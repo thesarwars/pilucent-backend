@@ -91,6 +91,7 @@ BALANZIFY_APPS = [
     "paymentio",
     "recurringio",
     "payrollio",
+    "rulebookio",
     "stockio",
     "nexusio",
     "salesio",
