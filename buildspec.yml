@@ -1,0 +1,17 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "Installing dependencies if needed..."
+  build:
+    commands:
+      - echo "Checking syntax..."
+      - # Optional: run your django tests here
+      - # python manage.py test
+  post_build:
+    commands:
+      - echo "Build completed on `date`"
+artifacts:
+  files:
+    - '**/*' # Pass everything to the next stage (Deploy)

@@ -1,0 +1,152 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Payroll summary by employee report</title>
+    <style>
+        @page {
+            size: {% if landscape %}A3 landscape{% else %}A4 portrait{% endif %};
+            margin: 14mm 12mm 16mm 12mm;
+
+            @bottom-left {
+                content: "{{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+            @bottom-right {
+                content: counter(page);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 8pt;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .company {
+            text-align: center;
+            font-size: 10pt;
+            margin-bottom: 6px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 15pt;
+            font-weight: normal;
+            margin: 0 0 6px 0;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 9.5pt;
+            margin-bottom: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 3px 8px;
+        }
+
+        thead th {
+            border-top: 1px solid #cfcfcf;
+            border-bottom: 1px solid #cfcfcf;
+            font-weight: normal;
+            color: #333;
+            padding-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        th.label-col, td.label-col {
+            text-align: left;
+            border-left: 1px solid #cfcfcf;
+            width: 220px;
+        }
+
+        th.amount-col, td.amount-col {
+            text-align: right;
+            border-right: 1px solid #cfcfcf;
+            white-space: nowrap;
+        }
+
+        /* The Total column is shaded down its whole length, exactly as the
+           reference report prints it. */
+        .total-col {
+            background-color: #f5f5f5;
+        }
+
+        /* Each row group is its own bordered block. */
+        tbody.section td {
+            border-bottom: 0;
+        }
+
+        tbody.section tr:first-child td {
+            border-top: 1px solid #cfcfcf;
+        }
+
+        tbody.section tr:last-child td {
+            border-bottom: 1px solid #cfcfcf;
+        }
+
+        tbody.section tr:first-child td {
+            padding-top: 6px;
+        }
+
+        tbody.section tr:last-child td {
+            padding-bottom: 6px;
+        }
+
+        /* The reference report keeps every level flush left -- the group
+           header reads as a heading through its position, not an indent. The
+           API still carries `depth` for callers that want to nest. */
+    </style>
+</head>
+<body>
+    <div class="company">{{ report.company_name }}</div>
+    <h1>{{ report.title }}</h1>
+    <div class="subtitle">{{ report.subtitle }}</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="label-col">Payroll</th>
+                {% for column in report.columns %}
+                    <th class="amount-col{% if column.is_total %} total-col{% endif %}">
+                        {{ column.label }}
+                    </th>
+                {% endfor %}
+            </tr>
+        </thead>
+
+        {% for section in report.sections %}
+            <tbody class="section">
+                {% for row in section.rows %}
+                    <tr>
+                        <td class="label-col">{{ row.label }}</td>
+                        {% for column in report.columns %}
+                            <td class="amount-col{% if column.is_total %} total-col{% endif %}">
+                                {% if row.is_empty %}
+                                    -
+                                {% elif row.format == "hours" %}
+                                    {{ row.values|get_item:column.key|report_hours }}
+                                {% else %}
+                                    {{ row.values|get_item:column.key|report_money }}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        {% endfor %}
+    </table>
+</body>
+</html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pay Stub Detail</title>
+  <style>
+    @page {
+      size: 11in 8.5in landscape;
+      margin: 0.35in 0.45in;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #000;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .page {
+      width: 100%;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .bold {
+      font-weight: 700;
+    }
+
+    .line-145 {
+      line-height: 1.45;
+    }
+
+    .blue-divider {
+      height: 3px;
+      background: #142c80;
+      width: 100%;
+      margin: 0 0 24px 0;
+      border: 0;
+    }
+
+    .section-gap-32 {
+      margin-bottom: 32px;
+    }
+
+    .section-gap-24 {
+      margin-bottom: 24px;
+    }
+
+    .section-gap-22 {
+      margin-bottom: 22px;
+    }
+
+    .spacer-28 {
+      height: 28px;
+    }
+
+    .spacer-18 {
+      height: 18px;
+    }
+
+    .spacer-14 {
+      height: 14px;
+    }
+
+    .spacer-16 {
+      height: 16px;
+    }
+
+    .header-right {
+      text-align: right;
+      vertical-align: top;
+    }
+
+    .company-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .net-pay-large {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .col-pay-half {
+      width: 50%;
+      padding-right: 14px;
+      vertical-align: top;
+    }
+
+    .col-ded-half {
+      width: 50%;
+      padding-left: 0;
+      vertical-align: top;
+    }
+
+    .pay-deductions-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .memo-block-bottom {
+      border-top: 1px solid #e5e5e5;
+      padding-top: 16px;
+      margin-top: 24px;
+    }
+
+    .layout-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .layout-table td {
+      vertical-align: top;
+      padding: 0;
+    }
+
+    .col-half-left {
+      width: 49%;
+      padding-right: 14px;
+    }
+
+    .col-half-right {
+      width: 49%;
+      padding-left: 14px;
+    }
+
+    .col-third {
+      width: 34%;
+      vertical-align: top;
+      padding-right: 18px;
+    }
+    .col-third-two {
+      width: 35%;
+      vertical-align: top;
+      padding-right: 18px;
+    }
+
+    .col-third-last {
+      width: 31%;
+      vertical-align: top;
+      padding-right: 0;
+    }
+
+    .other-pay-section {
+      margin-bottom: 32px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 6px 2px;
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .data-table thead th {
+      padding: 8px 2px;
+      font-weight: 700;
+    }
+
+    .data-table .th-other thead th {
+      padding: 9px 2px;
+    }
+
+    .border-e5-top {
+      border-top: 1px solid #e5e5e5;
+    }
+
+    .border-e5-bottom {
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    .border-e5-y {
+      border-top: 1px solid #e5e5e5;
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    .border-e5-all {
+      border: 1px solid #e5e5e5;
+    }
+
+    .border-e5-no-left {
+      border: 1px solid #e5e5e5;
+      border-left: none;
+    }
+
+    .border-e5-no-sides {
+      border: 1px solid #e5e5e5;
+      border-left: none;
+      border-right: none;
+    }
+
+    .data-table thead tr.border-e5-header-bottom th {
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    .summary-box {
+      border: 1px solid #000;
+      padding: 14px 14px 18px 14px;
+    }
+
+    .summary-box .data-table thead th {
+      padding: 4px 2px;
+    }
+
+    .border-black-bottom {
+      border-bottom: 1px solid #000;
+    }
+
+    .net-pay-row td {
+      padding-top: 10px;
+    }
+
+    /* Pay table columns (within left half) */
+    .pay-col-label { width: 36%; }
+    .pay-col-num { width: 16%; }
+
+    /* Deductions columns (within right half) */
+    .ded-col-label { width: 50%; }
+    .ded-col-num { width: 25%; }
+
+    /* Full-width taxes / summary */
+    .wide-col-label { width: 50%; }
+    .wide-col-num { width: 25%; }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <!-- Top Header -->
+    <table class="layout-table section-gap-32">
+      <tr>
+        <td class="col-half-left" style="vertical-align:top;">
+          <div class="company-title">{{ company_name }}</div>
+          {% for line in company_address_lines %}
+          <div class="line-145">{{ line }}</div>
+          {% endfor %}
+        </td>
+        <td class="col-half-right header-right">
+          <div class="bold" style="margin-bottom:4px;">Pay Stub Detail</div>
+          <div>PAY DATE: {{ pay_date_display }}</div>
+          <div>NET PAY: {{ net_pay_display }}</div>
+          <div>Check No.: {% if check_number %}{{ check_number }}{% else %}&nbsp;{% endif %}</div>
+        </td>
+      </tr>
+    </table>
+
+    <div class="blue-divider"></div>
+
+    <!-- Employer / Employee / Pay Period (three columns) -->
+    <table class="layout-table section-gap-32">
+      <tr>
+        <td class="col-third">
+          <div class="bold" style="margin-bottom:10px;">EMPLOYER</div>
+          <div class="line-145">{{ company_name }}</div>
+          {% for line in company_address_lines %}
+          <div class="line-145">{{ line }}</div>
+          {% endfor %}
+        </td>
+        <td class="col-third">
+          <div class="bold" style="margin-bottom:10px;">EMPLOYEE</div>
+          <div class="line-145">{{ employee_name }}</div>
+          {% for line in employee_address_lines %}
+          <div class="line-145">{{ line }}</div>
+          {% endfor %}
+        </td>
+        <td class="col-third-last">
+          <div class="bold" style="margin-bottom:10px;">PAY PERIOD</div>
+
+          <table class="layout-table">
+            <tr>
+              <td>Period Beginning:</td>
+              <td class="text-right">{{ period_beginning }}</td>
+            </tr>
+            <tr>
+              <td style="padding-top:6px;">Period Ending:</td>
+              <td class="text-right" style="padding-top:6px;">{{ period_ending }}</td>
+            </tr>
+            <tr>
+              <td style="padding-top:6px;">Pay Date:</td>
+              <td class="text-right" style="padding-top:6px;">{{ pay_date_display }}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Other Pay / Contributions (full width below header row) -->
+    <div class="other-pay-section">
+      <table class="data-table th-other">
+        <colgroup>
+          <col class="wide-col-label" />
+          <col class="wide-col-num" />
+          <col class="wide-col-num" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="text-left border-e5-no-sides">OTHER PAY/CONTRIBUTIONS</th>
+            <th class="text-right border-e5-no-sides">Current</th>
+            <th class="text-right border-e5-no-sides">YTD</th>
+          </tr>
+        </thead>
+        {% if other_rows %}
+        <tbody>
+          {% for row in other_rows %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td class="text-right">{{ row.current_display }}</td>
+            <td class="text-right">{{ row.ytd_display }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% endif %}
+      </table>
+
+      {% if not other_rows %}
+      <div style="height:34px; border-bottom:1px solid #e5e5e5;"></div>
+      {% endif %}
+
+      <table class="layout-table" style="padding-top:18px;">
+        <tr>
+          <td class="bold">NET PAY:</td>
+          <td class="text-right net-pay-large">{{ net_pay_display }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Pay and Deductions -->
+    <table class="pay-deductions-table section-gap-22">
+      <tr>
+        <td class="col-pay-half">
+          <table class="data-table">
+            <colgroup>
+              <col class="pay-col-label" />
+              <col class="pay-col-num" />
+              <col class="pay-col-num" />
+              <col class="pay-col-num" />
+              <col class="pay-col-num" />
+            </colgroup>
+            <thead>
+              <tr{% if not pay_rows %} class="border-e5-header-bottom"{% endif %}>
+                <th class="text-left border-e5-no-left">PAY</th>
+                <th class="text-right border-e5-y">Hours</th>
+                <th class="text-right border-e5-y">Rate</th>
+                <th class="text-right border-e5-y">Current</th>
+                <th class="text-right border-e5-no-left">YTD</th>
+              </tr>
+            </thead>
+            {% if pay_rows %}
+            <tbody>
+              {% for row in pay_rows %}
+              <tr>
+                <td{% if loop.last %} class="border-e5-bottom"{% endif %}>{{ row.label }}</td>
+                <td class="text-right{% if loop.last %} border-e5-bottom{% endif %}">{{ row.hours }}</td>
+                <td class="text-right{% if loop.last %} border-e5-bottom{% endif %}">{{ row.rate }}</td>
+                <td class="text-right{% if loop.last %} border-e5-bottom{% endif %}">{{ row.current }}</td>
+                <td class="text-right{% if loop.last %} border-e5-bottom{% endif %}">{{ row.ytd }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            {% endif %}
+          </table>
+        </td>
+        <td class="col-ded-half">
+          <table class="data-table">
+            <colgroup>
+              <col class="ded-col-label" />
+              <col class="ded-col-num" />
+              <col class="ded-col-num" />
+            </colgroup>
+            <thead>
+              <tr{% if not deduction_rows %} class="border-e5-header-bottom"{% endif %}>
+                <th class="text-left border-e5-no-sides">DEDUCTIONS</th>
+                <th class="text-right border-e5-no-sides">Current</th>
+                <th class="text-right border-e5-no-sides">YTD</th>
+              </tr>
+            </thead>
+            {% if deduction_rows %}
+            <tbody>
+              {% for row in deduction_rows %}
+              <tr>
+                <td{% if loop.last %} class="border-e5-bottom"{% endif %}>{{ row.label }}</td>
+                <td class="text-right{% if loop.last %} border-e5-bottom{% endif %}">{{ row.current_display }}</td>
+                <td class="text-right{% if loop.last %} border-e5-bottom{% endif %}">{{ row.ytd_display }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            {% endif %}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Taxes -->
+    <table class="data-table section-gap-22">
+      <colgroup>
+        <col class="wide-col-label" />
+        <col class="wide-col-num" />
+        <col class="wide-col-num" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="text-left border-e5-top">TAXES</th>
+          <th class="text-right border-e5-top">Current</th>
+          <th class="text-right border-e5-top">YTD</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in tax_rows %}
+        <tr>
+          <td{% if loop.last and tax_rows %} class="border-e5-bottom"{% endif %}>{{ row.label }}</td>
+          <td class="text-right{% if loop.last and tax_rows %} border-e5-bottom{% endif %}">{{ row.current_display }}</td>
+          <td class="text-right{% if loop.last and tax_rows %} border-e5-bottom{% endif %}">{{ row.ytd_display }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Summary -->
+    <div class="summary-box">
+      <table class="data-table">
+        <colgroup>
+          <col class="wide-col-label" />
+          <col class="wide-col-num" />
+          <col class="wide-col-num" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="text-left">SUMMARY</th>
+            <th class="text-right">Current</th>
+            <th class="text-right">YTD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Total Pay</td>
+            <td class="text-right">{{ summary.total_pay_current }}</td>
+            <td class="text-right">{{ summary.total_pay_ytd }}</td>
+          </tr>
+          <tr>
+            <td>Taxes</td>
+            <td class="text-right">{{ summary.taxes_current }}</td>
+            <td class="text-right">{{ summary.taxes_ytd }}</td>
+          </tr>
+          <tr>
+            <td class="border-black-bottom">Deductions</td>
+            <td class="text-right border-black-bottom">{{ summary.deductions_current }}</td>
+            <td class="text-right border-black-bottom">{{ summary.deductions_ytd }}</td>
+          </tr>
+          <tr class="net-pay-row">
+            <td class="bold">Net Pay</td>
+            <td></td>
+            <td class="text-right bold">{{ summary.net_pay }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    {% if memo %}
+    <!-- Memo (below summary) -->
+    <div class="memo-block-bottom">
+      <div class="bold" style="margin-bottom:6px;">MEMO:</div>
+      <div>{{ memo }}</div>
+    </div>
+    {% endif %}
+
+  </div>
+</body>
+</html>

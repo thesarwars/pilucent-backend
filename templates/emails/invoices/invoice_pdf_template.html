@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #000;
+        font-size: 12px;
+      }
+      .container {
+        margin: auto;
+        background: #fff;
+        padding: 20px 40px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-top: 20px;
+      }
+      .header h2 {
+        color: #2579b7;
+        margin: 0;
+        font-size: 18px;
+      }
+      .company-info {
+        line-height: 1.6;
+      }
+      .info-section {
+        background-color: #eaf4fb;
+        padding: 15px;
+        margin: 30px 0;
+        display: flex;
+        justify-content: space-between;
+      }
+      .info-section div {
+        width: 48%;
+      }
+      .info-section strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+      .details {
+        background-color: #eaf4fb;
+        padding: 15px;
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-between;
+      }
+      .details div {
+        width: 48%;
+      }
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .invoice-table th,
+      .invoice-table td {
+        border-bottom: 1px solid #ddd;
+        padding: 10px;
+        text-align: left;
+      }
+      .invoice-table th {
+        background-color: #fff;
+        font-weight: normal;
+      }
+      .invoice-table td strong {
+        font-weight: bold;
+      }
+      .totals {
+        width: 100%;
+        text-align: right;
+        margin-top: 20px;
+      }
+      .totals div {
+        margin-bottom: 5px;
+      }
+      .total-bold {
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .notes,
+      .terms {
+        margin-top: 40px;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+      .notes h4,
+      .terms h4 {
+        font-size: 12px;
+        margin-bottom: 8px;
+        color: #2579b7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h2>{{title}}</h2><br>
+          <div class="company-info">
+            <strong>
+              {{ data.company.name }}<br />
+            </strong>
+            {{data.company.email}}<br/>
+            {{data.company.phone}}<br/>
+            {{data.company.legal_address if data.company.legal_address else ""}}
+          </div>
+        </div>
+      </div>
+    
+      <!-- info -->
+      {% if title == "INVOICE" or title == "SALE RECEIPT" or title == "ESTIMATE" %}
+      <div class="info-section">
+        <div>
+          <strong>Billing to</strong>
+          {{ data.customer.first_name if data.customer.first_name else "" }} {{ data.customer.middle_name if data.customer.middle_name else '' }} {{ data.customer.last_name if data.customer.last_name else '' }}<br/>
+          {{data.customer_email}}<br />
+          {{ data.billing_address if data.billing_address else '' }}
+        </div>
+        <div>
+          <strong>Shipping to</strong>
+          {{ data.customer.first_name if data.customer.first_name else "" }} {{ data.customer.middle_name if data.customer.middle_name else '' }} {{ data.customer.last_name if data.customer.last_name else '' }}<br/>
+          {{data.customer_email}}<br />
+          {{ data.shipping_address if data.shipping_address else '' }}
+        </div>
+      </div>
+
+
+      <!-- details -->
+      <div class="details">
+        <div>
+          <strong>Shipping Information</strong><br />
+          Ship via: {{data.shipping_by}}<br />
+          Ship date: {{data.shipping_date}}<br />
+          Tracking no.: {{data.tracking_number}}
+        </div>
+
+        {% if title == "INVOICE"  %}
+        <div>
+          <strong> Invoice details</strong><br />
+          Invoice no.: {{data.reference_number}}<br />
+          Terms: {{data.term.title}}<br />
+          Invoice date: {{data.invoice_date}}<br />
+          Due date: {{data.invoice_due_date}}
+        </div>
+        {% elif title == "ESTIMATE"  %}
+        <div>
+          <strong> Estimate details</strong><br />
+          Estimate no.: {{data.reference_number}}<br />
+          Estimate date: {{data.invoice_date}}<br />
+          Expired date: {{data.invoice_due_date}}
+        </div>
+        {% else %}
+        <div>
+          <strong> Sale Receipt Information</strong><br />
+          Reference no.: {{data.reference_number}}<br />
+          Date: {{data.date}}<br />
+          Deposit To: {{data.deposit_to.title}}<br />
+          Payment Method: {{data.payment_method.title}}<br />
+          Location: {{data.location}}
+        </div>
+        {% endif %}
+      </div>
+      {% elif title == "REFUND RECEIPT" %}
+      <div class="info-section">
+        <div>
+          <strong>Billing to</strong>
+          {{ data.customer.first_name if data.customer.first_name else "" }} {{ data.customer.middle_name if data.customer.middle_name else '' }} {{ data.customer.last_name if data.customer.last_name else '' }}<br/>
+          {{data.customer_email}}<br />
+          {{ data.billing_address if data.billing_address else '' }}
+        </div>
+        <div>
+            <strong>Refund Information</strong>
+            Receipt no.: {{data.tracking_number}}<br />
+            Cheque no.: {{data.reference_number}}<br />
+            Date: {{data.date}}<br />
+            Refund From: {{data.refund_from.title}}<br />
+            Payment Method: {{data.payment_method.title}}<br />
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- items -->
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Product or service</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sale_item in data.sale_items %}
+          <tr>
+            <td>{{ loop.index }}.</td>
+            <td>
+              <strong>{{sale_item.product.title}}</strong>
+              <p>
+                {{ sale_item.description if sale_item.description else "" }} <br />
+                <b>Section:</b> {{ sale_item.section if sale_item.section else "" }} <br />
+                <b>Note:</b> {{ sale_item.note if sale_item.note else "" }}
+              </p>
+            </td>
+            <td>{{sale_item.quantity}}</td>
+            <td>${{sale_item.sale_price}}</td>
+            <td>${{sale_item.total}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- totals -->
+      <div class="totals">
+        <div>Sales tax: ${{data.total_tax}}</div>
+        {% if title == "INVOICE" or title == "SALE RECEIPT" %}
+        <div>Total: ${{data.total}}</div>
+        <div>Total Deposit: ${{data.deposit}}</div>
+        <div class="total-bold" style="color: red">
+          Total Due : ${{data.due_total}}
+        </div>
+        {% elif title == "REFUND RECEIPT" %}
+        <div>Total Refund Amount: ${{data.deposit}}</div>
+        {% else %}
+        <div class="total-bold" style="color: red">
+          Total Due : ${{data.total}}
+        </div>
+        {% endif %}
+      </div>
+      <div class="terms">
+        <h4>Terms & Conditions</h4>
+        {{data.description}}
+      </div>
+    </div>
+  </body>
+</html>

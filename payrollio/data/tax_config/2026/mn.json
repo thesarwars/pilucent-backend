@@ -1,0 +1,133 @@
+{
+  "standardDeduction": {
+    "single": 15300,
+    "married": 30600,
+    "mfj": 30600,
+    "mfs": 15300,
+    "hoh": 23000
+  },
+  "allowanceValue": 5300,
+  "supplementalRate": 0.0625,
+  "paidLeaveWageBase": 184500,
+  "paidLeaveEmployeeRate": 0.0044,
+  "paidLeaveEmployerStandardRate": 0.0044,
+  "paidLeaveEmployerSmallRate": 0.0022,
+  "uiWageBase": 44000,
+  "uiBaseTaxRate": 0.004,
+  "uiAdditionalAssessmentRate": 0.14,
+  "uiFederalLoanInterestAssessmentRate": 0,
+  "uiWorkforceDevelopmentFeeRate": 0.001,
+  "uiDefaultRate": 0.004,
+  "brackets": {
+    "single": [
+      [
+        0,
+        33310,
+        0.0535
+      ],
+      [
+        33310,
+        109430,
+        0.068
+      ],
+      [
+        109430,
+        203150,
+        0.0785
+      ],
+      [
+        203150,
+        null,
+        0.0985
+      ]
+    ],
+    "married": [
+      [
+        0,
+        48700,
+        0.0535
+      ],
+      [
+        48700,
+        193480,
+        0.068
+      ],
+      [
+        193480,
+        337930,
+        0.0785
+      ],
+      [
+        337930,
+        null,
+        0.0985
+      ]
+    ],
+    "mfj": [
+      [
+        0,
+        48700,
+        0.0535
+      ],
+      [
+        48700,
+        193480,
+        0.068
+      ],
+      [
+        193480,
+        337930,
+        0.0785
+      ],
+      [
+        337930,
+        null,
+        0.0985
+      ]
+    ],
+    "mfs": [
+      [
+        0,
+        24350,
+        0.0535
+      ],
+      [
+        24350,
+        96740,
+        0.068
+      ],
+      [
+        96740,
+        168965,
+        0.0785
+      ],
+      [
+        168965,
+        null,
+        0.0985
+      ]
+    ],
+    "hoh": [
+      [
+        0,
+        41010,
+        0.0535
+      ],
+      [
+        41010,
+        164800,
+        0.068
+      ],
+      [
+        164800,
+        270060,
+        0.0785
+      ],
+      [
+        270060,
+        null,
+        0.0985
+      ]
+    ]
+  }
+}

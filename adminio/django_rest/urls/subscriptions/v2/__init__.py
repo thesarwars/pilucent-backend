@@ -1,0 +1,52 @@
+from django.urls import path, include
+
+urlpatterns = [
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.plans"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.plan_versions"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.addons"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.metrics"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.tenants"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.invoices"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.referrals"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.trials"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.audit"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.promotions"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.analytics"),
+    ),
+    path(
+        "",
+        include("adminio.django_rest.urls.subscriptions.v2.enterprise"),
+    ),
+]

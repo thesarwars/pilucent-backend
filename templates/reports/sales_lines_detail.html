@@ -1,0 +1,77 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{{ report.title }}</title>
+    <style>
+        @page {
+            size: A4 portrait; margin: 16mm 14mm 18mm 14mm;
+            @bottom-center {
+                content: "{{ report.basis }}  {{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #444;
+            }
+            @bottom-right {
+                content: counter(page) "/" counter(pages);
+                font-family: Helvetica, Arial, sans-serif; font-size: 7.5pt; color: #888;
+            }
+        }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; color: #1a1a1a; margin: 0; }
+        h1 { text-align: center; font-size: 14pt; font-weight: normal; margin: 0 0 4px 0; }
+        .subtitle { text-align: center; font-size: 9pt; margin-bottom: 2px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 26px; }
+        th { border-bottom: 1px solid #999; padding: 4px 5px; font-weight: normal; text-align: left; }
+        td { padding: 4px 5px; border-bottom: 1px solid #e2e2e2; }
+        th.amount, td.amount { text-align: right; white-space: nowrap; }
+        tr.group > td { background-color: #f2f2f2; }
+        tr.total > td { font-weight: bold; border-bottom: 1px solid #999; }
+        tr.grand > td { font-weight: bold; border-top: 1px solid #999; }
+        td.indent { padding-left: 14px; }
+    </style>
+</head>
+<body>
+    <h1>{{ report.company_name }}</h1>
+    <div class="subtitle">{{ report.title }}</div>
+    <div class="subtitle">{{ report.subtitle }}</div>
+
+    <table>
+        <thead>
+            <tr>
+                {% for column in report.columns %}
+                    <th class="{% if column.align == 'right' %}amount{% endif %}">{{ column.label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.rows %}
+                {% if row.is_group %}
+                    <tr class="group"><td colspan="9">{{ row.label }}</td></tr>
+                {% elif row.is_total %}
+                    <tr class="{% if row.key == 'total' %}grand{% else %}total{% endif %}">
+                        <td colspan="5">{{ row.label }}</td>
+                        <td class="amount">{{ row.quantity|report_number }}</td>
+                        <td></td>
+                        <td class="amount">{{ row.amount|report_money }}</td>
+                        <td></td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td class="indent">{{ row.date|date:"m/d/Y" }}</td>
+                        <td>{{ row.txn_type }}</td>
+                        <td>{{ row.num }}</td>
+                        {% if report.columns.3.key == 'product_name' %}
+                            <td>{{ row.product_name }}</td>
+                        {% else %}
+                            <td>{{ row.customer_name }}</td>
+                        {% endif %}
+                        <td>{{ row.description }}</td>
+                        <td class="amount">{{ row.quantity|report_number }}</td>
+                        <td class="amount">{{ row.sale_price|report_number }}</td>
+                        <td class="amount">{{ row.amount|report_number }}</td>
+                        <td class="amount">{{ row.balance|report_number }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

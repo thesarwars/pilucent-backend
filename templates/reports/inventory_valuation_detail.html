@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inventory Valuation Detail</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        padding: 15px;
+        margin: 0;
+        color: #222;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .header h1 {
+        font-size: 25px;
+        color: black;
+      }
+      .header p {
+        margin-top: 5px;
+        color: #444;
+        font-size: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        font-size: 12px;
+      }
+      th,
+      td {
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        text-align: left;
+      }
+      th {
+        background-color: #eaeaea;
+      }
+      td.num,
+      th.num {
+        text-align: right;
+      }
+      tr.group-header td {
+        background-color: #f7f7f7;
+        font-weight: bold;
+      }
+      tr.subtotal td {
+        background-color: #fafafa;
+        font-weight: bold;
+      }
+      tr.grand-total td {
+        background-color: #f1f1f1;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Inventory Valuation Detail</h1>
+      <p>
+        {{company_name}}<br />
+        As of {{ report_as_of }}
+      </p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          {% for field in fields %}
+          <th class="{% if field in ['QTY', 'RATE', 'INVENTORY COST', 'QTY ON HAND', 'ASSET VALUE'] %}num{% endif %}">{{field}}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for group in data %}
+        <tr class="group-header">
+          <td colspan="7">{{ group.product or '' }}{% if group.sku %} ({{ group.sku }}){% endif %}</td>
+        </tr>
+        {% for row in group.rows %}
+        <tr>
+          <td>{{ row.date }}</td>
+          <td>{{ row.transaction_type }}</td>
+          <td class="num">{{ "{:,.2f}".format(row.quantity) }}</td>
+          <td class="num">{% if row.rate is not none %}{{ "{:,.2f}".format(row.rate) }}{% else %}—{% endif %}</td>
+          <td class="num">{{ "{:,.2f}".format(row.inventory_cost) }}</td>
+          <td class="num">{{ "{:,.2f}".format(row.running_quantity) }}</td>
+          <td class="num">{{ "{:,.2f}".format(row.running_value) }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="subtotal">
+          <td colspan="2">Total for {{ group.product or '' }}</td>
+          <td class="num">{{ "{:,.2f}".format(group.subtotal.quantity) }}</td>
+          <td class="num"></td>
+          <td class="num">{{ "{:,.2f}".format(group.subtotal.inventory_cost) }}</td>
+          <td class="num"></td>
+          <td class="num">${{ "{:,.2f}".format(group.subtotal.asset_value) }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="grand-total">
+          <td colspan="6">TOTAL ASSET VALUE</td>
+          <td class="num">${{ "{:,.2f}".format(overview.asset_value) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

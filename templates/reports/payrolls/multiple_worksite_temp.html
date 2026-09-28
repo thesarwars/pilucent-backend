@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Multiple Worksite Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 7mm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 12px;
+                font-family: Arial, sans-serif;
+                color: #666;
+            }
+        }
+
+        body {
+            font-family: "Arial", sans-serif;
+            font-size: 14px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            margin: auto;
+        }
+
+        h1 {
+            font-size: 25px;
+        }
+
+        h2 {
+            font-size: 20px;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .header {
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        table td,
+        table th {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid black;
+            vertical-align: top;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #ccc;
+            margin: 6px 0;
+        }
+
+        .summary_container label {
+            font-weight: bold;
+            background-color: #f1f1f1;
+            padding: 5px;
+        }
+
+        /* Currency formatting */
+        .currency {
+            text-align: right;
+        }
+
+        /* Worksite name styling */
+        .worksite-name {
+            text-align: left;
+            font-weight: normal;
+        }
+
+        /* Header row styling */
+        .header-row th {
+            background-color: #f1f1f1;
+            font-weight: bold;
+        }
+
+        /* Total row styling */
+        .total-row td {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+
+        /* Address styling */
+        .address-line {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Multiple worksite report (MWR)</h1>
+            <p>
+                From {{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }} from all locations
+            </p>
+        </div>
+        <hr />
+
+        <table>
+            <thead>
+                <tr class="header-row">
+                    <th>Worksite</th>
+                    <th class="text-center">No. of employees ({{ data.month_names.0 }})</th>
+                    <th class="text-center">No. of employees ({{ data.month_names.1 }})</th>
+                    <th class="text-center">No. of employees ({{ data.month_names.2 }})</th>
+                    <th class="currency">Quarterly wages</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for worksite in data.worksites %}
+                <tr>
+                    <td class="worksite-name">
+                        {{ worksite.worksite }}
+                        {% if worksite.address or worksite.city_state_zip %}
+                        <div class="address-line">
+                            {% if worksite.address and worksite.address != "-" %}
+                                {{ worksite.address }}{% if worksite.city_state_zip and worksite.city_state_zip != "-" %},{% endif %}
+                            {% endif %}
+                            {% if worksite.city_state_zip and worksite.city_state_zip != "-" %}
+                                {{ worksite.city_state_zip }}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ worksite.month1_employees }}</td>
+                    <td class="text-center">{{ worksite.month2_employees }}</td>
+                    <td class="text-center">{{ worksite.month3_employees }}</td>
+                    <td class="currency">${{ worksite.quarterly_wages|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No worksite data available for the selected period.</td>
+                </tr>
+                {% endfor %}
+                
+                {% if data.worksites %}
+                <tr class="total-row">
+                    <td>Total</td>
+                    <td class="text-center">{{ data.totals.month1_employees }}</td>
+                    <td class="text-center">{{ data.totals.month2_employees }}</td>
+                    <td class="text-center">{{ data.totals.month3_employees }}</td>
+                    <td class="currency">${{ data.totals.quarterly_wages|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <hr />
+        
+        <div class="summary_container">
+            <p><strong>Report Period:</strong> {{ data.quarter_label }}</p>
+            <p><strong>Total Worksites:</strong> {{ data.worksites|length }}</p>
+            <p><strong>Generated on:</strong> {% now "F d, Y \a\t g:i A" %}</p>
+        </div>
+    </div>
+</body>
+</html>

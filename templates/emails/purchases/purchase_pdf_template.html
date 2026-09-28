@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #000;
+        font-size: 12px;
+      }
+      .container {
+        margin: auto;
+        background: #fff;
+        padding: 20px 40px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-top: 20px;
+      }
+      .header h2 {
+        color: #2579b7;
+        margin: 0;
+        font-size: 18px;
+      }
+      .company-info {
+        line-height: 1.6;
+      }
+      .info-section {
+        background-color: #eaf4fb;
+        padding: 15px;
+        margin: 30px 0;
+        display: flex;
+        justify-content: space-between;
+      }
+      .info-section div {
+        width: 48%;
+      }
+      .info-section strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+      .details {
+        background-color: #eaf4fb;
+        padding: 15px;
+        margin: 30px 0px;
+        display: flex;
+        justify-content: space-between;
+      }
+      .details div {
+        width: 48%;
+      }
+      .purchase-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .purchase-table th,
+      .purchase-table td {
+        border-bottom: 1px solid #ddd;
+        padding: 10px;
+        text-align: left;
+      }
+      .purchase-table th {
+        background-color: #fff;
+        font-weight: normal;
+      }
+      .purchase-table td strong {
+        font-weight: bold;
+      }
+      .totals {
+        width: 100%;
+        text-align: right;
+        margin-top: 20px;
+      }
+      .totals div {
+        margin-bottom: 5px;
+      }
+      .total-bold {
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .notes,
+      .terms {
+        margin-top: 40px;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+      .notes h4,
+      .terms h4 {
+        font-size: 12px;
+        margin-bottom: 8px;
+        color: #2579b7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h2>{{title}}</h2>
+          <br />
+          <div class="company-info">
+            <strong> {{ data.company.name }}<br /> </strong>
+            {{data.company.email}}<br />
+            {{data.company.phone}}<br />
+            {{data.company.legal_address if data.company.legal_address else ""}}
+          </div>
+        </div>
+      </div>
+
+      <!-- details -->
+      <div class="details">
+        <div>
+          <strong>Purchase Information</strong><br />
+          Purchase Date: {{ data.purchase.date }}<br />
+          Reference Number: {{ data.purchase.purchase_id }}<br />
+          Amount: {{ data.purchase.total }}<br />
+        </div>
+
+        <div>
+          <strong>Supplier Information</strong><br />
+          Supplier: {{ data.supplier.first_name if data.supplier.first_name else
+          "" }} {{ data.supplier.middle_name if data.supplier.middle_name else
+          '' }} {{ data.supplier.last_name if data.supplier.last_name else ''
+          }}<br />
+          Billing Address: {{ data.full_billing_address }}<br />
+          Email: {{ data.supplier_email }}<br />
+        </div>
+      </div>
+
+      <!-- Product items -->
+      <table class="purchase-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <h3>PRODUCT/SERVICE</h3>
+          {% for purchase_item in data.purchase_items %}
+          <tr>
+            <td>{{ loop.index }}.</td>
+            <td>
+              <strong>{{purchase_item.product.title}}</strong>
+            </td>
+            <td>{{purchase_item.quantity}}</td>
+            <td>${{purchase_item.purchase_price}}</td>
+            <td>${{purchase_item.total}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Custom Expense Items -->
+      {% if data.custom_expense_items %}
+      <table class="purchase-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Section</th>
+            <th>Description</th>
+            <th>Note</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <h3>EXPENSE ITEMS</h3>
+          {% for expense_item in data.custom_expense_items %}
+          <tr>
+            <td>{{ loop.index }}.</td>
+            <td>
+              <strong>{{expense_item.section}}</strong>
+            </td>
+            <td>{{expense_item.description}}</td>
+            <td>{{expense_item.note}}</td>
+            <td>${{expense_item.total}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      <!-- totals -->
+      <div class="totals">
+        <div>
+          Subtotal: ${{ data.purchase.total - data.purchase.total_tax }}
+        </div>
+        {% if data.has_deposit %}
+        <div>Deposit: ${{data.deposit_amount}}</div>
+        {% endif %} {% if data.has_due_total %}
+        <div>Due Total: ${{data.due_total}}</div>
+        {% endif %}
+        <div>Total Amount: ${{data.purchase.total}}</div>
+      </div>
+
+      <div class="terms">
+        <h4>Terms & Conditions</h4>
+        {{data.description}}
+      </div>
+    </div>
+  </body>
+</html>

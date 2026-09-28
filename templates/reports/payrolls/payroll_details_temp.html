@@ -1,0 +1,174 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Payroll details report</title>
+    <style>
+        /* Nine columns, several holding a nested breakdown -- portrait cannot
+           hold them without the labels wrapping to one word per line. */
+        @page {
+            size: A4 landscape;
+            margin: 12mm 10mm 14mm 10mm;
+
+            @bottom-left {
+                content: "{{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+            @bottom-right {
+                content: counter(page);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 7.5pt;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .company { text-align: center; font-size: 10pt; margin-bottom: 6px; }
+
+        h1 {
+            text-align: center;
+            font-size: 15pt;
+            font-weight: normal;
+            margin: 0 0 6px 0;
+        }
+
+        .subtitle { text-align: center; font-size: 9.5pt; margin-bottom: 14px; }
+
+        table.report { width: 100%; border-collapse: collapse; }
+
+        table.report > thead > tr > th {
+            border: 1px solid #cfcfcf;
+            font-weight: normal;
+            color: #333;
+            padding: 6px 6px;
+            vertical-align: bottom;
+        }
+
+        table.report > tbody > tr > td {
+            border: 1px solid #cfcfcf;
+            padding: 6px 6px;
+            vertical-align: top;
+        }
+
+        .align-left { text-align: left; }
+        .align-right { text-align: right; }
+
+        /* The Total row is shaded across its full width. */
+        tr.total-row > td { background-color: #f5f5f5; }
+
+        /* A breakdown inside a cell: label on the left, figures right-aligned.
+           A nested table keeps the label and amount columns aligned down the
+           whole report rather than per cell. */
+        table.breakdown { width: 100%; border-collapse: collapse; }
+        table.breakdown td {
+            border: 0;
+            padding: 0 0 2px 0;
+            vertical-align: top;
+        }
+        table.breakdown td.b-label { text-align: right; padding-right: 10px; }
+        table.breakdown td.b-hours { text-align: right; width: 60px; }
+        table.breakdown td.b-amount { text-align: right; width: 78px; }
+
+        .pay-period { color: #555; }
+    </style>
+</head>
+<body>
+    <div class="company">{{ report.company_name }}</div>
+    <h1>{{ report.title }}</h1>
+    <div class="subtitle">{{ report.subtitle }}</div>
+
+    <table class="report">
+        <thead>
+            <tr>
+                {% for column in report.columns %}
+                    <th class="align-{{ column.align }}">{{ column.label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.rows %}
+                <tr {% if row.is_total %}class="total-row"{% endif %}>
+                    <td class="align-left">
+                        {% if row.is_total %}
+                            Total
+                        {% else %}
+                            {{ row.pay_date|date:"m/d/Y" }}
+                            {% if row.pay_period %}
+                                <br /><span class="pay-period">{{ row.pay_period }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="align-left">{{ row.name }}</td>
+
+                    {% comment %}
+                        Hours and Gross pay are two printed columns fed by one
+                        list, so they are emitted together. A multi-line {# #}
+                        would leak as literal text -- that form is single-line.
+                    {% endcomment %}
+                    <td class="align-right">
+                        <table class="breakdown">
+                            {% for entry in row.cells.gross_pay %}
+                                <tr>
+                                    <td class="b-label">{{ entry.label }}</td>
+                                    <td class="b-hours">
+                                        {% if entry.hours %}{{ entry.hours|report_hours }}{% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+                    <td class="align-right">
+                        <table class="breakdown">
+                            {% for entry in row.cells.gross_pay %}
+                                <tr><td class="b-amount">{{ entry.amount|report_money }}</td></tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+
+                    <td class="align-right">
+                        {% for entry in row.cells.other_pay %}
+                            {{ entry.label }} {{ entry.amount|report_money }}<br />
+                        {% endfor %}
+                    </td>
+
+                    <td class="align-right">
+                        <table class="breakdown">
+                            {% for entry in row.cells.employee_taxes_deductions %}
+                                <tr>
+                                    <td class="b-label">{{ entry.label }}</td>
+                                    <td class="b-amount">{{ entry.amount|report_money }}</td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+
+                    <td class="align-right">{{ row.cells.net_pay|report_money }}</td>
+
+                    <td class="align-right">
+                        <table class="breakdown">
+                            {% for entry in row.cells.employer_taxes_contributions %}
+                                <tr>
+                                    <td class="b-label">{{ entry.label }}</td>
+                                    <td class="b-amount">{{ entry.amount|report_money }}</td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+
+                    <td class="align-right">
+                        {{ row.cells.total_payroll_cost|report_money }}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

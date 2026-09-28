@@ -1,0 +1,100 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Payroll tax and wage summary report</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 14mm 12mm 16mm 12mm;
+
+            @bottom-left {
+                content: "{{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+            @bottom-right {
+                content: counter(page);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 8pt;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .company { text-align: center; font-size: 10pt; margin-bottom: 6px; }
+
+        h1 {
+            text-align: center;
+            font-size: 15pt;
+            font-weight: normal;
+            margin: 0 0 6px 0;
+        }
+
+        .subtitle { text-align: center; font-size: 9.5pt; margin-bottom: 16px; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th, td {
+            border: 1px solid #cfcfcf;
+            padding: 7px 10px;
+        }
+
+        thead th {
+            font-weight: normal;
+            color: #333;
+        }
+
+        .align-left { text-align: left; }
+        .align-right { text-align: right; }
+
+        /* Group rows are shaded across the full width; the member lines beneath
+           explain the figure and sit on white. */
+        tr.group-row > td { background-color: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <div class="company">{{ report.company_name }}</div>
+    <h1>{{ report.title }}</h1>
+    <div class="subtitle">{{ report.subtitle }}</div>
+
+    <table>
+        <thead>
+            <tr>
+                {% for column in report.columns %}
+                    <th class="align-{{ column.align }}">{{ column.label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.rows %}
+                <tr {% if row.is_group %}class="group-row"{% endif %}>
+                    <td class="align-left">{{ row.label }}</td>
+                    {% comment %}
+                        Wage columns are blank on a group row: the same wages
+                        carry several taxes, so summing them would double-count
+                        the payroll.
+                    {% endcomment %}
+                    <td class="align-right">
+                        {% if not row.is_group %}{{ row.total_wages|report_money }}{% endif %}
+                    </td>
+                    <td class="align-right">
+                        {% if not row.is_group %}{{ row.excess_wages|report_money }}{% endif %}
+                    </td>
+                    <td class="align-right">
+                        {% if not row.is_group %}{{ row.taxable_wages|report_money }}{% endif %}
+                    </td>
+                    <td class="align-right">{{ row.tax_amount|report_money }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

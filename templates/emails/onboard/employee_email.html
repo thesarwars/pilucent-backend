@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      background-color: #f9f9f9;
+      font-family: 'Segoe UI', sans-serif;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      background-color: #ffffff;
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+    .header {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2579b7;
+      margin-bottom: 20px;
+    }
+    .message {
+      font-size: 16px;
+      margin-bottom: 30px;
+    }
+    .button {
+      background-color: #7F3CF0;
+      color: black;
+      padding: 12px 24px;
+      text-decoration: none;
+      font-weight: 500;
+      border-radius: 8px;
+      display: inline-block;
+      margin-bottom: 30px;
+    }
+    .footer {
+      font-size: 13px;
+      color: #888;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- header -->
+    <div class="header">Hi {{employee.user.name}},Wellcome to the {{company.name}}.</div>
+    
+    <!-- email and password -->
+    <div>
+      Email: {{employee.user.email}}<br>
+      Password: {{employee.user.email}}
+    </div>
+
+    <!-- message -->
+    <p class="message">
+        Click the link below to join the {{company.name}}.
+    </p>
+
+    <!-- button -->
+    <div>
+      <a href="{{ url }}" class="button" style="color: black;" target="_blank">JOIN NOW</a>
+    </div>
+    
+    <!-- best regard -->
+    <div>
+      Best regards,<br>
+      {{company.name}}<br>
+      {{company.email}}<br>
+      {{company.phone}}
+    </div>
+
+    <!-- footer -->
+    <div class="footer">
+      Thank you for using Balanzify.
+    </div>
+  </div>
+</body>
+</html>

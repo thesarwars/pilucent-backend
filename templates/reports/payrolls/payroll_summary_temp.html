@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Payroll Summary Report</title>
+    <style>
+        @page {
+            size: A3;
+            margin: 7mm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 12px;
+                font-family: Arial, sans-serif;
+                color: #666;
+            }
+        }
+
+        body {
+            font-family: "Arial", sans-serif;
+            font-size: 14px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            margin: auto;
+        }
+
+        h1 {
+            font-size: 25px;
+        }
+
+        h2 {
+            font-size: 20px;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .header {
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        table td,
+        table th {
+            padding: 6px;
+            text-align: left;
+            border: 1px solid black;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #ccc;
+            margin: 6px 0;
+        }
+
+        .summary_container label {
+            font-weight: bold;
+            background-color: #f1f1f1;
+            padding: 5px;
+        }
+
+        /* Currency formatting */
+        .currency {
+            text-align: right;
+        }
+
+        /* Employee name styling */
+        .employee-name {
+            text-align: left;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Payroll Summary Report</h1>
+            <p>
+                {{ company.name }}<br />
+                From {{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }} for all employees from all locations
+            </p>
+        </div>
+        <hr />
+
+        <table>
+            <thead>
+                <tr>
+                    <!-- <th>S/L</th> -->
+                    <th>Pay Date</th>
+                    <th>Employee Name</th>
+                    <th>Hours</th>
+                    <th>Gross Pay</th>
+                    <th>Pretax Deductions</th>
+                    <th>Other Pay</th>
+                    <th>Employee Taxes</th>
+                    <th>Aftertax Deductions</th>
+                    <th>Net Pay</th>
+                    <th>Employer Taxes</th>
+                    <th>Company Contributions</th>
+                    <th>Total Payroll Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee_name, employee_data in data.employees.items %}
+                <tr>
+                    <!-- <td class="text-center">{{ forloop.counter }}</td> -->
+                    <td class="text-center">{{ start_date|date:"m/d/Y" }}</td>
+                    <td class="employee-name">{{ employee_name }}</td>
+                    <td class="text-right">{{ employee_data.totals.total_hours|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_gross_pay|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_employee_taxes_deductions|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_other_pay|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_employee_taxes|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_employee_deductions|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_net_pay|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_employer_taxes|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_company_paid_contributions|floatformat:2 }}</td>
+                    <td class="currency">${{ employee_data.totals.total_payroll_cost|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <hr />
+        
+    </div>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Deduction & Contribution Report</title>
+    <style>
+        @page {
+            size: A3;
+            margin: 7mm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 12px;
+                font-family: Arial, sans-serif;
+                color: #666;
+            }
+        }
+        body {
+            font-family: "Arial", sans-serif;
+            font-size: 14px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            margin: auto;
+        }
+        h1 {
+            font-size: 25px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        h2 {
+            font-size: 20px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .header {
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table th, table td {
+            padding: 6px;
+            border: 1px solid black;
+            text-align: right;
+        }
+        table th {
+            background: #e2e2e2;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        table td.text-left, table th.text-left {
+            text-align: left;
+        }
+        .total-row {
+            background: #d9edf7;
+            font-weight: bold;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #ccc;
+            margin: 6px 0;
+        }
+        .summary_container label {
+            font-weight: bold;
+            background-color: #f1f1f1;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Deduction & Contribution Report</h1>
+            <p>
+                {{ company.name }}<br />
+                From {{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }}
+            </p>
+        </div>
+        <hr />
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-left">Description</th>
+                    <th class="text-left">Type</th>
+                    <th>Employee Deductions</th>
+                    <th>Company Contributions</th>
+                    <th>Plan Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data.deductions_and_contributions %}
+                <tr>
+                    <td class="text-left">{{ item.description }}</td>
+                    <td class="text-left">{{ item.type }}</td>
+                    <td>${{ item.employee_deductions|floatformat:2 }}</td>
+                    <td>${{ item.company_contributions|floatformat:2 }}</td>
+                    <td>${{ item.plan_total|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td class="text-left"><strong>Total</strong></td>
+                    <td></td>
+                    <td><strong>${{ data.total_employee_deductions|floatformat:2 }}</strong></td>
+                    <td><strong>${{ data.total_company_contributions|floatformat:2 }}</strong></td>
+                    <td><strong>${{ data.total_plan_total|floatformat:2 }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        <hr />
+        <div class="text-right">
+            <small>Generated on {{ "now"|date:"M d, Y g:i A" }}</small>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{{ report.title }}</title>
+    <style>
+        @page {
+            size: A4 portrait; margin: 16mm 14mm 18mm 14mm;
+            @bottom-center {
+                content: "{{ report.basis }}  {{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #444;
+            }
+            @bottom-right {
+                content: counter(page) "/" counter(pages);
+                font-family: Helvetica, Arial, sans-serif; font-size: 7.5pt; color: #888;
+            }
+        }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; color: #1a1a1a; margin: 0; }
+        h1 { text-align: center; font-size: 14pt; font-weight: normal; margin: 0 0 4px 0; }
+        .subtitle { text-align: center; font-size: 9pt; margin-bottom: 2px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 26px; }
+        th { border-bottom: 1px solid #999; padding: 4px 5px; font-weight: normal; text-align: left; }
+        td { padding: 4px 5px; border-bottom: 1px solid #e2e2e2; }
+        th.amount, td.amount { text-align: right; white-space: nowrap; }
+        tr.grand > td { font-weight: bold; border-top: 1px solid #999; border-bottom: 1px solid #999; }
+    </style>
+</head>
+<body>
+    <h1>{{ report.company_name }}</h1>
+    <div class="subtitle">{{ report.title }}</div>
+    <div class="subtitle">{{ report.subtitle }}</div>
+
+    <table>
+        <thead>
+            <tr>
+                {% for column in report.columns %}
+                    <th class="{% if column.align == 'right' %}amount{% endif %}">{{ column.label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.rows %}
+                <tr class="{% if row.is_total %}grand{% endif %}">
+                    <td>{{ row.label }}</td>
+                    <td class="amount">{{ row.quantity|report_number }}</td>
+                    <td class="amount">{% if row.is_total %}{{ row.amount|report_money }}{% else %}{{ row.amount|report_number }}{% endif %}</td>
+                    <td class="amount">{{ row.pct_of_sales }} %</td>
+                    <td class="amount">{% if row.is_total %}{{ row.avg_price|report_money }}{% else %}{{ row.avg_price|report_number }}{% endif %}</td>
+                    <td class="amount">{% if row.is_total %}{{ row.cogs|report_money }}{% else %}{{ row.cogs|report_number }}{% endif %}</td>
+                    <td class="amount">{% if row.is_total %}{{ row.avg_cogs|report_money }}{% else %}{{ row.avg_cogs|report_number }}{% endif %}</td>
+                    <td class="amount">{% if row.gross_margin is not None %}{{ row.gross_margin|report_number }}{% endif %}</td>
+                    <td class="amount">{% if row.gross_margin_pct is not None %}{{ row.gross_margin_pct }} %{% endif %}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

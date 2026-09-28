@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Profit and Loss Report</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        font-size: 14px;
+        color: #000;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 800px;
+        margin: auto;
+      }
+      h1{
+        font-size: 25px;
+      }
+      h2{
+        font-size: 20px;
+      }
+      h1,
+      h2 {
+        text-align: center;
+        margin-bottom: 5px;
+      }
+      .header{
+        text-align: center;
+      }
+      .section {
+        margin-top: 16px;
+      }
+
+      .section h3 {
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+
+      table td,
+      table th {
+        padding: 6px;
+        text-align: left;
+      }
+
+      .total {
+        font-weight: bold;
+      }
+
+      .text-right {
+        text-align: right;
+      }
+      .text-left {
+        text-align: right;
+      }
+
+      .summary {
+        font-size: 15px;
+        font-weight: bold;
+        margin: 12px 0;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid #ccc;
+        margin: 6px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Total payroll cost report</h1>
+        <p>{{company_name}}<br /> {% if as_of != None %} As of {{as_of.start_date}} to {{as_of.end_date}} {% else %} All Dates {% endif %}</p>
+      </div>
+      <div><h2 class="text-right">Total</h2></div>
+      <hr />
+
+      <!-- Expenses -->
+      <div class="section">
+        <h3>Total pay</h3>
+        <table>
+          {% for payroll_expense_cao in data.payroll_expense_cao %}
+          <tr>
+            <td>{{payroll_expense_cao.title}}</td>
+            <td class="text-right">${{payroll_expense_cao.last_balance}}</td>
+          </tr>
+          {% endfor %}
+          <tr class="total"><td>Subtotal</td><td class="text-right">${% if overview.total_payroll_expense_cao == None %}0 {% else %} {{overview.total_payroll_expense_cao}} {% endif %}</td></tr>
+        </table>
+      </div>
+
+      <!-- Company contributions -->
+      <div class="section">
+        <h3>Total pay</h3>
+        <table>
+          {% for company_contribution_cao in data.company_contribution_cao %}
+          <tr>
+            <td>{{company_contribution_cao.title}}</td>
+            <td class="text-right">${{company_contribution_cao.last_balance}}</td>
+          </tr>
+          {% endfor %}
+          <tr class="total"><td>Subtotal</td><td class="text-right">${% if overview.total_company_contribution_cao == None %}0 {% else %} {{overview.total_company_contribution_cao}} {% endif %}</td></tr>
+        </table>
+      </div>
+
+      <!-- Liabilities -->
+      <div class="section">
+        <h3>Employer taxes</h3>
+        <table>
+          {% for payroll_liabilities_cao in data.payroll_liabilities_cao %}
+          <tr>
+            <td>{{payroll_liabilities_cao.title}}</td>
+            <td class="text-right">${{payroll_liabilities_cao.last_balance}}</td>
+          </tr>
+          {% endfor %}
+          <tr class="total"><td>Subtotal</td><td class="text-right">${% if overview.total_payroll_liabilities_cao == None %}0 {% else %} {{overview.total_payroll_liabilities_cao}} {% endif %}</td></tr>
+        </table>
+      </div>
+
+      <hr/>
+      <div class="text-right">
+        <small>Generated on {{date_time}}</small>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+from django.urls import path
+
+from adminio.django_rest.views.subscriptions.v2.enterprise import (
+    AdminManualSubscriptionInvoiceCreate,
+    AdminPlanMigrationJobDetail,
+    AdminPlanMigrationJobExecute,
+    AdminPlanMigrationJobListCreate,
+    AdminPlanMigrationJobPreview,
+    AdminPlanMigrationRecordList,
+    AdminSubscriptionContractDetail,
+    AdminSubscriptionContractListCreate,
+    AdminSubscriptionPriceCurrencyDetail,
+    AdminSubscriptionPriceCurrencyListCreate,
+)
+
+urlpatterns = [
+    path(
+        r"/prices/<uuid:uid>",
+        AdminSubscriptionPriceCurrencyDetail.as_view(),
+        name="adminio.subscription-price-currency-detail",
+    ),
+    path(
+        r"/prices",
+        AdminSubscriptionPriceCurrencyListCreate.as_view(),
+        name="adminio.subscription-price-currency-list",
+    ),
+    path(
+        r"/contracts/<uuid:uid>",
+        AdminSubscriptionContractDetail.as_view(),
+        name="adminio.subscription-contract-detail",
+    ),
+    path(
+        r"/contracts",
+        AdminSubscriptionContractListCreate.as_view(),
+        name="adminio.subscription-contract-list",
+    ),
+    path(
+        r"/migrations/<uuid:uid>/records",
+        AdminPlanMigrationRecordList.as_view(),
+        name="adminio.plan-migration-records",
+    ),
+    path(
+        r"/migrations/<uuid:uid>/preview",
+        AdminPlanMigrationJobPreview.as_view(),
+        name="adminio.plan-migration-preview",
+    ),
+    path(
+        r"/migrations/<uuid:uid>/execute",
+        AdminPlanMigrationJobExecute.as_view(),
+        name="adminio.plan-migration-execute",
+    ),
+    path(
+        r"/migrations/<uuid:uid>",
+        AdminPlanMigrationJobDetail.as_view(),
+        name="adminio.plan-migration-detail",
+    ),
+    path(
+        r"/migrations",
+        AdminPlanMigrationJobListCreate.as_view(),
+        name="adminio.plan-migration-list",
+    ),
+    path(
+        r"/manual-invoices",
+        AdminManualSubscriptionInvoiceCreate.as_view(),
+        name="adminio.manual-subscription-invoice",
+    ),
+]

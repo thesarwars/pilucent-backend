@@ -1,0 +1,271 @@
+{
+  "ChatConsumer": {
+    "description": "1-to-1 direct messaging between two users",
+    "url_pattern": "ws://<host>/ws/chat/<receiver_uid>/",
+    "actions": {
+      "send_message": {
+        "description": "Send a direct message (no 'action' field needed)",
+        "payload": {
+          "message": "Hello",
+          "message_type": "TEXT",
+          "file_data": "https://... or base64-encoded (optional)"
+        }
+      },
+      "mark_read": {
+        "description": "Mark all unread messages from the other user as read",
+        "payload": {
+          "action": "mark_read"
+        }
+      }
+    },
+    "server_sent_events": {
+      "new_message": {
+        "description": "Broadcast to both participants when a new message is sent",
+        "payload": {
+          "event": "new_message",
+          "id": 42,
+          "receiver": {
+            "uid": "receiver-user-uuid",
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "email": "jane@example.com",
+            "image": "https://... or null"
+          },
+          "sender": {
+            "uid": "sender-user-uuid",
+            "first_name": "John",
+            "last_name": "Smith",
+            "email": "john@example.com",
+            "image": "https://... or null"
+          },
+          "content": "Hello",
+          "message_type": "TEXT",
+          "file_data": "https://... or null",
+          "is_read": false,
+          "timestamp": "2026-04-22T10:30:00.000000+00:00"
+        }
+      },
+      "messages_read": {
+        "description": "Broadcast to both participants when messages are marked as read",
+        "payload": {
+          "event": "messages_read",
+          "reader_id": 1,
+          "other_id": 2
+        }
+      },
+      "user_status": {
+        "description": "Broadcast to both participants when a user connects or disconnects",
+        "payload": {
+          "event": "user_status",
+          "user_id": 1,
+          "status": "online | offline"
+        }
+      }
+    }
+  },
+  "RoomChatConsumer": {
+    "description": "Group/room chat with role-based features",
+    "url_pattern": "ws://<host>/ws/room/<room_uid>/",
+    "close_codes": {
+      "4401": "Unauthenticated user",
+      "4403": "User is not a member of the room",
+      "4404": "Room does not exist"
+    },
+    "actions": {
+      "send_message": {
+        "description": "Send a message to the room (no 'action' field needed)",
+        "payload": {
+          "message": "Hello room",
+          "message_type": "TEXT",
+          "file_data": "https://... or base64-encoded (optional)"
+        }
+      },
+      "mark_read": {
+        "description": "Mark room messages as read. Omit message_ids to mark all messages (except own) as read.",
+        "payload": {
+          "action": "mark_read",
+          "message_ids": [1, 2, 3]
+        }
+      },
+      "save_expense_report_create": {
+        "description": "Create a new expense report (all data fields optional except amount defaults to 0)",
+        "payload": {
+          "action": "save_expense_report",
+          "data": {
+            "amount": 150.00,
+            "currency": "USD",
+            "description": "Office supplies",
+            "expense_date": "2026-03-11",
+            "supplier": "supplier-uuid-string",
+            "category": "chart-of-account-uuid-string",
+            "reference_number": "REF-001"
+          }
+        }
+      },
+      "save_expense_report_update": {
+        "description": "Update an existing DRAFT expense report. Only sent fields are updated.",
+        "payload": {
+          "action": "save_expense_report",
+          "data": {
+            "report_uid": "existing-report-uuid-string (required for update)",
+            "amount": 200.00,
+            "currency": "USD",
+            "description": "Updated description",
+            "expense_date": "2026-03-15",
+            "supplier": "supplier-uuid-string",
+            "category": "chart-of-account-uuid-string",
+            "reference_number": "REF-002"
+          }
+        }
+      },
+      "change_expense_report_status": {
+        "description": "Change the status of an expense report. Role and current status restrictions apply.",
+        "payload": {
+          "action": "change_expense_report_status",
+          "data": {
+            "report_uid": "report-uuid-string (required)",
+            "amount": 150.00,
+            "currency": "USD",
+            "description": "Office supplies",
+            "expense_date": "2026-03-11",
+            "supplier": "supplier-uuid-string",
+            "category": "chart-of-account-uuid-string",
+            "reference_number": "REF-001",
+            "new_status": "SUBMITTED",
+            "deposit_to": "account-uuid-string or null",
+            "payment_method": "payment-method-string or null"
+          }
+        },
+        "allowed_transitions": {
+          "SUBMITTED": {
+            "who": "Report owner",
+            "from_status": ["DRAFT"]
+          },
+          "APPROVED": {
+            "who": "APPROVER role",
+            "from_status": ["SUBMITTED", "REQUEST_CHANGES", "REVIEW"]
+          },
+          "REJECTED": {
+            "who": "APPROVER role",
+            "from_status": ["SUBMITTED", "REQUEST_CHANGES", "REVIEW"]
+          },
+          "REVIEW": {
+            "who": "MODERATOR role",
+            "from_status": ["SUBMITTED", "REQUEST_CHANGES", "REVIEW"]
+          },
+          "REQUEST_CHANGES": {
+            "who": "MODERATOR role",
+            "from_status": ["SUBMITTED", "REQUEST_CHANGES", "REVIEW"]
+          },
+          "PAID": {
+            "who": "FINANCE role",
+            "from_status": ["APPROVED"]
+          }
+        }
+      }
+    },
+    "server_sent_events": {
+      "room_joined": {
+        "description": "Sent only to the connecting user immediately after a successful connection",
+        "payload": {
+          "event": "room_joined",
+          "room_id": "room-uuid-string",
+          "room_name": "My Room",
+          "room_slug": "my-room",
+          "your_role": "MEMBER | MODERATOR | APPROVER | FINANCE"
+        }
+      },
+      "room_user_status": {
+        "description": "Broadcast to all room members when any member joins or leaves",
+        "payload": {
+          "event": "room_user_status",
+          "room_name": "My Room",
+          "room_slug": "my-room",
+          "user_uid": "user-uuid-string",
+          "first_name": "John",
+          "user_email": "john@example.com",
+          "role": "MEMBER | MODERATOR | APPROVER | FINANCE",
+          "status": "joined | left"
+        }
+      },
+      "room_message": {
+        "description": "Broadcast to all room members when a new message is sent",
+        "payload": {
+          "event": "room_message",
+          "id": 101,
+          "sender": {
+            "id": 1,
+            "uid": "sender-user-uuid",
+            "first_name": "John",
+            "last_name": "Smith",
+            "role": "MEMBER",
+            "image": "https://... or null"
+          },
+          "content": "Hello room",
+          "message_type": "TEXT",
+          "file_data": "https://... or null",
+          "created_time": "2026-04-22T10:30:00.000000+00:00",
+          "read_count": 0,
+          "read_by": []
+        }
+      },
+      "room_messages_read": {
+        "description": "Broadcast to all room members when messages are marked as read",
+        "payload": {
+          "event": "room_messages_read",
+          "reader": {
+            "user_id": 1,
+            "user_uid": "reader-user-uuid",
+            "first_name": "John"
+          },
+          "message_ids": [1, 2, 3],
+          "read_info": {
+            "1": {
+              "read_count": 2,
+              "read_by": [
+                { "user_id": 1, "read_at": "2026-04-22T10:31:00+00:00" }
+              ]
+            },
+            "2": {
+              "read_count": 1,
+              "read_by": [
+                { "user_id": 1, "read_at": "2026-04-22T10:31:00+00:00" }
+              ]
+            }
+          }
+        }
+      },
+      "expense_report_saved": {
+        "description": "Broadcast to all room members when an expense report is created or updated",
+        "payload": {
+          "event": "expense_report_saved",
+          "room_name": "My Room",
+          "room_slug": "my-room",
+          "user_uid": "user-uuid-string",
+          "first_name": "John",
+          "last_name": "Smith",
+          "user_email": "john@example.com",
+          "role": "MEMBER",
+          "file_path": "https://... or null",
+          "result": {}
+        }
+      },
+      "expense_report_status_changed": {
+        "description": "Broadcast to all room members when an expense report status changes",
+        "payload": {
+          "event": "expense_report_status_changed",
+          "room_name": "My Room",
+          "room_slug": "my-room",
+          "user_uid": "user-uuid-string",
+          "first_name": "John",
+          "last_name": "Smith",
+          "user_email": "john@example.com",
+          "role": "APPROVER",
+          "deposit_to": "account-uuid-string or null",
+          "payment_method": "payment-method-string or null",
+          "result": {}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Total payroll cost report</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 14mm 12mm 16mm 12mm;
+
+            @bottom-left {
+                content: "{{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+            @bottom-right {
+                content: counter(page);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 8pt;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .company { text-align: center; font-size: 10pt; margin-bottom: 6px; }
+
+        h1 {
+            text-align: center;
+            font-size: 15pt;
+            font-weight: normal;
+            margin: 0 0 6px 0;
+        }
+
+        .subtitle { text-align: center; font-size: 9.5pt; margin-bottom: 16px; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th, td {
+            border: 1px solid #cfcfcf;
+            padding: 7px 10px;
+        }
+
+        thead th {
+            font-weight: normal;
+            color: #333;
+        }
+
+        .align-left { text-align: left; }
+        .align-right { text-align: right; }
+
+        /* Section headings and the final total are shaded; the lines that
+           explain them, including each Subtotal, sit on white. */
+        tr.group-row > td, tr.total-row > td { background-color: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <div class="company">{{ report.company_name }}</div>
+    <h1>{{ report.title }}</h1>
+    <div class="subtitle">{{ report.subtitle }}</div>
+
+    <table>
+        <thead>
+            <tr>
+                {% for column in report.columns %}
+                    <th class="align-{{ column.align }}">{{ column.label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.rows %}
+                <tr {% if row.kind == "group" %}class="group-row"{% elif row.kind == "total" %}class="total-row"{% endif %}>
+                    <td class="align-left">{{ row.label }}</td>
+                    <td class="align-right">
+                        {% if row.amount is not None %}{{ row.amount|report_money }}{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

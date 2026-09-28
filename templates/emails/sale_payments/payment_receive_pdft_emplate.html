@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #000;
+        font-size: 12px;
+      }
+      .container {
+        margin: auto;
+        background: #fff;
+        padding: 20px 40px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-top: 20px;
+      }
+      .header h2 {
+        color: #2579b7;
+        margin: 0;
+        font-size: 18px;
+      }
+      .company-info {
+        line-height: 1.6;
+      }
+      .info-section {
+        background-color: #eaf4fb;
+        padding: 15px;
+        margin: 30px 0;
+        display: flex;
+        justify-content: space-between;
+      }
+      .info-section div {
+        width: 48%;
+      }
+      .info-section strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+      .details {
+        background-color: #eaf4fb;
+        padding: 15px;
+        margin: 30px 0px;
+        display: flex;
+        justify-content: space-between;
+      }
+      .details div {
+        width: 48%;
+      }
+      .payment-receieved-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .payment-receieved-table th,
+      .payment-receieved-table td {
+        border-bottom: 1px solid #ddd;
+        padding: 10px;
+        text-align: left;
+      }
+      .payment-receieved-table th {
+        background-color: #fff;
+        font-weight: normal;
+      }
+      .payment-receieved-table td strong {
+        font-weight: bold;
+      }
+      .totals {
+        width: 100%;
+        text-align: right;
+        margin-top: 20px;
+      }
+      .totals div {
+        margin-bottom: 5px;
+      }
+      .total-bold {
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .notes,
+      .terms {
+        margin-top: 40px;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+      .notes h4,
+      .terms h4 {
+        font-size: 12px;
+        margin-bottom: 8px;
+        color: #2579b7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h2>{{title}}</h2><br>
+          <div class="company-info">
+            <strong>
+              {{ data.company.name }}<br />
+            </strong>
+            {{data.company.email}}<br/>
+            {{data.company.phone}}<br/>
+            {{data.company.legal_address if data.company.legal_address else ""}}
+          </div>
+        </div>
+      </div>
+
+      <!-- details -->
+      <div class="details">
+        <div>
+          <strong>Payment Information</strong><br />
+          Payment Received Date: {{ data.payment_received_date }}<br />
+          Reference Number: {{ data.reference_number }}<br />
+          Amount received: {{ data.total_received }}<br />
+        </div>
+
+        <div>
+          <strong>Payment Received</strong><br />
+          Received By:{{ data.customer.first_name if data.customer.first_name else "" }} {{ data.customer.middle_name if data.customer.middle_name else '' }} {{ data.customer.last_name if data.customer.last_name else '' }}<br />
+          Billing Address: {{ data.full_billing_address }}<br />
+          Email: {{ data.customer_email }}<br />
+          Deposit to: {{ data.deposit_to.title }}<br />
+          Payment Method: {{ data.payment_method.title }}<br />
+        </div>
+      </div>
+
+      <!-- Invoice items items -->
+      <table class="payment-receieved-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Invoice ID</th>
+            <th>Due Date</th>
+            <th>Original Amount</th>
+            <th>Open Balance</th>
+            <th>Payment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <h3>OUTSTANDING TRANSACTIONS</h3>
+          {% for sale_item in data.sale_items %}
+          <tr>
+            <td>{{ loop.index }}.</td>
+            <td>
+              <strong>{{sale_item.sale.invoice_id}}</strong>
+            </td>
+            <td>{{sale_item.sale.due_date}}</td>
+            <td>${{sale_item.total}}</td>
+            <td>${{sale_item.total}}</td>
+            <td>${{sale_item.used_total}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Credit note items -->
+      <table class="payment-receieved-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Note No.</th>
+            <th>Date</th>
+            <th>Original Amount</th>
+            <th>Open Balance</th>
+            <th>Payment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <h3 style="margin-top: 30px;">CREDITS</h3>
+          {% for credit_note_item in data.credit_note_items %}
+          <tr>
+            <td>{{ loop.index }}.</td>
+            <td>
+              <strong>{{credit_note_item.credit_note.credit_note_number}}</strong>
+            </td>
+            <td>{{credit_note_item.credit_note.date}}</td>
+            <td>${{credit_note_item.total}}</td>
+            <td>${{credit_note_item.total}}</td>
+            <td>${{credit_note_item.used_total}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- totals -->
+      <div class="totals">
+        <div>Amount Apply: ${{data.total_received}}</div>
+        <div>Amount to Credit: ${{data.amount_to_credit}}</div>
+      </div>
+
+      <div class="terms">
+        <h4>Terms & Conditions</h4>
+        {{data.description}}
+      </div>
+    </div>
+  </body>
+</html>

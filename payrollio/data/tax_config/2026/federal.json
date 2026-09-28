@@ -1,0 +1,569 @@
+{
+  "ssRate": 0.062,
+  "ssWageBase": 184500,
+  "medicareRate": 0.0145,
+  "addMedicareRate": 0.009,
+  "addMedicareThreshold": 200000,
+  "futaRate": 0.006,
+  "futaGrossRate": 0.06,
+  "futaDefaultCreditRate": 0.054,
+  "futaWageBase": 7000,
+  "standardDeduction": {
+    "single": 16100,
+    "married": 32200,
+    "mfj": 32200,
+    "mfs": 16100,
+    "hoh": 24150
+  },
+  "brackets": {
+    "single": [
+      [
+        0,
+        12400,
+        0.1
+      ],
+      [
+        12400,
+        50400,
+        0.12
+      ],
+      [
+        50400,
+        105700,
+        0.22
+      ],
+      [
+        105700,
+        201775,
+        0.24
+      ],
+      [
+        201775,
+        256225,
+        0.32
+      ],
+      [
+        256225,
+        640600,
+        0.35
+      ],
+      [
+        640600,
+        null,
+        0.37
+      ]
+    ],
+    "mfs": [
+      [
+        0,
+        12400,
+        0.1
+      ],
+      [
+        12400,
+        50400,
+        0.12
+      ],
+      [
+        50400,
+        105700,
+        0.22
+      ],
+      [
+        105700,
+        201775,
+        0.24
+      ],
+      [
+        201775,
+        256225,
+        0.32
+      ],
+      [
+        256225,
+        384350,
+        0.35
+      ],
+      [
+        384350,
+        null,
+        0.37
+      ]
+    ],
+    "married": [
+      [
+        0,
+        24800,
+        0.1
+      ],
+      [
+        24800,
+        100800,
+        0.12
+      ],
+      [
+        100800,
+        211400,
+        0.22
+      ],
+      [
+        211400,
+        403550,
+        0.24
+      ],
+      [
+        403550,
+        512450,
+        0.32
+      ],
+      [
+        512450,
+        768700,
+        0.35
+      ],
+      [
+        768700,
+        null,
+        0.37
+      ]
+    ],
+    "mfj": [
+      [
+        0,
+        24800,
+        0.1
+      ],
+      [
+        24800,
+        100800,
+        0.12
+      ],
+      [
+        100800,
+        211400,
+        0.22
+      ],
+      [
+        211400,
+        403550,
+        0.24
+      ],
+      [
+        403550,
+        512450,
+        0.32
+      ],
+      [
+        512450,
+        768700,
+        0.35
+      ],
+      [
+        768700,
+        null,
+        0.37
+      ]
+    ],
+    "hoh": [
+      [
+        0,
+        17700,
+        0.1
+      ],
+      [
+        17700,
+        67450,
+        0.12
+      ],
+      [
+        67450,
+        105700,
+        0.22
+      ],
+      [
+        105700,
+        201775,
+        0.24
+      ],
+      [
+        201775,
+        256200,
+        0.32
+      ],
+      [
+        256200,
+        640600,
+        0.35
+      ],
+      [
+        640600,
+        null,
+        0.37
+      ]
+    ]
+  },
+  "supplementalRate": 0.22,
+  "highSupplementalRate": 0.37,
+  "highSupplementalThreshold": 1000000,
+  "percentageMethodTables": {
+    "standard": {
+      "married": [
+        {
+          "atLeast": 0,
+          "lessThan": 19300,
+          "subtract": 0,
+          "rate": 0,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 19300,
+          "lessThan": 44100,
+          "subtract": 19300,
+          "rate": 0.1,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 44100,
+          "lessThan": 120100,
+          "subtract": 44100,
+          "rate": 0.12,
+          "baseTax": 2480
+        },
+        {
+          "atLeast": 120100,
+          "lessThan": 230700,
+          "subtract": 120100,
+          "rate": 0.22,
+          "baseTax": 11600
+        },
+        {
+          "atLeast": 230700,
+          "lessThan": 422850,
+          "subtract": 230700,
+          "rate": 0.24,
+          "baseTax": 35932
+        },
+        {
+          "atLeast": 422850,
+          "lessThan": 531750,
+          "subtract": 422850,
+          "rate": 0.32,
+          "baseTax": 82048
+        },
+        {
+          "atLeast": 531750,
+          "lessThan": 788000,
+          "subtract": 531750,
+          "rate": 0.35,
+          "baseTax": 116896
+        },
+        {
+          "atLeast": 788000,
+          "lessThan": null,
+          "subtract": 788000,
+          "rate": 0.37,
+          "baseTax": 206583.5
+        }
+      ],
+      "single": [
+        {
+          "atLeast": 0,
+          "lessThan": 7500,
+          "subtract": 0,
+          "rate": 0,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 7500,
+          "lessThan": 19900,
+          "subtract": 7500,
+          "rate": 0.1,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 19900,
+          "lessThan": 57900,
+          "subtract": 19900,
+          "rate": 0.12,
+          "baseTax": 1240
+        },
+        {
+          "atLeast": 57900,
+          "lessThan": 113200,
+          "subtract": 57900,
+          "rate": 0.22,
+          "baseTax": 5800
+        },
+        {
+          "atLeast": 113200,
+          "lessThan": 209275,
+          "subtract": 113200,
+          "rate": 0.24,
+          "baseTax": 17966
+        },
+        {
+          "atLeast": 209275,
+          "lessThan": 263725,
+          "subtract": 209275,
+          "rate": 0.32,
+          "baseTax": 41024
+        },
+        {
+          "atLeast": 263725,
+          "lessThan": 648100,
+          "subtract": 263725,
+          "rate": 0.35,
+          "baseTax": 58448
+        },
+        {
+          "atLeast": 648100,
+          "lessThan": null,
+          "subtract": 648100,
+          "rate": 0.37,
+          "baseTax": 192979.25
+        }
+      ],
+      "hoh": [
+        {
+          "atLeast": 0,
+          "lessThan": 15550,
+          "subtract": 0,
+          "rate": 0,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 15550,
+          "lessThan": 33250,
+          "subtract": 15550,
+          "rate": 0.1,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 33250,
+          "lessThan": 83000,
+          "subtract": 33250,
+          "rate": 0.12,
+          "baseTax": 1770
+        },
+        {
+          "atLeast": 83000,
+          "lessThan": 121250,
+          "subtract": 83000,
+          "rate": 0.22,
+          "baseTax": 7740
+        },
+        {
+          "atLeast": 121250,
+          "lessThan": 217300,
+          "subtract": 121250,
+          "rate": 0.24,
+          "baseTax": 16155
+        },
+        {
+          "atLeast": 217300,
+          "lessThan": 271750,
+          "subtract": 217300,
+          "rate": 0.32,
+          "baseTax": 39207
+        },
+        {
+          "atLeast": 271750,
+          "lessThan": 656150,
+          "subtract": 271750,
+          "rate": 0.35,
+          "baseTax": 56631
+        },
+        {
+          "atLeast": 656150,
+          "lessThan": null,
+          "subtract": 656150,
+          "rate": 0.37,
+          "baseTax": 191171
+        }
+      ]
+    },
+    "step2": {
+      "married": [
+        {
+          "atLeast": 0,
+          "lessThan": 16100,
+          "subtract": 0,
+          "rate": 0,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 16100,
+          "lessThan": 28500,
+          "subtract": 16100,
+          "rate": 0.1,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 28500,
+          "lessThan": 66500,
+          "subtract": 28500,
+          "rate": 0.12,
+          "baseTax": 1240
+        },
+        {
+          "atLeast": 66500,
+          "lessThan": 121800,
+          "subtract": 66500,
+          "rate": 0.22,
+          "baseTax": 5800
+        },
+        {
+          "atLeast": 121800,
+          "lessThan": 217875,
+          "subtract": 121800,
+          "rate": 0.24,
+          "baseTax": 17966
+        },
+        {
+          "atLeast": 217875,
+          "lessThan": 272325,
+          "subtract": 217875,
+          "rate": 0.32,
+          "baseTax": 41024
+        },
+        {
+          "atLeast": 272325,
+          "lessThan": 400450,
+          "subtract": 272325,
+          "rate": 0.35,
+          "baseTax": 58448
+        },
+        {
+          "atLeast": 400450,
+          "lessThan": null,
+          "subtract": 400450,
+          "rate": 0.37,
+          "baseTax": 103291.75
+        }
+      ],
+      "single": [
+        {
+          "atLeast": 0,
+          "lessThan": 8050,
+          "subtract": 0,
+          "rate": 0,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 8050,
+          "lessThan": 14250,
+          "subtract": 8050,
+          "rate": 0.1,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 14250,
+          "lessThan": 33250,
+          "subtract": 14250,
+          "rate": 0.12,
+          "baseTax": 620
+        },
+        {
+          "atLeast": 33250,
+          "lessThan": 60900,
+          "subtract": 33250,
+          "rate": 0.22,
+          "baseTax": 2900
+        },
+        {
+          "atLeast": 60900,
+          "lessThan": 108938,
+          "subtract": 60900,
+          "rate": 0.24,
+          "baseTax": 8983
+        },
+        {
+          "atLeast": 108938,
+          "lessThan": 136163,
+          "subtract": 108938,
+          "rate": 0.32,
+          "baseTax": 20512
+        },
+        {
+          "atLeast": 136163,
+          "lessThan": 328350,
+          "subtract": 136163,
+          "rate": 0.35,
+          "baseTax": 29224
+        },
+        {
+          "atLeast": 328350,
+          "lessThan": null,
+          "subtract": 328350,
+          "rate": 0.37,
+          "baseTax": 96489.63
+        }
+      ],
+      "hoh": [
+        {
+          "atLeast": 0,
+          "lessThan": 12075,
+          "subtract": 0,
+          "rate": 0,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 12075,
+          "lessThan": 20925,
+          "subtract": 12075,
+          "rate": 0.1,
+          "baseTax": 0
+        },
+        {
+          "atLeast": 20925,
+          "lessThan": 45800,
+          "subtract": 20925,
+          "rate": 0.12,
+          "baseTax": 885
+        },
+        {
+          "atLeast": 45800,
+          "lessThan": 64925,
+          "subtract": 45800,
+          "rate": 0.22,
+          "baseTax": 3870
+        },
+        {
+          "atLeast": 64925,
+          "lessThan": 112950,
+          "subtract": 64925,
+          "rate": 0.24,
+          "baseTax": 8077.5
+        },
+        {
+          "atLeast": 112950,
+          "lessThan": 140175,
+          "subtract": 112950,
+          "rate": 0.32,
+          "baseTax": 19603.5
+        },
+        {
+          "atLeast": 140175,
+          "lessThan": 332375,
+          "subtract": 140175,
+          "rate": 0.35,
+          "baseTax": 28315.5
+        },
+        {
+          "atLeast": 332375,
+          "lessThan": null,
+          "subtract": 332375,
+          "rate": 0.37,
+          "baseTax": 95585.5
+        }
+      ]
+    }
+  },
+  "step4bAdjustmentWhenStep2Unchecked": {
+    "married": 12900,
+    "single": 8600,
+    "hoh": 8600,
+    "mfj": 12900,
+    "mfs": 8600
+  }
+}

@@ -1,0 +1,157 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Employee details report</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 14mm 12mm 16mm 12mm;
+
+            @bottom-left {
+                content: "{{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+            @bottom-right {
+                content: counter(page);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 7.5pt;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .company { text-align: center; font-size: 10pt; margin-bottom: 6px; }
+
+        h1 {
+            text-align: center;
+            font-size: 15pt;
+            font-weight: normal;
+            margin: 0 0 6px 0;
+        }
+
+        .subtitle { text-align: center; font-size: 9.5pt; margin-bottom: 16px; }
+
+        table.report { width: 100%; border-collapse: collapse; }
+
+        table.report > thead > tr > th {
+            border: 1px solid #cfcfcf;
+            padding: 7px 6px;
+            text-align: left;
+            font-weight: normal;
+            color: #333;
+        }
+
+        table.report > tbody > tr > td {
+            border: 1px solid #cfcfcf;
+            padding: 7px 6px;
+            vertical-align: top;
+        }
+
+        /* An employee's block must not split across pages mid-row. */
+        table.report > tbody > tr { page-break-inside: avoid; }
+
+        .personal-line { margin-bottom: 4px; }
+        .name { margin-bottom: 4px; }
+
+        /* Label/value pairs inside the Pay info and Tax info cells. A nested
+           table keeps the two columns aligned down the whole report rather
+           than per cell. */
+        table.pairs { width: 100%; border-collapse: collapse; }
+        table.pairs td {
+            border: 0;
+            padding: 0 0 3px 0;
+            vertical-align: top;
+        }
+        table.pairs td.p-label { padding-right: 8px; white-space: nowrap; }
+
+        col.c-personal { width: 17%; }
+        col.c-hire { width: 9%; }
+        col.c-location { width: 15%; }
+        col.c-pay { width: 24%; }
+        col.c-tax { width: 24%; }
+        col.c-notes { width: 11%; }
+    </style>
+</head>
+<body>
+    <div class="company">{{ report.company_name }}</div>
+    <h1>{{ report.title }}</h1>
+    <div class="subtitle">{{ report.subtitle }}</div>
+
+    <table class="report">
+        <colgroup>
+            <col class="c-personal" /><col class="c-hire" /><col class="c-location" />
+            <col class="c-pay" /><col class="c-tax" /><col class="c-notes" />
+        </colgroup>
+        <thead>
+            <tr>
+                {% for column in report.columns %}
+                    <th>{{ column.label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.rows %}
+                <tr>
+                    <td>
+                        <div class="name">{{ row.name }}</div>
+                        {% if row.address %}
+                            <div class="personal-line">{{ row.address }}</div>
+                        {% endif %}
+                        {% if row.date_of_birth %}
+                            <div class="personal-line">DOB: {{ row.date_of_birth }}</div>
+                        {% endif %}
+                        {% if row.gender %}
+                            <div class="personal-line">Gender: {{ row.gender }}</div>
+                        {% endif %}
+                    </td>
+
+                    <td>{{ row.hire_date|date:"m/d/Y" }}</td>
+
+                    <td>{{ row.work_location }}</td>
+
+                    <td>
+                        <table class="pairs">
+                            {% for pair in row.pay_info %}
+                                <tr>
+                                    <td class="p-label">{{ pair.label }}</td>
+                                    <td>
+                                        {% for line in pair.value %}
+                                            {{ line }}{% if not forloop.last %}<br />{% endif %}
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+
+                    <td>
+                        <table class="pairs">
+                            {% for pair in row.tax_info %}
+                                <tr>
+                                    <td class="p-label">{{ pair.label }}</td>
+                                    <td>
+                                        {% for line in pair.value %}
+                                            {{ line }}{% if not forloop.last %}<br />{% endif %}
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+
+                    <td>{{ row.notes }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

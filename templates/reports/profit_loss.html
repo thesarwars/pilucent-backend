@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Profit and Loss Report</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        font-size: 14px;
+        color: #000;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 800px;
+        margin: auto;
+      }
+      h1{
+        font-size: 25px;
+      }
+      h2{
+        font-size: 20px;
+      }
+      h1,
+      h2 {
+        text-align: center;
+        margin-bottom: 5px;
+      }
+      .header{
+        text-align: center;
+      }
+      .section {
+        margin-top: 16px;
+      }
+
+      .section h3 {
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+
+      table td,
+      table th {
+        padding: 6px;
+        text-align: left;
+      }
+
+      .total {
+        font-weight: bold;
+      }
+
+      .text-right {
+        text-align: right;
+      }
+
+      .summary {
+        font-size: 15px;
+        font-weight: bold;
+        margin: 12px 0;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid #ccc;
+        margin: 6px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Profit and Loss Report</h1>
+        <p>{{company_name}}<br /> {% if as_of != None %} As of {{as_of.start_date}} to {{as_of.end_date}} {% else %} All Dates {% endif %}</p>
+      </div>
+      <div><h2 class="text-right">Total</h2></div>
+      <hr />
+
+      <!-- Income -->
+      <div class="section">
+        <h3>Income</h3>
+        <table>
+          {% for income_account in data.income_accounts %}
+          <tr>
+            <td>{{income_account.title}}</td>
+            <td class="text-right">${{income_account.opening_balance}}</td>
+          </tr>
+          {% endfor %}
+          <tr class="total"><td>Total Income</td><td class="text-right">${% if overview.total_income == None %}0 {% else %} {{overview.total_income}} {% endif %}</td></tr>
+        </table>
+      </div>
+
+      <!-- COGS -->
+      <div class="section">
+        <h3>Cost of Goods Sold</h3>
+        <table>
+          {% for cost_of_good_sold_account in data.cost_of_good_sold_accounts %}
+          <tr><td>{{cost_of_good_sold_account.title}}</td><td class="text-right">${{cost_of_good_sold_account.opening_balance}}</td></tr>
+          {% endfor %}
+          <tr class="total"><td>Total Cost of Goods Sold</td><td class="text-right">${% if overview.total_cost_of_goods == None %}0 {% else %} {{overview.total_cost_of_goods}} {% endif %}</td></tr>
+        </table>
+      </div>
+
+      <!-- Gross Profit -->
+      <div class="summary">
+        <table>
+          <tr class="total"><td>GROSS PROFIT:</td><td class="text-right">${{overview.total_gross_profit}}</td></tr>
+        </table>
+      </div>
+
+      <!-- Expenses -->
+      <div class="section">
+        <h3>Expenses</h3>
+        <table>
+          {% for expense_account in data.expense_accounts %}
+          <tr><td>{{expense_account.title}}</td><td class="text-right">${{expense_account.opening_balance}}</td></tr>
+          {% endfor %}
+          <tr class="total"><td>Total Expenses</td><td class="text-right">${% if overview.total_expenses == None %}0 {% else %} {{overview.total_expenses}} {% endif %}</td></tr>
+        </table>
+      </div>
+
+      <!-- Net Operating Income -->
+      <div class="summary">
+        <table>
+          <tr><td>NET OPERATING INCOME:</td><td class="text-right">${{overview.total_net_operating_income}}</td></tr>
+        </table>
+      </div>
+
+      <!-- Other Income -->
+      <div class="section">
+        <h3>Other Income</h3>
+        <table>
+          {% for other_income_account in data.other_income_accounts %}
+          <tr><td>{{other_income_account.title}}</td><td class="text-right">${{other_income_account.opening_balance}}</td></tr>
+          {% endfor %}
+          <tr class="total"><td>Total Other Income</td><td class="text-right">${% if overview.total_other_income == None %}0 {% else %} {{overview.total_other_income}} {% endif %}</td></tr>
+        </table>
+      </div>
+
+      <!-- Other Expenses -->
+      <div class="section">
+        <h3>Other Expenses</h3>
+        <table>
+          {% for other_expense_account in data.other_expense_accounts %}
+          <tr><td>{{other_expense_account.title}}</td><td class="text-right">${{other_expense_account.opening_balance}}</td></tr>
+          {% endfor %}
+          <tr class="total"><td>Total Other Expenses</td><td class="text-right">${% if overview.total_other_expenses == None %}0 {% else %} {{overview.total_other_expenses}} {% endif %}</td></tr>
+        </table>
+      </div>
+
+      <!-- Net Other Income -->
+      <div class="summary">
+        <table>
+          <tr><td>NET OTHER INCOME:</td><td class="text-right">${{overview.total_net_other_income}}</td></tr>
+        </table>
+      </div>
+
+      <!-- Net Income -->
+      <div class="summary">
+        <table>
+          <tr><td>NET INCOME:</td><td class="text-right">${{overview.total_net_income}}</td></tr>
+        </table>
+      </div>
+
+      <hr/>
+      <div class="text-right">
+        <small>Generated on {{date_time}}</small>
+      </div>
+    </div>
+  </body>
+</html>

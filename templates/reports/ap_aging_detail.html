@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A/P Aging Detail</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        padding: 15px;
+        margin: 0;
+        color: #222;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .header h1 {
+        font-size: 25px;
+        color: black;
+      }
+      .header p {
+        margin-top: 5px;
+        color: #444;
+        font-size: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        font-size: 12px;
+      }
+      th,
+      td {
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        text-align: left;
+      }
+      th {
+        background-color: #eaeaea;
+      }
+      td.num,
+      th.num {
+        text-align: right;
+      }
+      tr.band td {
+        background-color: #eaeaea;
+        font-weight: bold;
+      }
+      tr.subtotal td {
+        background-color: #f8f8f8;
+        font-weight: bold;
+      }
+      tr.grand-total td {
+        background-color: #f1f1f1;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>A/P Aging Detail Report</h1>
+      <p>
+        {{company_name}}<br />
+        As of {{ report_as_of }}
+      </p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          {% for field in fields %}
+          <th class="{% if field in ['AMOUNT', 'OPEN BALANCE', 'PAST DUE'] %}num{% endif %}">{{field}}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for band in data %}
+        <tr class="band">
+          <td colspan="9">{{band.label}} ({{band.count}})</td>
+        </tr>
+        {% for row in band.rows %}
+        <tr>
+          <td>{{row.date or ''}}</td>
+          <td>{{row.transaction_type}}</td>
+          <td>{{row.num or ''}}</td>
+          <td>{{row.vendor_display_name or ''}}</td>
+          <td>{{row.store_full_name or ''}}</td>
+          <td>{{row.due_date or ''}}</td>
+          <td class="num">{% if row.past_due != None %}{{row.past_due}}{% endif %}</td>
+          <td class="num">{{ "{:,.2f}".format(row.amount) }}</td>
+          <td class="num">{{ "{:,.2f}".format(row.open_balance) }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="subtotal">
+          <td colspan="7">Total for {{band.label}}</td>
+          <td class="num">${{ "{:,.2f}".format(band.subtotal.amount) }}</td>
+          <td class="num">${{ "{:,.2f}".format(band.subtotal.open_balance) }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="grand-total">
+          <td colspan="7">TOTAL</td>
+          <td class="num">${{ "{:,.2f}".format(overview.amount) }}</td>
+          <td class="num">${{ "{:,.2f}".format(overview.open_balance) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

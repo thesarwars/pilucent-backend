@@ -1,0 +1,93 @@
+from fileroomio.choices import FileItemKindChoices
+
+
+def get_file_kind(extension):
+    return {
+        # Images
+        ".jpg": FileItemKindChoices.IMAGE,
+        ".jpeg": FileItemKindChoices.IMAGE,
+        ".png": FileItemKindChoices.IMAGE,
+        ".gif": FileItemKindChoices.IMAGE,
+        ".bmp": FileItemKindChoices.IMAGE,
+        ".webp": FileItemKindChoices.IMAGE,
+        ".tiff": FileItemKindChoices.IMAGE,
+        ".svg": FileItemKindChoices.IMAGE,
+        ".heic": FileItemKindChoices.IMAGE,
+        ".heif": FileItemKindChoices.IMAGE,
+        ".ico": FileItemKindChoices.IMAGE,
+        ".avif": FileItemKindChoices.IMAGE,
+        ".jfif": FileItemKindChoices.IMAGE,
+        ".exif": FileItemKindChoices.IMAGE,
+        ".raw": FileItemKindChoices.IMAGE,
+        ".arw": FileItemKindChoices.IMAGE,
+        ".cr2": FileItemKindChoices.IMAGE,
+        # Videos
+        ".mp4": FileItemKindChoices.VIDEO,
+        ".mov": FileItemKindChoices.VIDEO,
+        ".avi": FileItemKindChoices.VIDEO,
+        ".mkv": FileItemKindChoices.VIDEO,
+        ".flv": FileItemKindChoices.VIDEO,
+        ".wmv": FileItemKindChoices.VIDEO,
+        ".webm": FileItemKindChoices.VIDEO,
+        ".mpeg": FileItemKindChoices.VIDEO,
+        ".mpg": FileItemKindChoices.VIDEO,
+        ".3gp": FileItemKindChoices.VIDEO,
+        ".m4v": FileItemKindChoices.VIDEO,
+        ".vob": FileItemKindChoices.VIDEO,
+        ".ogv": FileItemKindChoices.VIDEO,
+        ".mts": FileItemKindChoices.VIDEO,
+        # PDFs
+        ".pdf": FileItemKindChoices.PDF,
+        ".epub": FileItemKindChoices.PDF,
+        ".xps": FileItemKindChoices.PDF,
+        ".djvu": FileItemKindChoices.PDF,
+        ".cbz": FileItemKindChoices.PDF,
+        ".cbr": FileItemKindChoices.PDF,
+        ".mobi": FileItemKindChoices.PDF,
+        # Word Docs
+        ".doc": FileItemKindChoices.WORD,
+        ".docx": FileItemKindChoices.WORD,
+        ".odt": FileItemKindChoices.WORD,
+        ".wps": FileItemKindChoices.WORD,
+        # Excel Files
+        ".xls": FileItemKindChoices.EXCEL,
+        ".xlsx": FileItemKindChoices.EXCEL,
+        ".csv": FileItemKindChoices.EXCEL,
+        ".ods": FileItemKindChoices.EXCEL,
+        # PowerPoint
+        ".ppt": FileItemKindChoices.PPT,
+        ".pptx": FileItemKindChoices.PPT,
+        # Text
+        ".txt": FileItemKindChoices.TEXT,
+        ".md": FileItemKindChoices.TEXT,
+        ".rtf": FileItemKindChoices.TEXT,
+        # Archives
+        ".zip": FileItemKindChoices.ARCHIVE,
+        ".rar": FileItemKindChoices.ARCHIVE,
+        ".7z": FileItemKindChoices.ARCHIVE,
+        ".tar": FileItemKindChoices.ARCHIVE,
+        ".gz": FileItemKindChoices.ARCHIVE,
+        # Audio
+        ".mp3": FileItemKindChoices.AUDIO,
+        ".wav": FileItemKindChoices.AUDIO,
+        ".aac": FileItemKindChoices.AUDIO,
+        ".ogg": FileItemKindChoices.AUDIO,
+        ".flac": FileItemKindChoices.AUDIO,
+        # Code / Script / Markup
+        ".html": FileItemKindChoices.SCRIPT,
+        ".htm": FileItemKindChoices.SCRIPT,
+        ".py": FileItemKindChoices.SCRIPT,
+        ".js": FileItemKindChoices.SCRIPT,
+        ".json": FileItemKindChoices.SCRIPT,
+        ".ts": FileItemKindChoices.SCRIPT,
+        ".xml": FileItemKindChoices.SCRIPT,
+        ".java": FileItemKindChoices.SCRIPT,
+        ".cpp": FileItemKindChoices.SCRIPT,
+        ".c": FileItemKindChoices.SCRIPT,
+        ".cs": FileItemKindChoices.SCRIPT,
+        ".php": FileItemKindChoices.SCRIPT,
+        ".rb": FileItemKindChoices.SCRIPT,
+        ".go": FileItemKindChoices.SCRIPT,
+        ".sh": FileItemKindChoices.SCRIPT,
+    }.get(extension, FileItemKindChoices.OTHER)
+

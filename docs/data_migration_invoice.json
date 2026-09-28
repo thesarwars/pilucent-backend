@@ -1,0 +1,42 @@
+{
+    "json_data": [
+        {
+            "invoice number": "INV-001",
+            "invoice date": "01/15/2024",
+            "due date": "02/15/2024",
+            "customer name": "Acme Corp",
+            "customer email": "acme@example.com",
+            "product name": "Consulting Services",
+            "quantity": "2",
+            "unit price": "500.00",
+            "amount": "1000.00",
+            "tax code": "GST10",
+            "account name": "Service Revenue",
+            "memo": "January consulting",
+            "reference number": "REF-001",
+            "currency": "USD"
+        },
+        {
+            "invoice number": "INV-001",
+            "invoice date": "01/15/2024",
+            "due date": "02/15/2024",
+            "customer name": "Acme Corp",
+            "customer email": "acme@example.com",
+            "product name": "Software License",
+            "quantity": "1",
+            "unit price": "200.00",
+            "amount": "200.00",
+            "tax code": "GST10",
+            "account name": "Service Revenue",
+            "memo": "License fee",
+            "reference number": "REF-001",
+            "currency": "USD"
+        }
+    ],
+    "data_type": "invoices",
+    "date_format": "MM/DD/YYYY",
+    "currency": "USD",
+    "decimal_format": "1,234.56",
+    "duplicate_handling": "skip_duplicates",
+    "has_header_row": true
+}

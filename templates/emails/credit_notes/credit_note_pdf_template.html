@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #000;
+        font-size: 12px;
+      }
+      .container {
+        margin: auto;
+        background: #fff;
+        padding: 20px 40px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-top: 20px;
+      }
+      .header h2 {
+        color: #2579b7;
+        margin: 0;
+        font-size: 18px;
+      }
+      .company-info {
+        line-height: 1.6;
+      }
+      .info-section {
+        background-color: #eaf4fb;
+        padding: 15px;
+        margin: 30px 0;
+        display: flex;
+        justify-content: space-between;
+      }
+      .info-section div {
+        width: 48%;
+      }
+      .info-section strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+      .details {
+        background-color: #eaf4fb;
+        padding: 15px;
+        margin: 30px 0px;
+        display: flex;
+        justify-content: space-between;
+      }
+      .details div {
+        width: 48%;
+      }
+      .credit-note-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .credit-note-table th,
+      .credit-note-table td {
+        border-bottom: 1px solid #ddd;
+        padding: 10px;
+        text-align: left;
+      }
+      .credit-note-table th {
+        background-color: #fff;
+        font-weight: normal;
+      }
+      .credit-note-table td strong {
+        font-weight: bold;
+      }
+      .totals {
+        width: 100%;
+        text-align: right;
+        margin-top: 20px;
+      }
+      .totals div {
+        margin-bottom: 5px;
+      }
+      .total-bold {
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .notes,
+      .terms {
+        margin-top: 40px;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+      .notes h4,
+      .terms h4 {
+        font-size: 12px;
+        margin-bottom: 8px;
+        color: #2579b7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h2>{{title}}</h2><br>
+          <div class="company-info">
+            <strong>
+              {{ data.company.name }}<br />
+            </strong>
+            {{data.company.email}}<br/>
+            {{data.company.phone}}<br/>
+            {{data.company.legal_address if data.company.legal_address else ""}}
+          </div>
+        </div>
+      </div>
+
+      <!-- details -->
+      <div class="details">
+        <div>
+          <strong>Credit Information</strong><br />
+          Received Date: {{ data.credit_note.date }}<br />
+          Reference Number: {{ data.credit_note.credit_note_number }}<br />
+          Amount received: {{ data.credit_note.total }}<br />
+        </div>
+
+        <div>
+          <strong>Credit Receive Information</strong><br />
+          Received By:{{ data.customer.first_name if data.customer.first_name else "" }} {{ data.customer.middle_name if data.customer.middle_name else '' }} {{ data.customer.last_name if data.customer.last_name else '' }}<br />
+          Billing Address: {{ data.full_address }}<br />
+          Email: {{ data.customer_email }}<br />
+        </div>
+      </div>
+
+      <!-- Product items -->
+      <table class="credit-note-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Tax</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <h3>PRODUCT/SERVICE</h3>
+          {% for credit_note_item in data.credit_note_items %}
+          <tr>
+            <td>{{ loop.index }}.</td>
+            <td>
+              <strong>{{credit_note_item.product.title}}</strong>
+            </td>
+            <td>{{credit_note_item.quantity}}</td>
+            <td>${{credit_note_item.item_credit}}</td>
+            <td>{{credit_note_item.tax.rate}}%</td>
+            <td>${{credit_note_item.total}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- totals -->
+      <div class="totals">
+        <div>Subtotal: ${{ data.credit_note.total - data.credit_note.total_tax }}</div>
+        <div>Total Tax: ${{ data.credit_note.total_tax }}</div>
+        <div>Total Credit: ${{data.credit_note.total}}</div>
+      </div>
+
+      <div class="terms">
+        <h4>Terms & Conditions</h4>
+        {{data.description}}
+      </div>
+    </div>
+  </body>
+</html>

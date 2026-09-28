@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Daily Attendance</title>
+    <style>
+      @page {
+        size: A3;
+        margin: 7mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 12px;
+          font-family: Arial, sans-serif;
+          color: #666;
+        }
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        font-size: 14px;
+        color: #000;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        width: 100%;
+        /* max-width: 800px; */
+        margin: auto;
+      }
+      h1 {
+        font-size: 25px;
+      }
+      h2 {
+        font-size: 20px;
+      }
+      h1,
+      h2 {
+        text-align: center;
+        margin-bottom: 5px;
+      }
+      .header {
+        text-align: center;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+
+      table td,
+      table th {
+        padding: 6px;
+        text-align: left;
+        border: 1px solid black;
+      }
+
+      .text-right {
+        text-align: right;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid #ccc;
+        margin: 6px 0;
+      }
+      .hour_count_container label {
+        font-weight: bold;
+        background-color: #f1f1f1;
+        padding: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Daily Attendance</h1>
+        <p>
+          {{company_name}}<br />
+          {% if as_of != None %} As of {{as_of.start_date}} to
+          {{as_of.end_date}} {% else %} All Dates {% endif %}
+        </p>
+      </div>
+      <div><h2 class="text-right">Total</h2></div>
+      <hr />
+
+      <table>
+        <thead>
+          <tr>
+            {% for field in fields %}
+            <th>{{field}}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for data in data %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{data.employee.employee_id}}</td>
+            <td>{{data.employee.first_name}}</td>
+            <td>{{data.employee.designation.title}}</td>
+            <td>{{data.shift.in_time}} to {{data.shift.out_time}}</td>
+            <td>{{data.status}}</td>
+            <td>{{data.check_in}}</td>
+            <td>{{data.check_out}}</td>
+            <td>{{ (data.late_hour_count or 0)|round(2) }}</td>
+            <td>{{ (data.worked_hour_count or 0)|round(2) }}</td>
+            <td>{{ (data.ot_hour_count or 0)|round(2) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div
+        class="text-right hour_count_container"
+        style="margin-top: 10px; margin-bottom: 10px"
+      >
+        <!-- Overviews -->
+        <label>TOTAL WORKED HOURS: {{ (overview.worked_hour_count or 0)|round(2) }}hr</label
+        ><br /><br />
+        <label>TOTAL OT HOURS: {{ (overview.ot_hour_count or 0)|round(2) }}hr</label><br />
+      </div>
+
+      <hr />
+      <div class="text-right">
+        <small>Generated on {{date_time}}</small>
+      </div>
+    </div>
+  </body>
+</html>

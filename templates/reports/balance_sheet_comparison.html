@@ -1,0 +1,62 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{{ report.title }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 14mm 12mm 16mm 12mm;
+            @bottom-left {
+                content: "{{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #555;
+            }
+            @bottom-right {
+                content: counter(page);
+                font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #555;
+            }
+        }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #1a1a1a; margin: 0; }
+        .company { text-align: center; font-size: 10pt; margin-bottom: 6px; }
+        h1 { text-align: center; font-size: 15pt; font-weight: normal; margin: 0 0 6px 0; }
+        .subtitle { text-align: center; font-size: 9.5pt; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #cfcfcf; padding: 5px 8px; }
+        thead th { font-weight: normal; color: #333; }
+        .label { text-align: left; }
+        .amount { text-align: right; white-space: nowrap; }
+        /* Group headings and the running totals carry the structure; item rows
+           sit plain, the way the reference prints them. */
+        tr.group > td, tr.total > td { background-color: #f5f5f5; }
+        tr.subtotal > td { border-top: 1px solid #999; }
+        .depth-1 { padding-left: 22px; }
+    </style>
+</head>
+<body>
+    <div class="company">{{ report.company_name }}</div>
+    <h1>{{ report.title }}</h1>
+    <div class="subtitle">{{ report.subtitle }}</div>
+    <table>
+        <thead>
+            <tr>
+                <th class="label">&nbsp;</th>
+                {% for column in report.columns %}<th class="amount">{{ column.label }}</th>{% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.rows %}
+                <tr class="{% if row.is_group %}group{% elif row.is_total %}total{% endif %}">
+                    <td class="label depth-{{ row.depth }}">{{ row.label }}</td>
+                    {% for column in report.columns %}
+                        <td class="amount">
+                            {% with value=row.values|get_item:column.key %}
+                                {% if value %}{{ value|report_money }}{% endif %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

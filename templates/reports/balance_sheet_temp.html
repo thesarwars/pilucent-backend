@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Balance Sheet Report</title>
+    
+</head>
+
+{% load custom_filter %}
+
+<body>
+<h1>Balance Sheet Report</h1>
+
+{% for head, accounts in grouped_data.items %}
+  <h2>{{ head }}</h2>
+  <p><strong>{{ accounts|get_item:"total for " |add:head }}: </strong>{{ accounts|get_item:"total for "|add:head }}</p>
+
+  {% for account_name, account_data in accounts.items %}
+    {% comment %} {% if not account_name.startswith "total" %} {% endcomment %}
+      <h3>{{ account_name }}</h3>
+      <p><strong>Beginning Balance:</strong> {{ account_data.beginning_balance }}</p>
+      <p><strong>Total:</strong> {{ account_data|get_item:"total for " |add:account_name }}</p>
+
+      {% for date, entries in account_data.items %}
+        {% comment %} {% if date != "beginning_balance" and not date.startswith "total" %} {% endcomment %}
+          <h4>{{ date }}</h4>
+          <table border="1" cellspacing="0" cellpadding="4">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Kind</th>
+                <th>Amount</th>
+                <th>Credit</th>
+                <th>Debit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in entries %}
+              <tr>
+                <td>{{ entry.customer }}</td>
+                <td>{{ entry.kind }}</td>
+                <td>{{ entry.amount }}</td>
+                <td>{{ entry.credit }}</td>
+                <td>{{ entry.debit }}</td>
+                {% comment %} <td>{{ entry.total }}</td> {% endcomment %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% comment %} {% endif %} {% endcomment %}
+      {% endfor %}
+    {% comment %} {% endif %} {% endcomment %}
+  {% endfor %}
+{% endfor %}
+</body>
+</html>

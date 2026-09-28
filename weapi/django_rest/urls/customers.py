@@ -1,0 +1,61 @@
+from django.urls import path
+
+from weapi.django_rest.views.customers import (
+    PrivateWeCustomerDeactivate,
+    PrivateWeCustomerList,
+    PrivateWeCustomerDetails,
+    PrivateWeCustomerFileList,
+    PrivateWeCustomerFileDetails,
+    PrivateWeCustomerBulkCreate,
+    PrivateWeCustomerTransactionList,
+    PrivateWeSaleInvoiceListByCustomer,
+    PrivateWeSaleReceiptsInvoiceListByCustomer,
+)
+
+urlpatterns = [
+    path(
+        r"/<uuid:uid>/files/<uuid:file_uid>",
+        PrivateWeCustomerFileDetails.as_view(),
+        name="weapi.customer-file-detils",
+    ),
+    path(
+        r"/<uuid:uid>/files",
+        PrivateWeCustomerFileList.as_view(),
+        name="weapi.customer-file-list",
+    ),
+    path(
+        r"/<uuid:uid>/transactions",
+        PrivateWeCustomerTransactionList.as_view(),
+        name="weapi.customers-transactions",
+    ),
+    path(
+        r"/<uuid:uid>/sales",
+        PrivateWeSaleInvoiceListByCustomer.as_view(),
+        name="weapi.customers-sales-invoices",
+    ),
+    path(
+        r"/<uuid:uid>/sales-receipts",
+        PrivateWeSaleReceiptsInvoiceListByCustomer.as_view(),
+        name="weapi.customers-sales-receipts-invoices",
+    ),
+    path(
+        r"/<uuid:uid>/deactivate",
+        PrivateWeCustomerDeactivate.as_view(),
+        name="weapi.customer-deactivate",
+    ),
+    path(
+        r"/<uuid:uid>",
+        PrivateWeCustomerDetails.as_view(),
+        name="weapi.customers-details",
+    ),
+    path(
+        r"/bulk-create",
+        PrivateWeCustomerBulkCreate.as_view(),
+        name="weapi.customers.bulk-create",
+    ),
+    path(
+        r"",
+        PrivateWeCustomerList.as_view(),
+        name="weapi.customers-list",
+    ),
+]

@@ -1,0 +1,60 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{{ report.title }}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 14mm 12mm 16mm 12mm;
+            @bottom-left {
+                content: "{{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #555;
+            }
+            @bottom-right {
+                content: counter(page);
+                font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #555;
+            }
+        }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #1a1a1a; margin: 0; }
+        .company { text-align: center; font-size: 10pt; margin-bottom: 6px; }
+        h1 { text-align: center; font-size: 15pt; font-weight: normal; margin: 0 0 6px 0; }
+        .subtitle { text-align: center; font-size: 9.5pt; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #cfcfcf; padding: 5px 8px; }
+        thead th { font-weight: normal; color: #333; }
+        .label { text-align: left; }
+        .amount { text-align: right; white-space: nowrap; }
+        /* Group headings and the running totals carry the structure; item rows
+           sit plain, the way the reference prints them. */
+        tr.group > td, tr.total > td { background-color: #f5f5f5; }
+        tr.subtotal > td { border-top: 1px solid #999; }
+        .depth-1 { padding-left: 22px; }
+    </style>
+</head>
+<body>
+    <div class="company">{{ report.company_name }}</div>
+    <h1>{{ report.title }}</h1>
+    <div class="subtitle">{{ report.subtitle }}</div>
+    <table>
+        <thead>
+            <tr>
+                <th class="label">{{ report.group_by|title }}</th>
+                <th class="amount">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.rows %}
+                <tr>
+                    <td class="label">{{ row.label }}</td>
+                    <td class="amount">{{ row.value|report_money }}</td>
+                </tr>
+            {% endfor %}
+            <tr class="total">
+                <td class="label">Total</td>
+                <td class="amount">{{ report.total|report_money }}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

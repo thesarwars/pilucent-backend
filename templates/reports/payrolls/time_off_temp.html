@@ -1,0 +1,101 @@
+{% load custom_filter %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Time off</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 14mm 12mm 16mm 12mm;
+
+            @bottom-left {
+                content: "{{ printed_at }}";
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+            @bottom-right {
+                content: counter(page);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 8pt;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .company { text-align: center; font-size: 10pt; margin-bottom: 6px; }
+
+        h1 {
+            text-align: center;
+            font-size: 15pt;
+            font-weight: normal;
+            margin: 0 0 6px 0;
+        }
+
+        .subtitle { text-align: center; font-size: 9.5pt; margin-bottom: 16px; }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
+
+        th, td {
+            border: 1px solid #cfcfcf;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        thead th { font-weight: normal; color: #333; }
+
+        .c-name { width: 17%; }
+        .c-policy { width: 25%; }
+        .c-figure { width: 9%; }
+    </style>
+</head>
+<body>
+    <div class="company">{{ report.company_name }}</div>
+    <h1>{{ report.title }}</h1>
+    <div class="subtitle">{{ report.subtitle }}</div>
+
+    {% comment %}
+        The reference prints the four categories two tables at a time, and the
+        pairing ships in the payload so it is not hard-coded here.
+    {% endcomment %}
+    {% for table in report.tables %}
+        <table>
+            <thead>
+                <tr>
+                    <th class="c-name">Name</th>
+                    {% for category_key in table %}
+                        <th class="c-policy">
+                            {% for category in report.categories %}
+                                {% if category.key == category_key %}{{ category.label }}{% endif %}
+                            {% endfor %}
+                        </th>
+                        <th class="c-figure">Balance</th>
+                        <th class="c-figure">Used</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.rows %}
+                    <tr>
+                        <td>{{ row.name }}</td>
+                        {% for category_key in table %}
+                            {% with cell=row.categories|get_item:category_key %}
+                                <td>{% if cell.policy %}{{ cell.policy }}{% else %}-{% endif %}</td>
+                                <td>{{ cell.balance }}</td>
+                                <td>{{ cell.used }}</td>
+                            {% endwith %}
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+</body>
+</html>
