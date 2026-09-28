@@ -18,20 +18,7 @@ from ..views.company_designations import (
     PrivateWeCompanyDesignationDetails,
 )
 
-from ..views.employee_salaries import PrivateWeSalaryDetails
-from ..views.employee_salaries import PrivateWeCompanyEmployeeSalaryList
-
 urlpatterns = [
-    path(
-        r"/salaries",
-        PrivateWeCompanyEmployeeSalaryList.as_view(),
-        name="weapi.employee-salary-adjustment-list",
-    ),
-    path(
-        r"/salary/<uuid:uid>",
-        PrivateWeSalaryDetails.as_view(),
-        name="weapi.employee-salary-details",
-    ),
     # Designations
     path(
         r"/designations/<uuid:uid>",

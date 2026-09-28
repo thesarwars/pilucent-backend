@@ -11,15 +11,15 @@ class Migration(migrations.Migration):
         ('payrollio', '0027_alter_payrollgeneralsettings_email_template'),
     ]
 
+    # pilucent: this migration also added `employee_garnishment`, an FK to
+    # employeeio.EmployeeGarnishment. That model was removed with the US employee
+    # module and employeeio's history restarts at 0001_initial, so the operation
+    # is dropped here rather than reversed later -- a later RemoveField cannot
+    # run when this one no longer resolves.
     operations = [
         migrations.AddField(
             model_name='payrollaccountexpenseaccountcomponent',
             name='deduction_and_contribution',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='expense_deduction_and_contribution', to='payrollio.deductionandcontributions'),
-        ),
-        migrations.AddField(
-            model_name='payrollaccountexpenseaccountcomponent',
-            name='employee_garnishment',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='expense_employee_garnishment', to='employeeio.employeegarnishment'),
         ),
     ]

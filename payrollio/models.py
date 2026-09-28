@@ -568,13 +568,6 @@ class PayrollAccountExpenseAccountComponent(BaseModelWithUID):
         blank=True,
         null=True,
     )
-    employee_garnishment = models.ForeignKey(
-        "employeeio.EmployeeGarnishment",
-        on_delete=models.SET_NULL,
-        related_name="expense_employee_garnishment",
-        blank=True,
-        null=True,
-    )
 
     def __str__(self):
         return f"Payroll Accounting Preferences: {self.payroll_accounting_preferences.slug}, Account Type: {self.account_type}, Expense Account: {self.expense_account.title if self.expense_account else 'N/A'}"
