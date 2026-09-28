@@ -14,7 +14,6 @@ from ...models import Messages, ChatRoom, ChatRoomMember, ChatRoomMessage, ChatR
 
 from ...choices import MessageTypeChoices
 from ..serializers.messages import RecentUsersSerializer
-from ..helpers.expense_report import save_employee_expense_report, change_expense_report_status
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -463,13 +462,18 @@ class RoomChatConsumer(AsyncWebsocketConsumer):
             origin_message_id=payload.get("origin_message_id"),
         )
 
+    # EmployeeExpenseReport was removed with the US employee module
+    # (docs/employee-reconnect-backlog.md). Answer through the existing error
+    # path instead of failing, until expense reports are rebuilt.
+    EXPENSE_REPORTS_UNAVAILABLE = {"success": False, "error": "Expense reports are not available yet."}
+
     @sync_to_async
     def _save_employee_expense_report(self, data):
-        return save_employee_expense_report(self.user, data)
+        return self.EXPENSE_REPORTS_UNAVAILABLE
 
     @sync_to_async
     def _change_expense_report_status(self, data):
-        return change_expense_report_status(self.user, data, member=self.member)
+        return self.EXPENSE_REPORTS_UNAVAILABLE
 
     @sync_to_async
     def _get_room_member_ids(self):

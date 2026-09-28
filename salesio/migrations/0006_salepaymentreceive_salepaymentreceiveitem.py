@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         ('companyio', '0004_alter_companyshift_created_by'),
         ('creditnoteio', '0003_alter_creditnote_kind'),
         ('customerio', '0006_alter_customer_currency'),
-        ('employeeio', '0006_employeesalary_company_alter_employeesalary_employee_and_more'),
+        ('employeeio', '0001_initial'),
         ('paymentio', '0003_paymentinformation_subscription'),
         ('salesio', '0005_saleitem_refund_quantity_saleitem_refund_status_and_more'),
     ]

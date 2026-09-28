@@ -18,7 +18,6 @@ from payrollio.models import (
     PayrollAccountExpenseAccountComponent,
     DeductionAndContributions,
 )
-from employeeio.models import EmployeeGarnishment
 
 from payrollio.django_rest.serializer.common import (
     PrivateWePayrollAccountExpenseAccountComponentSlimSerializer,
@@ -76,7 +75,7 @@ class PrivateWePayrollAccountingPreferencesListCreateSerializer(
     expense_account_components = JSONField(
         required=False,
         write_only=True,
-        help_text="List of expense account components, each containing 'uid', 'employee', 'account_type', 'expense_account', 'deduction and contribution', 'employee garnishment'.",
+        help_text="List of expense account components, each containing 'uid', 'employee', 'account_type', 'expense_account', 'deduction and contribution'.",
     )
 
     class Meta:
@@ -160,15 +159,14 @@ class PrivateWePayrollAccountingPreferencesListCreateSerializer(
                 deduction_and_contribution_uid = component_data.pop(
                     "deduction_and_contribution", None
                 )
-                employee_garnishment_uid = component_data.pop(
-                    "employee_garnishment", None
-                )
+                # Employee garnishments were removed with the US employee
+                # module; drop the key so an old client cannot pass it to create().
+                component_data.pop("employee_garnishment", None)
 
                 # Resolve employee and expense_account from UID
                 employee_instance = None
                 expense_account_instance = None
                 deduction_and_contribution_instance = None
-                employee_garnishment_instance = None
                 if employee_uid:
                     employee_instance = Employee.objects.get(
                 uid=employee_uid, company=self.context["request"].user.get_active_company()
@@ -183,11 +181,6 @@ class PrivateWePayrollAccountingPreferencesListCreateSerializer(
                             uid=deduction_and_contribution_uid,
                             company=user.get_active_company(),
                         )
-                    )
-
-                if employee_garnishment_uid:
-                    employee_garnishment_instance = EmployeeGarnishment.objects.get(
-                        uid=employee_garnishment_uid,
                     )
 
                 if component_uid:
@@ -206,17 +199,12 @@ class PrivateWePayrollAccountingPreferencesListCreateSerializer(
                         component_instance.deduction_and_contribution = (
                             deduction_and_contribution_instance
                         )
-                    if employee_garnishment_instance:
-                        component_instance.employee_garnishment = (
-                            employee_garnishment_instance
-                        )
                 else:
                     component_instance = PayrollAccountExpenseAccountComponent.objects.create(
                         payroll_accounting_preferences=payroll_accounting_preferences,
                         employee=employee_instance,
                         expense_account=expense_account_instance,
                         deduction_and_contribution=deduction_and_contribution_instance,
-                        employee_garnishment=employee_garnishment_instance,
                         **component_data,
                     )
                 component_instance.save()

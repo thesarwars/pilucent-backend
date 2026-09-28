@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0008_alter_chartofaccount_currency'),
-        ('employeeio', '0006_employeesalary_company_alter_employeesalary_employee_and_more'),
+        ('employeeio', '0001_initial'),
         ('paymentio', '0001_initial'),
         ('purchaseio', '0001_initial'),
         ('supplierio', '0004_alter_supplier_currency'),

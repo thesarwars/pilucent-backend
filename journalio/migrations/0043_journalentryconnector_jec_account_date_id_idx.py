@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
         ('agencyio', '0010_agency_state'),
         ('creditnoteio', '0013_alter_creditnoteitem_tax'),
         ('customerio', '0009_alter_customer_status'),
-        ('employeeio', '0067_backfill_employee_company'),
+        ('employeeio', '0001_initial'),
         ('journalio', '0042_relabel_manual_journal_entries'),
         ('purchaseio', '0026_paybillapplication'),
         ('salesio', '0040_alter_saleitem_tax'),

@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('companyio', '0016_companydesignation_code_and_more'),
-        ('employeeio', '0051_employee_is_banking_info_verified'),
+        ('employeeio', '0001_initial'),
     ]
 
     operations = [

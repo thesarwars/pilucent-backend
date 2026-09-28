@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('companyio', '0016_companydesignation_code_and_more'),
-        ('employeeio', '0020_rename_reports_to_employee_report_to'),
+        ('employeeio', '0001_initial'),
         ('leaveio', '0005_remove_leavebalance_adjusted_and_more'),
     ]
 

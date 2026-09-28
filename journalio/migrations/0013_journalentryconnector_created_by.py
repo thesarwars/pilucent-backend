@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employeeio', '0009_alter_employeesalary_basic_alter_employeesalary_cash_and_more'),
+        ('employeeio', '0001_initial'),
         ('journalio', '0012_journalentryconnector_parent'),
     ]
 

@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employeeio', '0067_backfill_employee_company'),
+        ('employeeio', '0001_initial'),
         ('transactionio', '0016_alter_bankreconciliation_options_and_more'),
     ]
 

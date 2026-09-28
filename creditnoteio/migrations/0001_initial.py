@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         ('agencyio', '0002_agency_start_of_period'),
         ('companyio', '0004_alter_companyshift_created_by'),
         ('customerio', '0006_alter_customer_currency'),
-        ('employeeio', '0006_employeesalary_company_alter_employeesalary_employee_and_more'),
+        ('employeeio', '0001_initial'),
         ('productio', '0006_product_expired_date'),
         ('wirehouseio', '0004_warehouse_status'),
     ]

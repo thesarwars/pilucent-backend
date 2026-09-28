@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('companyio', '0016_companydesignation_code_and_more'),
-        ('employeeio', '0012_rename_introducer_mobile_number_employee_company_phone_number_and_more'),
+        ('employeeio', '0001_initial'),
         ('leaveio', '0002_leavetype_is_active_leavetype_status'),
     ]
 

@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('attendanceio', '0006_alter_holiday_created_by'),
-        ('employeeio', '0047_alter_employee_citizenship_kind'),
+        ('employeeio', '0001_initial'),
     ]
 
     operations = [

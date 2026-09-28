@@ -18,6 +18,42 @@ where that happened. Everything else is still broken at runtime and waits for th
 child models, and `ssn`. A receiver the scan did not recognise will not be listed — treat the list
 as the floor, not the ceiling.
 
+## Phase 1 reconnect log
+
+What was reconnected to get `manage.py check` and the test suite green, and how.
+"Fixed" means the project imports and boots -- not that the US behaviour
+behind it works on BD employees.
+
+- **datamigrationio** — the three employee-import services imported
+  `EmployeeKindChoices` at app-ready time, so nothing booted. The spreadsheet's
+  employment-type column maps onto BD `EmploymentTypeChoices`
+  (FULL_TIME / PART_TIME / CONTRACT), so the import was renamed. The importer's
+  `create()` and the validator still speak US columns (first/last name, kind);
+  a BD employee import is its own piece of work.
+- **Pay schedules** — `GET /we/payroll/pay-schedule/employees/<uid>/` (employees
+  on a pay schedule) was built on the removed employee serializers, and a BD
+  employee has no pay schedule. Its view, serializer and route are removed.
+  Still mounted and **broken at request time**: `PayScheduleWithEmployeeCountView`
+  annotates `Count("employee")`, a reverse relation that no longer exists.
+- **Payroll accounting preferences** — the expense-account component no longer
+  carries `employee_garnishment`; a client sending it has the key ignored.
+  Its nested `employee` is now the BD slim shape (`uid, code, name_en, name_bn,
+  photo`), not the US user shape (`email, first_name, ...`).
+- **Payroll report "employee details"** — `/we/payroll/reports/employee-details/`
+  read the removed banking, deduction and tax satellites. View deleted, route
+  unmounted. Its builder (`payrollio/django_rest/helpers/employee_details.py`)
+  and tests are kept for the payroll phase.
+- **Chat expense reports** — `EmployeeExpenseReport` went with the module. The
+  websocket actions `save_expense_report` and `change_expense_report_status`
+  now answer through their existing error path ("Expense reports are not
+  available yet."); stored expense messages still render from their payload.
+- **Slim serializers** — `PrivateCompanyEmployeeSlimSerializer` and
+  `PublicCompanyEmployeeSlimSerializer` are rebuilt on BD fields, so the 27
+  places nesting them import cleanly. Their payload shape changed: consumers
+  reading `full_name`, `employee_id` or `image` get `name_en`, `code`, `photo`.
+- **Roles** — `/we/employees/<uuid>/roles` and `/extra-permissions` are kept
+  (see above) and resolve BD employees by uid.
+
 ## What the BD `Employee` still answers to
 
 `uid`, `code`, `status` (`EmployeeStatusChoices`: DRAFT / ACTIVE / IN_ACTIVE / REMOVED), `user`,
@@ -157,14 +193,14 @@ control, not US payroll, and they only use `Employee.uid` and `Employee.user`, w
 - L76 — `EmployeeTax` from `employeeio.models` — imports a model, enum or serializer that no longer exists
 - L76 — `EmployeeWorkExperience` from `employeeio.models` — imports a model, enum or serializer that no longer exists
 
-**`weapi/django_rest/serializers/payroll/accounting_preferences.py`**
+**`weapi/django_rest/serializers/payroll/accounting_preferences.py`** — **[fixed]** garnishment handling removed; the key is popped and ignored
 
 - L21 — `EmployeeGarnishment` from `employeeio.models` — imports a model, enum or serializer that no longer exists
 - L164 — `employee_garnishment` — uses `PayrollAccountExpenseAccountComponent.employee_garnishment`
 - L210 — `employee_garnishment` — uses `PayrollAccountExpenseAccountComponent.employee_garnishment`
 - L219 — `employee_garnishment` — uses `PayrollAccountExpenseAccountComponent.employee_garnishment`
 
-**`weapi/django_rest/serializers/payroll/pay_schedule.py`**
+**`weapi/django_rest/serializers/payroll/pay_schedule.py`** — **[fixed]** assigned-employee serializer removed with its view
 
 - L17 — `weapi.django_rest.serializers.employees` — imports from the removed US employee API module
 - L32 — `PrivateEmployeeBankingInformationSlimSerializer` from `employeeio.django_rest.serializers.common` — imports a model, enum or serializer that no longer exists
@@ -248,11 +284,11 @@ control, not US payroll, and they only use `Employee.uid` and `Employee.user`, w
 - L814 — `employee__first_name` — queries through a US `Employee` field
 - L815 — `employee__last_name` — queries through a US `Employee` field
 
-**`weapi/django_rest/views/payroll/pay_schedule.py`**
+**`weapi/django_rest/views/payroll/pay_schedule.py`** — **[fixed]** assigned-employee view and route removed
 
 - L6 — `from ..employees import` — imports from the removed US employee API module
 
-**`weapi/django_rest/views/payroll/reports/employee_details.py`**
+**`weapi/django_rest/views/payroll/reports/employee_details.py`** — **[fixed]** deleted and unmounted
 
 - L21 — `EmployeeBankingInformation` from `employeeio.models` — imports a model, enum or serializer that no longer exists
 - L21 — `EmployeeDeductionContribution` from `employeeio.models` — imports a model, enum or serializer that no longer exists
@@ -310,7 +346,7 @@ control, not US payroll, and they only use `Employee.uid` and `Employee.user`, w
 
 - L403 — `employee.work_locations` — reads a US `Employee` field the BD model does not have
 
-**`payrollio/django_rest/serializer/common.py`**
+**`payrollio/django_rest/serializer/common.py`** — **[fixed]** expense-account component nests the BD slim employee; garnishment field dropped
 
 - L21 — `PrivateEmployeeUserSerializer` from `employeeio.django_rest.serializers.common` — imports a model, enum or serializer that no longer exists
 - L21 — `PrivateWeEmployeeGarnishmentSlimSerializer` from `employeeio.django_rest.serializers.common` — imports a model, enum or serializer that no longer exists
@@ -344,20 +380,20 @@ control, not US payroll, and they only use `Employee.uid` and `Employee.user`, w
 - L72 — `ssn` — US Social Security Number — no BD equivalent (BD identity is `nid`)
 - L73 — `ssn` — US Social Security Number — no BD equivalent (BD identity is `nid`)
 
-**`datamigrationio/django_rest/services/employee_importer.py`**
+**`datamigrationio/django_rest/services/employee_importer.py`** — **[fixed]** enum import renamed to `EmploymentTypeChoices`; `create()` still writes US fields
 
 - L16 — `EmployeeKindChoices` from `employeeio.choices` — imports a model, enum or serializer that no longer exists
 - L91 — `ssn` — US Social Security Number — no BD equivalent (BD identity is `nid`)
 - L104 — `ssn` — US Social Security Number — no BD equivalent (BD identity is `nid`)
 - L171 — `ssn` — US Social Security Number — no BD equivalent (BD identity is `nid`)
 
-**`datamigrationio/django_rest/services/employee_validator.py`**
+**`datamigrationio/django_rest/services/employee_validator.py`** — **[fixed]** enum import renamed to `EmploymentTypeChoices`; still validates US columns (first/last name)
 
 - L8 — `EmployeeKindChoices` from `employeeio.choices` — imports a model, enum or serializer that no longer exists
 - L132 — `ssn` — US Social Security Number — no BD equivalent (BD identity is `nid`)
 - L392 — `ssn` — US Social Security Number — no BD equivalent (BD identity is `nid`)
 
-**`datamigrationio/django_rest/services/row_fix.py`**
+**`datamigrationio/django_rest/services/row_fix.py`** — **[fixed]** enum import renamed to `EmploymentTypeChoices`
 
 - L55 — `EmployeeKindChoices` from `employeeio.choices` — imports a model, enum or serializer that no longer exists
 
@@ -390,16 +426,16 @@ control, not US payroll, and they only use `Employee.uid` and `Employee.user`, w
 
 ### chatio — 4
 
-**`chatio/django_rest/helpers/expense_report.py`**
+**`chatio/django_rest/helpers/expense_report.py`** — **[fixed]** deleted with the model
 
 - L13 — `EmployeeExpenseReport` from `employeeio.models` — imports a model, enum or serializer that no longer exists
 - L14 — `EmployeeExpenseReportStatusChoices` from `employeeio.choices` — imports a model, enum or serializer that no longer exists
 
-**`chatio/django_rest/serializers/chat_rooms.py`**
+**`chatio/django_rest/serializers/chat_rooms.py`** — **[fixed]** expense-report serializer removed
 
 - L7 — `EmployeeExpenseReport` from `employeeio.models` — imports a model, enum or serializer that no longer exists
 
-**`chatio/django_rest/views/chat_rooms.py`**
+**`chatio/django_rest/views/chat_rooms.py`** — **[fixed]** expense messages render from the stored event payload
 
 - L27 — `EmployeeExpenseReport` from `employeeio.models` — imports a model, enum or serializer that no longer exists
 

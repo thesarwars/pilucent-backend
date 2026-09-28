@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('attendanceio', '0016_punchdatadailytime'),
         ('companyio', '0023_enable_rls_core_tables'),
-        ('employeeio', '0067_backfill_employee_company'),
+        ('employeeio', '0001_initial'),
     ]
 
     operations = [

@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         ('accounts', '0010_chartofaccount__id'),
         ('companyio', '0004_alter_companyshift_created_by'),
         ('creditnoteio', '0003_alter_creditnote_kind'),
-        ('employeeio', '0006_employeesalary_company_alter_employeesalary_employee_and_more'),
+        ('employeeio', '0001_initial'),
         ('paymentio', '0004_paymentinformation_subscription_price_and_more'),
         ('purchaseio', '0006_alter_expense_payment_account_and_more'),
         ('supplierio', '0004_alter_supplier_currency'),

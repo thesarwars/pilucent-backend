@@ -20,8 +20,6 @@ from ...models import (
 
 from employeeio.django_rest.serializers.common import (
     PrivateCompanyEmployeeSlimSerializer,
-    PrivateWeEmployeeGarnishmentSlimSerializer,
-    PrivateEmployeeUserSerializer,
 )
 from accounts.django_rest.serializers.common import (
     PrivateChartOfAccountSlimSerializer,
@@ -171,13 +169,11 @@ class PrivateWePayrollAccountingPreferencesSettingSlimSerializer(ModelSerializer
 
 
 class PrivateWePayrollAccountExpenseAccountComponentSlimSerializer(ModelSerializer):
-    # employee = PrivateCompanyEmployeeSlimSerializer(read_only=True)
-    employee = PrivateEmployeeUserSerializer(read_only=True)
+    employee = PrivateCompanyEmployeeSlimSerializer(read_only=True)
     expense_account = PrivateChartOfAccountSlimSerializer(read_only=True)
     deduction_and_contribution = PrivateWeDeductionAndContributionsSlimSerializer(
         read_only=True
     )
-    employee_garnishment = PrivateWeEmployeeGarnishmentSlimSerializer(read_only=True)
 
     class Meta:
         model = PayrollAccountExpenseAccountComponent
@@ -188,7 +184,6 @@ class PrivateWePayrollAccountExpenseAccountComponentSlimSerializer(ModelSerializ
             "account_type",
             "expense_account",
             "deduction_and_contribution",
-            "employee_garnishment",
         ]
         read_only_fields = fields
 

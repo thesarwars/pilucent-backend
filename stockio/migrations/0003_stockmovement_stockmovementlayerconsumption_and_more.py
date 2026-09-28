@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('companyio', '0023_enable_rls_core_tables'),
         ('creditnoteio', '0012_creditnote_credit_note_sales_tax'),
-        ('employeeio', '0067_backfill_employee_company'),
+        ('employeeio', '0001_initial'),
         ('productio', '0010_alter_productadditionalcost_prefferred_supplier_and_more'),
         ('purchaseio', '0024_purchase_source_template'),
         ('salesio', '0038_sale_source_template'),

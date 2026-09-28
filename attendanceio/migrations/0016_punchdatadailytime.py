@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('attendanceio', '0015_remove_dailytimetracking_worked_hour_count_and_more'),
         ('companyio', '0016_companydesignation_code_and_more'),
-        ('employeeio', '0051_employee_is_banking_info_verified'),
+        ('employeeio', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

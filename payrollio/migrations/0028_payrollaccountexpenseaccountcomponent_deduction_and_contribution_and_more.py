@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employeeio', '0049_employee_image'),
+        ('employeeio', '0001_initial'),
         ('payrollio', '0027_alter_payrollgeneralsettings_email_template'),
     ]
 

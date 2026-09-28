@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('accounts', '0029_chartofaccount_account_type_and_more'),
         ('companyio', '0008_company_kind_historicalcompany_kind'),
-        ('employeeio', '0009_alter_employeesalary_basic_alter_employeesalary_cash_and_more'),
+        ('employeeio', '0001_initial'),
         ('purchaseio', '0017_alter_expense_deposit_alter_expense_discount_and_more'),
         ('supplierio', '0005_alter_supplier_billing_rate_and_more'),
     ]

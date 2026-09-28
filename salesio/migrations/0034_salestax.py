@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('agencyio', '0010_agency_state'),
         ('companyio', '0016_companydesignation_code_and_more'),
-        ('employeeio', '0051_employee_is_banking_info_verified'),
+        ('employeeio', '0001_initial'),
         ('salesio', '0033_sale_auto_sales_tax'),
     ]
 

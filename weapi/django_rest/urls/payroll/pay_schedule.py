@@ -2,7 +2,6 @@ from django.urls import path, include
 from ...views.payroll.pay_schedule import (
     PayScheduleListCreateView,
     PayScheduleUpdateView,
-    PayScheduleAssignedEmployeeView,
     PayScheduleWithEmployeeCountView,
 )
 
@@ -20,9 +19,4 @@ urlpatterns = [
         PayScheduleWithEmployeeCountView.as_view(),
         name="GET.employee-count",
     ),
-    path(
-        "/employees/<str:schedule_uid>/",
-        PayScheduleAssignedEmployeeView.as_view(),
-        name="GET.pay-schedule-employee",
-    ),  # /api/v1/we/payroll/ded-con/employees
 ]

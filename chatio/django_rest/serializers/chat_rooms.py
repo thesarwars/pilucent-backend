@@ -4,7 +4,6 @@ from accounts.models import User
 
 from chatio.models import ChatRoom, ChatRoomMember, ChatRoomMessage
 from chatio.choices import RoomMemberRoleChoices
-from employeeio.models import EmployeeExpenseReport
 from .messages import RecentUsersSerializer
 
 
@@ -140,77 +139,3 @@ class ChatRoomMessageSerializer(serializers.ModelSerializer):
         ]
 
 
-
-class EmployeeExpenseReportSerializer(serializers.ModelSerializer):
-    supplier = serializers.SerializerMethodField()
-    category = serializers.SerializerMethodField()
-    purchase_uid = serializers.SerializerMethodField()
-    submitted_by = serializers.SerializerMethodField()
-    approved_by = serializers.SerializerMethodField()
-    paid_by = serializers.SerializerMethodField()
-    rejected_by = serializers.SerializerMethodField()
-
-    class Meta:
-        model = EmployeeExpenseReport
-        fields = [
-            "uid",
-            "slug",
-            "status_previous",
-            "status",
-            "amount",
-            "currency",
-            "vendor_supplier_name",
-            "supplier",
-            "category",
-            "expense_date",
-            "payment_date",
-            "description",
-            "reference_number",
-            "file_path",
-            "purchase_uid",
-            "submitted_by",
-            "approved_by",
-            "paid_by",
-            "rejected_by",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = fields
-
-    def get_supplier(self, obj):
-        if not obj.supplier_id:
-            return None
-        supplier = obj.supplier
-        title = supplier.company_name or supplier.display_name or ""
-        return {"uid": str(supplier.uid), "title": title}
-
-    def get_category(self, obj):
-        if not obj.chart_of_account_id:
-            return None
-        coa = obj.chart_of_account
-        return {"uid": str(coa.uid), "title": coa.title}
-
-    def get_purchase_uid(self, obj):
-        if not obj.purchase_id:
-            return None
-        return str(obj.purchase.uid)
-
-    def get_submitted_by(self, obj):
-        if not obj.submitted_by_id:
-            return None
-        return _user_full_name(obj.submitted_by)
-
-    def get_approved_by(self, obj):
-        if not obj.approved_by_id:
-            return None
-        return _user_full_name(obj.approved_by)
-
-    def get_paid_by(self, obj):
-        if not obj.paid_by_id:
-            return None
-        return _user_full_name(obj.paid_by)
-
-    def get_rejected_by(self, obj):
-        if not obj.rejected_by_id:
-            return None
-        return _user_full_name(obj.rejected_by)

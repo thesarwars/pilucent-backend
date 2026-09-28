@@ -5,7 +5,7 @@ from datetime import datetime
 from accounts.models import User
 from companyio.choices import CompanyDepartmentStatusChoices, CompanyDesignationStatusChoices
 from companyio.models import CompanyDepartment, CompanyDesignation
-from employeeio.choices import EmployeeKindChoices, EmployeeStatusChoices
+from employeeio.choices import EmploymentTypeChoices, EmployeeStatusChoices
 
 from datamigrationio.choices import (
     MigrationDuplicateHandlingChoices,
@@ -34,7 +34,7 @@ DATE_FORMAT_MAP = {
     "MM-DD-YYYY": "%m-%d-%Y",
 }
 
-VALID_KIND_VALUES = {c.upper() for c in EmployeeKindChoices.values}
+VALID_KIND_VALUES = {c.upper() for c in EmploymentTypeChoices.values}
 VALID_STATUS_VALUES = {c.upper() for c in EmployeeStatusChoices.values}
 VALID_GENDER_VALUES = {"MALE", "FEMALE", "OTHER"}
 
@@ -270,7 +270,7 @@ class EmployeeValidatorService:
                     row_status = MigrationRowStatusChoices.WARNING
 
         # --- Employment type validation (optional, WARNING) ---
-        resolved_kind = EmployeeKindChoices.FULL_TIME
+        resolved_kind = EmploymentTypeChoices.FULL_TIME
         if employment_type_raw:
             if employment_type_raw in VALID_KIND_VALUES:
                 resolved_kind = employment_type_raw

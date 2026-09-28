@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         ('accounts', '0034_chartofaccount_bank_balance_chartofaccount_bank_id'),
         ('companyio', '0014_remove_company_company_address_and_more'),
         ('customerio', '0008_customer_charter_account'),
-        ('employeeio', '0009_alter_employeesalary_basic_alter_employeesalary_cash_and_more'),
+        ('employeeio', '0001_initial'),
         ('journalio', '0027_journalentryconnector_credit_note_item'),
         ('paymentio', '0006_alter_paymentinformation_kind'),
         ('transactionio', '0009_alter_transactionruleassign_trx_type_and_more'),

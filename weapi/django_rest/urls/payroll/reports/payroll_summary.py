@@ -33,9 +33,6 @@ from weapi.django_rest.views.payroll.reports.payroll_total_cost import (
     PayrollTotalCostReportView,
 )
 
-from weapi.django_rest.views.payroll.reports.employee_details import (
-    EmployeeDetailsReportView,
-)
 
 from weapi.django_rest.views.payroll.reports.payroll_total_pay import (
     PayrollTotalPayReportView,
@@ -53,7 +50,6 @@ urlpatterns = [
     path("/tax-liability/", PayrollTaxLiabilityReportView.as_view(), name="weapi.payroll.reports.payroll-tax-liability"),
     path("/tax-and-wage-summary/", PayrollTaxAndWageSummaryReportView.as_view(), name="weapi.payroll.reports.payroll-tax-and-wage-summary"),
     path("/total-cost/", PayrollTotalCostReportView.as_view(), name="weapi.payroll.reports.payroll-total-cost"),
-    path("/employee-details/", EmployeeDetailsReportView.as_view(), name="weapi.payroll.reports.employee-details"),
     path("/total-pay/", PayrollTotalPayReportView.as_view(), name="weapi.payroll.reports.payroll-total-pay"),
     path("/time-off/", TimeOffReportView.as_view(), name="weapi.payroll.reports.time-off"),
     path("/deduction-and-contribution/", DeductionContributionReportView.as_view(), name="weapi.payroll.reports.deduction-and-contribution"),

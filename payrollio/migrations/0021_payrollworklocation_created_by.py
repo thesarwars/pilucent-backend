@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employeeio', '0047_alter_employee_citizenship_kind'),
+        ('employeeio', '0001_initial'),
         ('payrollio', '0020_payrollworklocation'),
     ]
 

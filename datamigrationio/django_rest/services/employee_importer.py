@@ -13,7 +13,7 @@ from accounts.models import User
 from adminio.choices import CompanyRoleKindChoices, CompanyRoleStatusChoices
 from adminio.models import CompanyRole
 from companyio.models import CompanyDepartment, CompanyDesignation, CompanyUser
-from employeeio.choices import EmployeeKindChoices, EmployeeStatusChoices
+from employeeio.choices import EmploymentTypeChoices, EmployeeStatusChoices
 from employeeio.models import Employee
 
 from datamigrationio.choices import (
@@ -142,7 +142,7 @@ class EmployeeMigrationImporter:
                             id=nd["designation_id"]
                         ).first()
 
-                    kind = nd.get("kind") or EmployeeKindChoices.FULL_TIME
+                    kind = nd.get("kind") or EmploymentTypeChoices.FULL_TIME
                     status = nd.get("status") or EmployeeStatusChoices.DRAFT
                     employee_id = nd.get("employee_id") or None
                     code = nd.get("code") or None

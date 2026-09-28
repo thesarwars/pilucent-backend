@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('attendanceio', '0002_dailytimetrackingsession_created_by'),
         ('companyio', '0016_companydesignation_code_and_more'),
-        ('employeeio', '0041_employee_on_boarding_kind'),
+        ('employeeio', '0001_initial'),
     ]
 
     operations = [

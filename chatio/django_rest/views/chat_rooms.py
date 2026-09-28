@@ -20,11 +20,9 @@ from chatio.django_rest.serializers import (
     ChatRoomMemberRoleUpdateSerializer,
     ChatRoomMemberSerializer,
     ChatRoomMessageSerializer,
-    EmployeeExpenseReportSerializer,
 )
 
 from accounts.models import User
-from employeeio.models import EmployeeExpenseReport
 
 
 def get_chat_room_queryset(user):
@@ -289,13 +287,10 @@ class ChatRoomMessageListView(generics.ListAPIView):
         }
 
     def _build_report_file_data(self, report_uid):
-        """Fetch EmployeeExpenseReport by uid and build file_data matching socket format."""
-        if not report_uid:
-            return None
-        report = EmployeeExpenseReport.objects.filter(uid=report_uid).first()
-        if not report:
-            return None
-        return EmployeeExpenseReportSerializer(report).data
+        """The live report behind an expense message. EmployeeExpenseReport was
+        removed with the US employee module, so the stored event payload is all
+        there is -- the caller falls back to it."""
+        return None
 
     def _apply_expense_payload(self, serialized_item, expense_payload):
         """Reshape expense messages so REST output matches WebSocket format."""

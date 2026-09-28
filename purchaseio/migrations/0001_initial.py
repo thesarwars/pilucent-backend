@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('agencyio', '0002_agency_start_of_period'),
         ('companyio', '0003_alter_companyuser_role'),
-        ('employeeio', '0006_employeesalary_company_alter_employeesalary_employee_and_more'),
+        ('employeeio', '0001_initial'),
         ('productio', '0004_rename_is_bundle_product_is_inventory_and_more'),
         ('supplierio', '0004_alter_supplier_currency'),
         ('termio', '0002_alter_term_kind_alter_termconnector_kind'),

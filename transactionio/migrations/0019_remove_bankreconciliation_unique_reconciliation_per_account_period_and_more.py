@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('accounts', '0047_backfill_is_money_account'),
         ('companyio', '0026_enable_rls_transactions'),
-        ('employeeio', '0067_backfill_employee_company'),
+        ('employeeio', '0001_initial'),
         ('transactionio', '0018_alter_transactioninformation_received_and_more'),
     ]
 

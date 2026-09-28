@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employeeio', '0012_rename_introducer_mobile_number_employee_company_phone_number_and_more'),
+        ('employeeio', '0001_initial'),
         ('leaveio', '0003_leavebalance_leaverequest'),
     ]
 

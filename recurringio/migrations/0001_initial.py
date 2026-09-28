@@ -37,7 +37,7 @@ class Migration(migrations.Migration):
         ('agencyio', '0010_agency_state'),
         ('companyio', '0023_enable_rls_core_tables'),
         ('customerio', '0008_customer_charter_account'),
-        ('employeeio', '0067_backfill_employee_company'),
+        ('employeeio', '0001_initial'),
         ('productio', '0010_alter_productadditionalcost_prefferred_supplier_and_more'),
         ('purchaseio', '0023_alter_paybill_email_alter_purchase_email_and_more'),
         ('supplierio', '0005_alter_supplier_billing_rate_and_more'),

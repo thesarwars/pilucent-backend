@@ -52,7 +52,7 @@ from datamigrationio.django_rest.services.employee_validator import (
 )
 from companyio.choices import CompanyDepartmentStatusChoices, CompanyDesignationStatusChoices
 from companyio.models import CompanyDepartment, CompanyDesignation
-from employeeio.choices import EmployeeKindChoices
+from employeeio.choices import EmploymentTypeChoices
 from datamigrationio.django_rest.services.migration_job_counters import (
     refresh_job_row_counters,
 )
@@ -1122,7 +1122,7 @@ class RowFixService:
 
         # --- employment_type (employees) ---
         if field == "employment_type":
-            VALID_KINDS = {c.upper() for c in EmployeeKindChoices.values}
+            VALID_KINDS = {c.upper() for c in EmploymentTypeChoices.values}
             resolved = value.strip().upper()
             if resolved not in VALID_KINDS:
                 return (

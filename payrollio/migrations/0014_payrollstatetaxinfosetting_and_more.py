@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('companyio', '0016_companydesignation_code_and_more'),
-        ('employeeio', '0047_alter_employee_citizenship_kind'),
+        ('employeeio', '0001_initial'),
         ('payrollio', '0013_alter_payrollgeneraltaxsetting_slug_and_more'),
     ]
 

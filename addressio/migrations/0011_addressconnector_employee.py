@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('addressio', '0010_alter_addressconnector_kind'),
-        ('employeeio', '0014_employee_attendance_device_id'),
+        ('employeeio', '0001_initial'),
     ]
 
     operations = [

@@ -6,7 +6,6 @@ from .chat_rooms import (
     ChatRoomAddMembersSerializer,
     ChatRoomMemberRoleUpdateSerializer,
     ChatRoomMessageSerializer,
-    EmployeeExpenseReportSerializer,
 )
 
 __all__ = [
@@ -17,5 +16,4 @@ __all__ = [
     "ChatRoomAddMembersSerializer",
     "ChatRoomMemberRoleUpdateSerializer",
     "ChatRoomMessageSerializer",
-    "EmployeeExpenseReportSerializer",
 ]

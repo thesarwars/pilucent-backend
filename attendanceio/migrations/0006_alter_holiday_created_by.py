@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('attendanceio', '0005_alter_holiday_weekend'),
-        ('employeeio', '0044_remove_employee_sign_w4_full_name_and_more'),
+        ('employeeio', '0001_initial'),
     ]
 
     operations = [
