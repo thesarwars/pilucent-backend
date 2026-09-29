@@ -185,9 +185,11 @@ class UserOnboardSerializer(ModelSerializer):
 class UserListSerializer(ModelSerializer):
     is_employee = serializers.SerializerMethodField()
     employee = serializers.SerializerMethodField()
-    company_user = PrivateCompanyUserSlimSerializer(
-        read_only=True, source="companyuser_set.first"
-    )
+    company_user = serializers.SerializerMethodField()
+
+    def get_company_user(self, obj):
+        membership = _membership_in_company(obj, self.context)
+        return PrivateCompanyUserSlimSerializer(membership).data if membership is not None else None
 
     class Meta:
         model = User
@@ -262,9 +264,11 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
 class UserOnBoardDetailsSerializer(serializers.ModelSerializer):
     employee = serializers.SerializerMethodField()
-    company_user = PrivateCompanyUserWithPermissionSlimSerializer(
-        read_only=True, source="companyuser_set.first"
-    )
+    company_user = serializers.SerializerMethodField()
+
+    def get_company_user(self, obj):
+        membership = _membership_in_company(obj, self.context)
+        return PrivateCompanyUserWithPermissionSlimSerializer(membership).data if membership is not None else None
 
     class Meta:
         model = User
@@ -296,6 +300,25 @@ class UserOnBoardDetailsSerializer(serializers.ModelSerializer):
         }
 
 
+def _membership_in_company(user, context):
+    """The user's membership in the viewer's active company.
+
+    `companyuser_set.first()` picked whichever company came first, so for a
+    user in two companies an admin of one was shown -- and on edit, wrote
+    roles and permissions onto -- the other company's membership. The views
+    prefetch the right one into `_company_users_for_list`; an empty list there
+    means "not a member here".
+    """
+    cached = getattr(user, "_company_users_for_list", None)
+    if cached is not None:
+        return cached[0] if cached else None
+    request = context.get("request")
+    company = request.user.get_active_company() if request is not None else None
+    if company is None:
+        return None
+    return user.companyuser_set.filter(company=company).first()
+
+
 def _employee_in_company(user):
     """The user's employee record as the onboarding views show it.
 
@@ -324,10 +347,12 @@ class UserOnBoardEditDetailsSerializer(serializers.ModelSerializer):
     employee = PrivateCompanyEmployeeSlimSerializer(
         read_only=True, source="get_employee"
     )
-    company_user = PrivateCompanyUserSlimSerializer(
-        read_only=True, source="companyuser_set.first"
-    )
+    company_user = serializers.SerializerMethodField()
     permission = serializers.CharField(write_only=True, required=False)
+
+    def get_company_user(self, obj):
+        membership = _membership_in_company(obj, self.context)
+        return PrivateCompanyUserSlimSerializer(membership).data if membership is not None else None
 
     class Meta:
         model = User
@@ -387,12 +412,16 @@ class UserOnBoardEditDetailsSerializer(serializers.ModelSerializer):
             instance.image = validated_data.get("image")
         instance.save()
 
-        # Update user roles if provided (replaces existing roles)
+        # Update user roles if provided (replaces existing roles). Only the
+        # membership in the editor's own company is ever written: a user may
+        # belong to several companies, and the roles come from this one.
         actor = self.context["request"].user if "request" in self.context else None
         role_uids = validated_data.get("role_uids")
-        company_user = instance.companyuser_set.first()
+        company = actor.get_active_company() if actor else None
+        # The same object the response reads (the view's prefetched membership),
+        # so roles.set() below also refreshes what the PATCH response shows.
+        company_user = _membership_in_company(instance, self.context) if company is not None else None
         if role_uids and company_user:
-            company = actor.get_active_company() if actor else None
             roles_qs = CompanyRole.objects.filter(
                 uid__in=role_uids,
                 status=CompanyRoleStatusChoices.ACTIVE,

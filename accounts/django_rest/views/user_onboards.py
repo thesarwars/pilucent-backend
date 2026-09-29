@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from accounts.models import User
 from accounts.choices import UserStatusChoices
 from employeeio.choices import EmployeeStatusChoices
+from companyio.models import CompanyUser
 from employeeio.models import Employee
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -47,6 +48,9 @@ class UserOnboardCreateView(CreateAPIView):
 class UserOnboardListView(ListAPIView):
     # permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserListSerializer
+    # A stable page order: User has no default ordering, and OrderingFilter
+    # adds none unless ?ordering= is sent.
+    ordering = ["-created_at", "-id"]
     filter_backends = [
         filters.SearchFilter,
         filters.OrderingFilter,
@@ -119,7 +123,13 @@ class UserOnboardListView(ListAPIView):
         )
         return qs.prefetch_related(
             Prefetch("employee_set", queryset=employee_qs, to_attr="_employees_for_list"),
-            "companyuser_set__roles",
+            Prefetch(
+                "companyuser_set",
+                queryset=CompanyUser.objects.filter(company=active_company)
+                .select_related("company")
+                .prefetch_related("roles"),
+                to_attr="_company_users_for_list",
+            ),
         )
 
 
@@ -244,8 +254,13 @@ class UserOnBoardEditDetailsView(APIView):
             User.objects.filter(uid=uid, companyuser__company=active_company)
             .prefetch_related(
                 Prefetch("employee_set", queryset=employee_qs, to_attr="_employees_for_list"),
-                "companyuser_set__roles",
-                "companyuser_set__permission",
+                Prefetch(
+                    "companyuser_set",
+                    queryset=CompanyUser.objects.filter(company=active_company)
+                    .select_related("company")
+                    .prefetch_related("roles", "permission"),
+                    to_attr="_company_users_for_list",
+                ),
             )
             .first()
         )
@@ -258,7 +273,7 @@ class UserOnBoardEditDetailsView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        serializer = UserOnBoardDetailsSerializer(user)
+        serializer = UserOnBoardDetailsSerializer(user, context={"request": request})
         return Response(
             {"error": False, "data": serializer.data}, status=status.HTTP_200_OK
         )
@@ -281,7 +296,7 @@ class UserOnBoardEditDetailsView(APIView):
                 {
                     "error": False,
                     "message": "User details updated successfully",
-                    "data": UserListSerializer(user).data,
+                    "data": UserListSerializer(user, context={"request": request}).data,
                 }
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

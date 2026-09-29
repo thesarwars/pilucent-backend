@@ -203,6 +203,24 @@ dashboard path.
 - `weapi/django_rest/views/moov_money/transfer_money.py:814-815` — search on
   `employee__first_name/last_name`.
 
+## Found alongside — pre-existing, not caused by the strip
+
+User onboarding (`accounts/.../user_onboards.py`) reached across companies for a
+user who belongs to two. Fixed in its own commit: role and permission edits
+now write only the membership in the editor's company, and the list and detail
+show that membership. Still open, both decisions for the owner:
+
+- **DELETE soft-deletes the user and their employee records in every
+  company.** An admin of one company can deactivate a shared user's account in
+  another. Removing only this company's membership is *not* a safe fix today:
+  US payroll and tax queries reach a company's runs through the membership row
+  (`employee__user__companyuser__company`), so a deleted row drops that
+  company's payroll history and its 940/941 figures. Either give `CompanyUser`
+  a status that login, workspace selection and the onboarding list honour, or
+  first scope those payroll queries by `employee__company`.
+- **The edit/delete view has no admin permission** (`permission_classes` is
+  commented out), so any member of a company can edit or remove other members.
+
 ## What the BD `Employee` still answers to
 
 `uid`, `code`, `status` (`EmployeeStatusChoices`: DRAFT / ACTIVE / IN_ACTIVE / REMOVED), `user`,
