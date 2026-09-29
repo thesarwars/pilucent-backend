@@ -1,12 +1,18 @@
-"""The admin delete that 500s today, and what the purge command must not take with it.
+"""What the purge command takes with a user, and what it must not take.
 
-Deleting a user in the admin dies at COMMIT with
+`purge_users` removes a user and everything that hangs off them, their employee
+records included. Two schema facts make that its job rather than a plain delete:
 
-    violates foreign key constraint "payrollio_payrollsal_employee_id_35b6c426_fk_employeei"
+* `Employee.user` is `SET_NULL` in the BD model -- an employee is the company's
+  statutory record and outlives a deleted login in ordinary use -- so deleting
+  a user leaves the employee behind. The command collects the employees itself.
+* Deleting an employee with payroll history dies at COMMIT with
 
-because `PayrollSalaryProcess.employee` is `DO_NOTHING` while the database still
-enforces the constraint. `purge_users` walks the graph with those edges made
-traversable for the length of one run.
+      violates foreign key constraint "payrollio_payrollsal_employee_id_..._fk_employeei"
+
+  because `PayrollSalaryProcess.employee` is `DO_NOTHING` while the database
+  still enforces the constraint. `purge_users` walks the graph with those edges
+  made traversable for the length of one run.
 
 The risk in doing that is over-reach, so most of what is asserted here is what
 the command leaves alone: the shared company, bystanding users, the ledger FKs,
@@ -19,7 +25,7 @@ from io import StringIO
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db.models.deletion import DO_NOTHING
+from django.db.models.deletion import DO_NOTHING, SET_NULL
 from django.test import TestCase
 
 from accounts.choices import ChartOfAccountKindChoices, ChartOfAccountStatusChoices
@@ -31,7 +37,7 @@ from accounts.models import ChartOfAccount, User
 
 from companyio.models import Company, CompanyUser
 
-from employeeio.models import Employee
+from employeeio.models import Employee, EmployeeFieldHistory, EmployeeSalaryStructure
 
 from journalio.choices import (
     JournalEntryConnectorKindChoices,
@@ -60,7 +66,15 @@ class PurgeUsersTests(TestCase):
             name=email.split("@")[0], email=email, password="pass1234!"
         )
         CompanyUser.objects.create(user=user, company=self.company)
-        employee = Employee.objects.create(user=user, name=user.name)
+        # BD contract: an employee belongs to a company and carries a code
+        # unique within it (never reassigned) plus a required English name.
+        next_number = Employee.objects.filter(company=self.company).count() + 1
+        employee = Employee.objects.create(
+            company=self.company,
+            user=user,
+            code=f"EMP-{next_number:04d}",
+            name_en=user.name,
+        )
         PayrollSalaryProcess.objects.create(
             employee=employee,
             title="monthly salary process",
@@ -90,15 +104,36 @@ class PurgeUsersTests(TestCase):
         )
 
     def test_the_plain_orm_delete_still_fails(self):
-        """Guards the premise: without the command, this is still broken.
+        """Guards the premise: deleting an employee without the command is still
+        broken, because the payroll FK is DO_NOTHING.
 
         If Django ever starts collecting `DO_NOTHING` rows on its own, or the FK
-        gets migrated, this test fails and the command has become unnecessary.
+        gets migrated, this test fails and that half of the command is unnecessary.
         """
         self.assertIs(
             PayrollSalaryProcess._meta.get_field("employee").remote_field.on_delete,
             DO_NOTHING,
         )
+
+    def test_a_user_delete_alone_leaves_the_employee(self):
+        """The other premise: `Employee.user` is SET_NULL, so only the command's
+        explicit collection takes a purged user's employees."""
+        self.assertIs(Employee._meta.get_field("user").remote_field.on_delete, SET_NULL)
+
+    def test_an_employee_with_a_revised_salary_structure_purges(self):
+        """`superseded_by` is RESTRICT: both structures go in the same cascade.
+        As PROTECT it refused the purge (and any company delete) outright."""
+        employee = self.doomed.employee_set.get()
+        first = EmployeeSalaryStructure.objects.create(
+            employee=employee, effective_from=date(2025, 7, 1), effective_to=date(2026, 6, 30)
+        )
+        second = EmployeeSalaryStructure.objects.create(employee=employee, effective_from=date(2026, 7, 1))
+        first.superseded_by = second
+        first.save()
+
+        self.purge("doomed@example.com", "--apply")
+
+        self.assertFalse(EmployeeSalaryStructure.objects.filter(employee_id=employee.id).exists())
 
     # -- what it must not touch ---------------------------------------------
 
@@ -128,8 +163,23 @@ class PurgeUsersTests(TestCase):
 
     def test_dry_run_reports_the_same_rows_it_would_delete(self):
         output = self.purge("doomed@example.com")
-        self.assertIn("payrollio.PayrollSalaryProcess", output)
-        self.assertIn("employeeio.Employee", output)
+        deletes = output.split("ROWS TO DELETE", 1)[1].split("REFERENCES TO NULL", 1)[0]
+        # Whole table rows, not substrings: "employeeio.Employee" alone would also
+        # match EmployeePaymentProfile, or the SET_NULL row "employeeio.Employee.user".
+        self.assertRegex(deletes, r"(?m)^\s+payrollio\.PayrollSalaryProcess\s+1$")
+        self.assertRegex(deletes, r"(?m)^\s+employeeio\.Employee\s+1$")
+        # The employee is deleted, so it is not also reported as merely nulled.
+        self.assertNotIn("employeeio.Employee.user", output)
+
+    def test_rows_the_cascade_fast_deletes_are_not_also_reported_as_nulled(self):
+        """Field history is fast-deleted with the employee, while its `by` FK to
+        the purged user is SET_NULL; it is one delete, not a delete and a null."""
+        employee = self.doomed.employee_set.get()
+        EmployeeFieldHistory.objects.create(
+            employee=employee, field="grade", date=date(2026, 7, 1), to_value="G5", by=self.doomed
+        )
+        output = self.purge("doomed@example.com")
+        self.assertNotIn("employeeio.EmployeeFieldHistory.by", output)
 
     # -- the override is temporary and scoped -------------------------------
 

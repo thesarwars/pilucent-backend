@@ -31,7 +31,7 @@ class LeaveBalanceAdmin(admin.ModelAdmin):
 @admin.register(EmployeeLeaveAllocation)
 class EmployeeLeaveAllocationAdmin(admin.ModelAdmin):
     list_display = ["uid", "employee", "leave_type", "leave_year", "available_days"]
-    search_fields = ["employee__name", "leave_type__name"]
+    search_fields = ["employee__name_en", "leave_type__name"]
     list_filter = ["leave_year", "leave_type"]
     readonly_fields = ["uid", "available_days"]
 
@@ -39,7 +39,7 @@ class EmployeeLeaveAllocationAdmin(admin.ModelAdmin):
 @admin.register(LeaveRequest)
 class LeaveRequestAdmin(admin.ModelAdmin):
     list_display = ["uid", "employee", "leave_type", "from_date", "to_date", "status"]
-    search_fields = ["employee__name", "leave_type__name"]
+    search_fields = ["employee__name_en", "leave_type__name"]
     list_filter = ["status"]
     readonly_fields = ["uid"]
 
@@ -54,7 +54,7 @@ class LeaveEncashmentAdmin(admin.ModelAdmin):
         "total_encashment_amount",
         "status",
     ]
-    search_fields = ["employee__name", "encashment_date"]
+    search_fields = ["employee__name_en", "encashment_date"]
     list_filter = ["status"]
     readonly_fields = ["uid"]
 

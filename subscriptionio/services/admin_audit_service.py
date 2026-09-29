@@ -36,8 +36,13 @@ class AdminAuditService:
     def _serialize_event(cls, event: SubscriptionEvent) -> dict[str, Any]:
         actor_name = None
         if event.actor:
-            actor_name = getattr(event.actor, "name", None) or getattr(
-                event.actor, "email", None
+            # The actor is a BD Employee: name_en, then its login, then email.
+            login = getattr(event.actor, "user", None)
+            actor_name = (
+                getattr(event.actor, "name_en", None)
+                or getattr(login, "name", None)
+                or getattr(event.actor, "email", None)
+                or getattr(login, "email", None)
             )
 
         return {
@@ -78,7 +83,7 @@ class AdminAuditService:
         category: str | None = None,
     ):
         queryset = SubscriptionEvent.objects.select_related(
-            "company", "actor", "company_subscription"
+            "company", "actor", "actor__user", "company_subscription"
         ).order_by("-created_at")
 
         if category and category.lower() != "all":

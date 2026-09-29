@@ -20,6 +20,7 @@ from rest_framework.views import APIView
 
 from common import clock
 from common.django_rest.helpers.custome_pagination import CustomPageNumberPagination
+from common.django_rest.permissions.admin import IsActiveCompanyAdmin
 from common.django_rest.permissions.company_subscription import HaveSubscription
 from employeeio.choices import ClassificationChoices, TrackedFieldChoices, WorkerCategoryChoices
 from employeeio.models import (
@@ -31,6 +32,7 @@ from employeeio.models import (
     EmployeeStatutory,
     EmployeeTaxProfile,
 )
+from employeeio.services.access import NoLinkedLogin, set_login_access
 from employeeio.services.compliance import evaluate
 from employeeio.services.salary import structure_in_force
 from employeeio.services.tax import project
@@ -45,6 +47,7 @@ from ..serializers.bd_employees import (
     NomineeListSerializer,
     PaymentSerializer,
     PersonalSerializer,
+    access_out,
     StatutorySerializer,
     TaxProfileSerializer,
     history_out,
@@ -207,6 +210,34 @@ class BDEmployeePayment(BDEmployeeSection):
             employee__code=self.kwargs["code"],
             employee__company=self.company(),
         )
+
+
+class BDEmployeeAccess(BDEmployeeView):
+    """Grant or revoke the linked login's access (account behaviour carried
+    over from the US employee API). Granting sends the invitation email.
+
+    Only an admin of the active company may call it -- tighter than the US
+    API, which let any subscribed member of the company toggle it, and
+    deliberately not `IsCompanyAdmin`, whose global `is_admin` flag every
+    self-signup carries into companies it was only invited to."""
+
+    permission_classes = [HaveSubscription, IsActiveCompanyAdmin]
+
+    def patch(self, request, code):
+        employee = self.get_employee()
+        data = request.data if isinstance(request.data, dict) else {}
+        enabled = data.get("isAccessEnabled")
+        if not isinstance(enabled, bool):
+            return Response(
+                {"errors": [{"field": "isAccessEnabled", "path": "isAccessEnabled",
+                             "messages": ["isAccessEnabled must be true or false."]}]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            invited = set_login_access(employee, enabled)
+        except NoLinkedLogin as exc:
+            return Response({"error": True, "message": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return Response({**access_out(employee), "invitationSent": invited})
 
 
 # --------------------------------------------------------------- computed

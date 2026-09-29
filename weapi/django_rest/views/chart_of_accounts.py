@@ -457,8 +457,8 @@ class PrivateWeChartOfAccountSessionList(ListAPIView):
         "supplier__last_name",
         "supplier__display_name",
         "supplier__company_name",
-        "employee__first_name",
-        "employee__last_name",
+        "employee__name_en",
+        "employee__name_bn",
     ]
     filterset_fields = [
         # `kind` here is the POSTING SIDE (DEBIT/CREDIT), not the transaction

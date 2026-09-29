@@ -276,9 +276,21 @@ class LimitEnforcementServiceTests(TestCase):
         from accounts.models import User
 
         user = User.objects.create(email="e1@test.com", name="E1")
-        Employee.objects.create(user=user, company=self.company, status="ACTIVE")
+        Employee.objects.create(
+            user=user,
+            company=self.company,
+            code="EMP-0001",
+            name_en="E1",
+            status="ACTIVE",
+        )
         user2 = User.objects.create(email="e2@test.com", name="E2")
-        Employee.objects.create(user=user2, company=self.company, status="ACTIVE")
+        Employee.objects.create(
+            user=user2,
+            company=self.company,
+            code="EMP-0002",
+            name_en="E2",
+            status="ACTIVE",
+        )
 
         result = LimitEnforcementService.check_create_allowed(
             self.company, LimitMetricChoices.EMPLOYEE

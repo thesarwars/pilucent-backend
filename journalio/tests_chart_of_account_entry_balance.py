@@ -116,7 +116,7 @@ class ChartOfAccountLedgerBase(TestCase):
         )
         CompanyUser.objects.create(user=cls.user, company=cls.company)
         cls.employee = Employee.objects.create(
-            user=cls.user, company=cls.company, name="Ada"
+            user=cls.user, company=cls.company, code="EMP-0001", name_en="Ada"
         )
 
     def request(self):

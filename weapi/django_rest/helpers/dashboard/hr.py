@@ -63,12 +63,8 @@ def employee_overview(company, date_from, date_to):
 
     return {
         "total_active": active.count(),
-        "new_joiners": active.filter(
-            confirmation_date__range=[date_from, date_to]
-        ).count(),
-        "upcoming_confirmations": active.filter(
-            confirmation_date__range=[today, window_end]
-        ).count(),
+        "new_joiners": active.filter(doj__range=[date_from, date_to]).count(),
+        "upcoming_confirmations": pending_confirmations(active, today, window_end).count(),
         "department_split": [
             {"department": row["department__title"] or "Unassigned", "count": row["count"]}
             for row in department_split
@@ -82,9 +78,9 @@ def employee_overview(company, date_from, date_to):
 def employee_stats(company, today=None):
     """Headcount stat-card numbers.
 
-    ``net_change`` approximates net growth as confirmations within the last 30
-    days; employee separations are not date-stamped in the data model, so true
-    attrition is not subtracted (documented limitation).
+    ``net_change`` approximates net growth as joiners (by ``doj``) within the
+    last 30 days. Separations are not subtracted yet, although the BD employee
+    now date-stamps them (``separated_on``) -- a known limitation.
     """
     today = today or date.today()
     active = company_employees(company).filter(status=EmployeeStatusChoices.ACTIVE)
@@ -95,16 +91,26 @@ def employee_stats(company, today=None):
 
     return {
         "total_active": active.count(),
-        "joiners_this_month": active.filter(
-            confirmation_date__gte=month_start, confirmation_date__lte=today
-        ).count(),
-        "net_change": active.filter(
-            confirmation_date__gt=last_30, confirmation_date__lte=today
-        ).count(),
-        "upcoming_confirmations": active.filter(
-            confirmation_date__gt=today, confirmation_date__lte=window_end
-        ).count(),
+        # The BD employee has a real date of joining (doj); the US model used
+        # its confirmation date as a stand-in for one.
+        "joiners_this_month": active.filter(doj__gte=month_start, doj__lte=today).count(),
+        "net_change": active.filter(doj__gt=last_30, doj__lte=today).count(),
+        "upcoming_confirmations": pending_confirmations(active, today, window_end).count(),
     }
+
+
+def pending_confirmations(employees, today, window_end):
+    """Probationers not yet confirmed whose probation ends in the window.
+
+    Not a future `confirmation` date: the BD contract treats one as a data
+    error that blocks payroll (docs/employee-profile.md §2.2, §3.1).
+    """
+    return employees.filter(
+        confirmation__isnull=True,
+        separated_on__isnull=True,  # a separated probationer is never confirmed
+        probation_end__gt=today,
+        probation_end__lte=window_end,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -434,39 +440,38 @@ def upcoming_events(company, days=DEFAULT_EVENT_WINDOW_DAYS):
     events = []
 
     for emp in employees:
-        name = getattr(emp, "name", None) or (
-            emp.user.name if emp.user_id and emp.user else None
-        )
+        name = emp.name_en or (emp.user.name if emp.user_id and emp.user else None)
         # Birthdays (month/day match within window)
-        if emp.date_of_birth and _date_in_window(emp.date_of_birth, today, window_end):
+        if emp.dob and _date_in_window(emp.dob, today, window_end):
             events.append(
                 {
                     "type": "birthday",
                     "employee_uid": str(emp.uid),
                     "name": name,
-                    "date": _next_anniversary(emp.date_of_birth, today).isoformat(),
+                    "date": _next_anniversary(emp.dob, today).isoformat(),
                 }
             )
-        # Work anniversaries (confirmation_date treated as the joining anchor)
-        if emp.confirmation_date and _date_in_window(
-            emp.confirmation_date, today, window_end
-        ):
-            events.append(
-                {
-                    "type": "work_anniversary",
-                    "employee_uid": str(emp.uid),
-                    "name": name,
-                    "date": _next_anniversary(emp.confirmation_date, today).isoformat(),
-                }
-            )
+        # Work anniversaries, from the date of joining -- a whole year at least,
+        # so a joining date inside the window is not its own anniversary.
+        if emp.doj:
+            anniversary = _next_anniversary(emp.doj, today)
+            if anniversary.year > emp.doj.year and anniversary <= window_end:
+                events.append(
+                    {
+                        "type": "work_anniversary",
+                        "employee_uid": str(emp.uid),
+                        "name": name,
+                        "date": anniversary.isoformat(),
+                    }
+                )
         # Contract end dates (absolute date in window)
-        if emp.contract_end_date and today <= emp.contract_end_date <= window_end:
+        if emp.contract_end and today <= emp.contract_end <= window_end:
             events.append(
                 {
                     "type": "contract_end",
                     "employee_uid": str(emp.uid),
                     "name": name,
-                    "date": emp.contract_end_date.isoformat(),
+                    "date": emp.contract_end.isoformat(),
                 }
             )
 

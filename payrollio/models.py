@@ -68,7 +68,7 @@ class SalaryAdjustment(BaseModelWithUID):
     objects = SalaryAdjustmentManager()
 
     def __str__(self):
-        return f"ID: {self.id}, Name: {self.employee.user.name}, Kind: {self.kind}"
+        return f"ID: {self.id}, Name: {self.employee.name_en}, Kind: {self.kind}"
 
     class Meta:
         verbose_name = "Salary Adjustment"
@@ -193,7 +193,7 @@ class PayrollSalaryProcess(BaseModelWithUID):
     )
 
     def __str__(self):
-        return f"employee_name: {self.employee.user.name}"
+        return f"employee_name: {self.employee.name_en}"
 
 
 class PayrollSalaryComponent(BaseModelWithoutTitle):

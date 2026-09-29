@@ -144,7 +144,7 @@ class PayrollAccountingPreferencesSettingAdmin(admin.ModelAdmin):
     search_fields = [
         "uid",
         "paycheck_payroll_tax_expense_account__title",
-        "created_by__name",
+        "created_by__name_en",
     ]
     list_filter = [
         "created_at",

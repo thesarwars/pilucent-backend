@@ -4,7 +4,7 @@ import logging
 from rest_framework import filters
 
 from django.db import transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, generics, permissions
 from rest_framework.generics import CreateAPIView, ListAPIView, get_object_or_404
@@ -58,20 +58,30 @@ class UserOnboardListView(ListAPIView):
 
     def get_queryset(self):
         active_company = self.request.user.get_active_company()
+        if active_company is None:
+            # companyuser__company=None would match every user with no
+            # membership -- a fresh self-signup could list them all.
+            return User.objects.none()
         # Two layers of "removed" both have to be excluded:
         #   1. User.status = REMOVED  -> account itself is soft-deleted.
         #   2. Employee.status = REMOVED -> linked HR record is terminated.
         # The inner OR keeps users-without-employees (`employee__isnull=True`)
         # while only including employee-linked users whose Employee is both
         # joined and not removed.
+        # Every employee predicate is scoped to the active company: an employee
+        # is a per-company record, and a user's record in another company must
+        # neither include nor exclude them here (the rendered row is scoped the
+        # same way, below).
+        employee_here = Employee.objects.filter(user=OuterRef("pk"), company=active_company)
         qs = (
             User.objects.filter(companyuser__company=active_company)
             .exclude(status=UserStatusChoices.REMOVED)
             .filter(
-                Q(employee__isnull=True)
-                | (
-                    Q(employee__is_joined=True)
-                    & ~Q(employee__status=EmployeeStatusChoices.REMOVED)
+                ~Exists(employee_here)
+                | Exists(
+                    employee_here.filter(is_joined=True).exclude(
+                        status=EmployeeStatusChoices.REMOVED
+                    )
                 )
             )
             .distinct()
@@ -81,22 +91,24 @@ class UserOnboardListView(ListAPIView):
         is_employee = self.request.query_params.get("is_employee")
         if is_employee is not None:
             if _coerce_bool(is_employee):
-                qs = qs.filter(employee__isnull=False)
+                qs = qs.filter(Exists(employee_here))
             else:
-                qs = qs.filter(employee__isnull=True)
+                qs = qs.filter(~Exists(employee_here))
 
         # Prefetch the employee row(s) into a list attr the serializer reads,
         # avoiding N+1 across is_employee + employee + designation/department.
         # Mirror the top-level REMOVED exclusion so the serializer never
         # renders a stale terminated-employee row alongside an active user.
+        # Scoped to the active company: a user employed by two companies must
+        # not show the other company's code, designation or department here.
         employee_qs = (
-            Employee.objects.exclude(status=EmployeeStatusChoices.REMOVED)
+            Employee.objects.filter(company=active_company)
+            .exclude(status=EmployeeStatusChoices.REMOVED)
             .select_related("designation", "department")
             .only(
                 "id",
                 "uid",
                 "user_id",
-                "employee_id",
                 "code",
                 "status",
                 "is_joined",
@@ -210,14 +222,21 @@ class UserOnBoardEditDetailsView(APIView):
 
     def get_object(self, uid):
         active_company = self.request.user.get_active_company()
-        employee_qs = Employee.objects.select_related("designation", "department").only(
+        if active_company is None:
+            # companyuser__company=None would match any user with no membership.
+            return None
+        # The employee record in the active company -- the one this endpoint
+        # shows, and the one validate_employee_code compares against.
+        employee_qs = Employee.objects.filter(company=active_company).select_related(
+            "designation", "department"
+        ).only(
             "id",
             "uid",
             "user_id",
-            "employee_id",
             "code",
             "status",
             "is_joined",
+            "is_access_enabled",
             "designation__title",
             "department__title",
         )

@@ -8,7 +8,10 @@ Deleting a user from the Django admin raises `IntegrityError` at COMMIT:
     update or delete on table "employeeio_employee" violates foreign key
     constraint "payrollio_payrollsal_employee_id_35b6c426_fk_employeei"
 
-`User` -> `Employee` is CASCADE, so the employee row goes. But
+The purge takes the user's `Employee` rows with it. (`Employee.user` is
+`SET_NULL` in the BD model -- an employee is the company's statutory record and
+outlives a deleted login in ordinary use -- so this command collects a purged
+user's employees explicitly; see `handle`.) But
 `PayrollSalaryProcess.employee` is `on_delete=DO_NOTHING`, so Django's collector
 skips those rows entirely -- it does not delete them, null them, or even see
 them. `db_constraint` still defaults to True, so Postgres enforces the FK that
@@ -29,8 +32,10 @@ WHAT IT DELETES
 ---------------
 
 Everything Django's own `Collector` reaches from the named users once those
-`DO_NOTHING` edges are traversable. That is the full transitive closure:
-`CompanyUser` membership, `Employee` and its twelve CASCADE children, payroll
+`DO_NOTHING` edges are traversable, plus the users' `Employee` rows. That is the
+full transitive closure: `CompanyUser` membership, `Employee` and its CASCADE
+children (nominees, statutory, tax and payment profiles, investments, field
+history, salary structures), payroll
 runs, attendance, chat, notifications. The ~39 `SET_NULL` referrers to
 `Employee` and ~15 to `User` are nulled rather than deleted, exactly as the
 schema asks; the report counts them separately so nothing is a surprise.
@@ -84,6 +89,7 @@ from common.deletion import LEDGER_GUARDED, do_nothing_as_cascade  # noqa: F401
 from accounts.models import User
 
 from companyio.models import Company, CompanyUser
+from employeeio.models import Employee
 
 
 class Command(BaseCommand):
@@ -175,11 +181,31 @@ class Command(BaseCommand):
             if count:
                 deletes[queryset.model._meta.label] += count
 
+        # A row that is nulled and then deleted in the same run is a delete,
+        # not a null -- count it once. That happens to a purged user's Employee
+        # (Employee.user is SET_NULL, and the command also collects the
+        # employee), and to rows the employee cascade removes on the fast-delete
+        # path while one of their FKs to the user is SET_NULL (field history).
+        # Only models that actually have a nulled field need their doomed pks.
+        nulled = {field.model._meta.concrete_model for field, _ in collector.field_updates}
+        doomed_by_model = defaultdict(set)
+        for model, instances in collector.data.items():
+            if model._meta.concrete_model in nulled:
+                doomed_by_model[model._meta.concrete_model].update(obj.pk for obj in instances)
+        for queryset in collector.fast_deletes:
+            if queryset.model._meta.concrete_model in nulled:
+                doomed_by_model[queryset.model._meta.concrete_model].update(
+                    queryset.values_list("pk", flat=True)
+                )
+
         nulls = defaultdict(int)
         for (field, value), querysets in collector.field_updates.items():
+            doomed = doomed_by_model.get(field.model._meta.concrete_model, set())
             for queryset in querysets:
                 count = (
-                    len(queryset) if isinstance(queryset, list) else queryset.count()
+                    sum(1 for obj in queryset if obj.pk not in doomed)
+                    if isinstance(queryset, list)
+                    else queryset.exclude(pk__in=doomed).count()
                 )
                 if count:
                     label = f"{field.model._meta.label}.{field.name}"
@@ -269,6 +295,11 @@ class Command(BaseCommand):
                 # a mixed list makes the related-object filter raise ValueError.
                 # Both calls accumulate into the same collector.
                 collector.collect(list(users))
+                # A purged user's employee records go with them, as the US
+                # cascade did; the BD model keeps them on an ordinary delete.
+                employees = list(Employee.objects.filter(user__in=users))
+                if employees:
+                    collector.collect(employees)
                 if options["with_orphan_companies"] and doomed_companies:
                     collector.collect(doomed_companies)
             except ProtectedError as exc:

@@ -107,7 +107,7 @@ class DailyTimeTracking(BaseModelWithUID):
         ]
 
     def __str__(self):
-        return f"ID: {self.id}, Name: {self.employee.user}"
+        return f"ID: {self.id}, Name: {self.employee.name_en}"
 
     def get_worked_hour_count(self):
         total_hours = self.dailytimetrackingsession_set.aggregate(
@@ -234,7 +234,7 @@ class PunchDataDailyTime(BaseModelWithUID):
         ]
 
     def __str__(self):
-        return f"ID: {self.id}, Name: {self.employee.user}"
+        return f"ID: {self.id}, Name: {self.employee.name_en}"
 
     def get_worked_hour_count(self):
         return self.worked_hour or 0

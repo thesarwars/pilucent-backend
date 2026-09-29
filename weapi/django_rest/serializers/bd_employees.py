@@ -479,6 +479,14 @@ def investment_out(i):
     return {"uid": str(i.uid), "instrument": i.instrument, "amount": money_str(i.amount), "proof": i.proof}
 
 
+def access_out(employee):
+    return {
+        "isAccessEnabled": employee.is_access_enabled,
+        "isJoined": employee.is_joined,
+        "login": employee.user.email if employee.user_id else None,
+    }
+
+
 def history_out(h):
     return {
         "uid": str(h.uid), "field": h.field, "date": h.date.isoformat(), "from": h.from_value,
@@ -522,6 +530,7 @@ class EmployeeProfileSerializer(serializers.Serializer):
             "code": employee.code,
             "uid": str(employee.uid),
             "status": employee.status,
+            "access": access_out(employee),
             "asOf": today.isoformat(),
             "personal": personal,
             "employment": {
@@ -573,7 +582,7 @@ class EmployeeRosterSerializer(serializers.Serializer):
 
 __all__ = [
     "EmployeeCreateSerializer", "EmployeeProfileSerializer", "EmployeeRosterSerializer",
-    "EmploymentSerializer", "InvestmentListSerializer", "NomineeListSerializer", "PaymentSerializer",
+    "EmploymentSerializer", "InvestmentListSerializer", "access_out", "NomineeListSerializer", "PaymentSerializer",
     "PersonalSerializer", "StatutorySerializer", "TaxProfileSerializer", "history_out",
     "investment_out", "nominee_out", "structure_out", "ui_errors",
 ]

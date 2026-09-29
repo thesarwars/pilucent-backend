@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 from employeeio.models import Employee
 from employeeio.choices import EmployeeStatusChoices
+from employeeio.services.profile import next_code
 from companyio.models import CompanyUser, Company
 from weapi.django_rest.serializers.companies import PrivateWeCompanySerializer
 import getpass
@@ -36,10 +37,15 @@ class Command(BaseCommand):
         user.groups.add(group)
         user.is_admin = True
         user.save()
-        Employee.objects.create(
-            company_email=email, user=user, status=EmployeeStatusChoices.ACTIVE
-        )
         company = Company.objects.create(name=company_name)
+        Employee.objects.create(
+            company=company,
+            user=user,
+            code=next_code(company),
+            name_en=user.name,
+            email=email,
+            status=EmployeeStatusChoices.ACTIVE,
+        )
         admin_role, _, _ = PrivateWeCompanySerializer().seed_company_roles(company=company)
         cu = CompanyUser.objects.create(company=company, user=user)
         cu.roles.add(admin_role)

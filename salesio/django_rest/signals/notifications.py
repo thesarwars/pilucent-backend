@@ -21,8 +21,8 @@ def create_sale_notification(sender, instance, created, **kwargs):
             if instance.is_invoice == False
             else NotificationKindChoices.INVOICE_CREATED
         )
-        # created_by = instance.created_by.name if instance.created_by else "someone"
-        created_by = getattr(instance.created_by, "name", "someone")
+        # created_by is a BD Employee: its name is name_en.
+        created_by = getattr(instance.created_by, "name_en", None) or "someone"
         NotificationService.create_notification(
             status=NotificationStatusChoices.PUBLISHED,
             model_kind=NotificationModelKindChoices.SALE,

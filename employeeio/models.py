@@ -59,6 +59,13 @@ class Employee(BaseModelWithUID):
         default=EmployeeStatusChoices.ACTIVE,
         db_index=True,
     )
+    # ---- account access (accounts/tenancy, not HR -- carried over unchanged)
+    # Whether the linked login may authenticate and enter this company's
+    # workspace (accounts.django_rest.helpers.login_access, SelectCompany).
+    # Off until an admin grants it, which sends the invitation email.
+    is_access_enabled = models.BooleanField(default=False)
+    # Whether the linked user finished onboarding (accounts onboard flow).
+    is_joined = models.BooleanField(default=False)
 
     # ---- identity and personal (§2.1)
     # Business key, e.g. EMP-0142. Unique within the company, never reassigned.
@@ -317,8 +324,10 @@ class EmployeeSalaryStructure(BaseModelWithUID):
     effective_from = models.DateField()
     # Inclusive. Null means in force until superseded.
     effective_to = models.DateField(null=True, blank=True)
+    # RESTRICT, not PROTECT: a structure that superseded another cannot be
+    # deleted on its own, but both go when the employee (or company) is deleted.
     superseded_by = models.OneToOneField(
-        "self", on_delete=models.PROTECT, null=True, blank=True, related_name="supersedes"
+        "self", on_delete=models.RESTRICT, null=True, blank=True, related_name="supersedes"
     )
     template = _text(40)
     reason = models.TextField(blank=True, default="")

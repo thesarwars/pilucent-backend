@@ -791,6 +791,8 @@ class PrivateWeChartOfAccountSessionListSerializer(DerivedRunningBalanceMixin, M
             name = (
                 getattr(party, "display_name", None)
                 or getattr(party, "company_name", None)
+                # A BD employee's name (employeeio has no first/last split).
+                or getattr(party, "name_en", None)
                 or " ".join(
                     part
                     for part in (

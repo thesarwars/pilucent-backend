@@ -389,7 +389,7 @@ class PayeeTests(RegisterTestCase):
         from employeeio.models import Employee
 
         employee = Employee.objects.create(
-            company=self.company, first_name="Abid", last_name="Ragib",
+            company=self.company, code="EMP-0001", name_en="Abid Ragib",
             user=User.objects.create_user(
                 name="Abid", email="abid@example.com", password="pass1234!"
             ),

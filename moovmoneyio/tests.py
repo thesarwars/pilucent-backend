@@ -45,7 +45,9 @@ class PayrollPayoutTests(TestCase):
         self.company = Company.objects.create(name="A")
         self.user = User.objects.create(email="pay@x.test", password="x")
         CompanyUser.objects.create(company=self.company, user=self.user)
-        self.employee = Employee.objects.create(user=self.user)
+        self.employee = Employee.objects.create(
+            company=self.company, user=self.user, code="EMP-0001", name_en="Pay Employee",
+        )
         coa = ChartOfAccount.objects.create(company=self.company, code="7000")
         self.run = PayrollSalaryProcess.objects.create(
             employee=self.employee,

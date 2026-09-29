@@ -38,11 +38,7 @@ class PrivateWeDashboardLeaveRequestsView(DashboardCardView):
         leave_requests = []
         for lr in pending:
             employee = lr.employee
-            name = (
-                getattr(employee, "name", None)
-                or getattr(employee, "full_name", None)
-                or "Unknown"
-            )
+            name = getattr(employee, "name_en", None) or "Unknown"
             days = lr.total_days or 0
             leave_requests.append(
                 {

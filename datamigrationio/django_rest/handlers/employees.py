@@ -90,8 +90,14 @@ class EmployeesMigrationHandler(BaseMigrationHandler):
     description = "Import employee records."
     has_gl_impact = False
     is_posting_transaction = False
-    import_available = True
-    template_available = True
+    # The importer maps a US spreadsheet (first/last name, SSN-era columns) onto
+    # the US Employee, which was replaced by the BD employee profile. Its
+    # create() would fail on every row inside the Celery task, so the type is
+    # switched off through the registry's own gate -- the views and workflow
+    # refuse it with "not implemented yet" -- until a BD import is built.
+    # See docs/employee-reconnect-backlog.md.
+    import_available = False
+    template_available = False
 
     TEMPLATE_HEADERS = [
         "First Name",
@@ -131,7 +137,9 @@ class EmployeesMigrationHandler(BaseMigrationHandler):
 
     @classmethod
     def get_template_headers(cls) -> list:
-        return cls.TEMPLATE_HEADERS
+        # The download view serves whatever this returns; `template_available`
+        # alone is only metadata. No headers -> "No template available".
+        return cls.TEMPLATE_HEADERS if cls.template_available else []
 
     @classmethod
     def get_template_sample_row(cls) -> list:
@@ -155,6 +163,11 @@ class EmployeesMigrationHandler(BaseMigrationHandler):
 
     @classmethod
     def validate(cls, job, company) -> dict:
+        # Validate and review-impact are not gated by the views, so they defer
+        # to "not implemented" while import is off, instead of running the US
+        # validator and advancing the job towards a confirm that is refused.
+        if not cls.import_available:
+            return super().validate(job, company)
         from datamigrationio.django_rest.services.employee_validator import (
             EmployeeValidatorService,
         )
@@ -162,6 +175,8 @@ class EmployeesMigrationHandler(BaseMigrationHandler):
 
     @classmethod
     def review_impact(cls, job, company) -> dict:
+        if not cls.import_available:
+            return super().review_impact(job, company)
         from datamigrationio.django_rest.services.employee_impact import (
             EmployeeImpactService,
         )

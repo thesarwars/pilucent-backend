@@ -85,6 +85,20 @@ class CrossTenantTests(ApiMixin, TestCase):
         make_employee(self.company_b, "EMP-0001", name_en="Bo Karim")
         self.assertEqual([r["code"] for r in self.as_b.get(url()).json()["results"]], ["EMP-0001"])
 
+    def test_an_admin_of_b_cannot_touch_as_login_access(self):
+        """The access endpoint is admin-only, but admin *of B* is still not A."""
+        from employeeio.tests_login_access import make_company_admin
+
+        make_company_admin(self.user_b, self.company_b)
+        login = make_user(self.company_a, "a-worker@example.com")
+        self.emp_a.user = login
+        self.emp_a.is_access_enabled = True
+        self.emp_a.save()
+        response = self.as_b.patch(url("EMP-0142", "/access"), {"isAccessEnabled": False}, format="json")
+        self.assertEqual(response.status_code, 404)
+        self.emp_a.refresh_from_db()
+        self.assertTrue(self.emp_a.is_access_enabled)
+
 
 class CallSiteTests(TestCase):
     """Guards against a new sub-resource being added without scoping."""

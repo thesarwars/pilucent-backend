@@ -1,6 +1,7 @@
 from django.urls import path
 
 from ..views.bd_employees import (
+    BDEmployeeAccess,
     BDEmployeeCompliance,
     BDEmployeeDetail,
     BDEmployeeEmployment,
@@ -47,6 +48,7 @@ urlpatterns = [
     path(r"/<str:code>/statutory", BDEmployeeStatutory.as_view(), name="weapi.bd-employee-statutory"),
     path(r"/<str:code>/tax-profile", BDEmployeeTaxProfile.as_view(), name="weapi.bd-employee-tax-profile"),
     path(r"/<str:code>/payment", BDEmployeePayment.as_view(), name="weapi.bd-employee-payment"),
+    path(r"/<str:code>/access", BDEmployeeAccess.as_view(), name="weapi.bd-employee-access"),
     path(r"/<str:code>/compliance", BDEmployeeCompliance.as_view(), name="weapi.bd-employee-compliance"),
     path(r"/<str:code>/tax-projection", BDEmployeeTaxProjection.as_view(), name="weapi.bd-employee-tax-projection"),
     path(r"/<str:code>/nominees", BDEmployeeNominees.as_view(), name="weapi.bd-employee-nominees"),

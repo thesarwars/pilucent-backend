@@ -215,13 +215,11 @@ class UserListSerializer(ModelSerializer):
         return obj.employee_set.exists()
 
     def get_employee(self, obj):
-        cached = getattr(obj, "_employees_for_list", None)
-        emp = cached[0] if cached else obj.employee_set.first()
+        emp = _employee_in_company(obj)
         if emp is None:
             return None
         return {
             "uid": str(emp.uid),
-            "employee_id": emp.employee_id,
             "code": emp.code,
             "status": emp.status,
             "is_joined": emp.is_joined,
@@ -284,13 +282,11 @@ class UserOnBoardDetailsSerializer(serializers.ModelSerializer):
         ]
 
     def get_employee(self, obj):
-        cached = getattr(obj, "_employees_for_list", None)
-        emp = cached[0] if cached else obj.employee_set.first()
+        emp = _employee_in_company(obj)
         if emp is None:
             return None
         return {
             "uid": str(emp.uid),
-            "employee_id": emp.employee_id,
             "code": emp.code,
             "status": emp.status,
             "is_joined": emp.is_joined,
@@ -298,6 +294,21 @@ class UserOnBoardDetailsSerializer(serializers.ModelSerializer):
             "designation": emp.designation.title if emp.designation_id else None,
             "department": emp.department.title if emp.department_id else None,
         }
+
+
+def _employee_in_company(user):
+    """The user's employee record as the onboarding views show it.
+
+    The views prefetch it scoped to the active company into
+    `_employees_for_list`; an empty list there means "no employee in this
+    company", not "not prefetched" -- falling back to the unscoped relation
+    would show another company's record. Without the prefetch, get_employee()
+    resolves the active company itself.
+    """
+    cached = getattr(user, "_employees_for_list", None)
+    if cached is not None:
+        return cached[0] if cached else None
+    return user.get_employee()
 
 
 class UserOnBoardEditDetailsSerializer(serializers.ModelSerializer):
@@ -330,6 +341,27 @@ class UserOnBoardEditDetailsSerializer(serializers.ModelSerializer):
             "permission",
         ]
 
+    def validate_employee_code(self, value):
+        """An employee code is the BD business key and is never reassigned
+        (docs/employee-profile.md §2.1). An unchanged code is accepted; it is
+        refused here, before update() saves the user or stores an image.
+
+        Compared against the user's employee in the *editor's* active company
+        -- the record this endpoint displays -- not whichever company
+        `get_employee()` would fall back to for a user employed by several.
+        """
+        if self.instance is None:
+            return value
+        request = self.context.get("request")
+        company = request.user.get_active_company() if request is not None else None
+        if company is None:
+            # No company to edit within: there is no employee record to compare.
+            return value
+        employee = self.instance.employee_set.filter(company=company).first()
+        if employee is not None and employee.code != value:
+            raise serializers.ValidationError("An employee code is never reassigned.")
+        return value
+
     def validate_role_uids(self, role_uids):
         request = self.context.get("request")
         company = request.user.get_active_company() if request else None
@@ -354,14 +386,6 @@ class UserOnBoardEditDetailsSerializer(serializers.ModelSerializer):
         if "image" in validated_data:
             instance.image = validated_data.get("image")
         instance.save()
-
-        # Update employee code if provided
-        employee_code = validated_data.get("employee_code")
-        if employee_code:
-            employee = instance.get_employee()
-            if employee:
-                employee.code = employee_code
-                employee.save()
 
         # Update user roles if provided (replaces existing roles)
         actor = self.context["request"].user if "request" in self.context else None

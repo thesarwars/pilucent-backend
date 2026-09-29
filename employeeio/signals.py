@@ -1,7 +1,8 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 
 from accounts.choices import UserStatusChoices
+from accounts.models import User
 
 from .choices import EmployeeStatusChoices
 from .models import (
@@ -56,3 +57,11 @@ def sync_employee_status_to_user(sender, instance, created, **kwargs):
         user.status = UserStatusChoices.ACTIVE
         user.is_active = True
         user.save(update_fields=["status", "is_active"])
+
+
+@receiver(pre_delete, sender=User)
+def clear_access_when_the_login_goes(sender, instance, **kwargs):
+    """`Employee.user` is SET_NULL: the employee outlives a deleted login. Its
+    access flags belonged to that login, so they go with it -- otherwise a
+    grant would survive as a stale True and pass to whoever is linked next."""
+    Employee.objects.filter(user=instance).update(is_access_enabled=False, is_joined=False)

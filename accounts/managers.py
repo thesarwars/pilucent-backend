@@ -47,17 +47,23 @@ class CustomUserManager(BaseUserManager):
         # Create super user
         user = self.create_user(name, email, password, **extra_fields)
 
-        # Creating employee (superuser is an operational/developer account; HR record is convenient)
-        Employee.objects.create(user=user, company_email=email)
-
         # Create the superuser's home company and seed system roles, then attach
         # the admin role. Imported here to avoid import-time cycles.
         from weapi.django_rest.serializers.companies import PrivateWeCompanySerializer
+        from employeeio.services.profile import next_code
 
         company = Company.objects.create(name=f"{name}-organization", email=email)
         admin_role, _, _ = PrivateWeCompanySerializer().seed_company_roles(company)
         cu = CompanyUser.objects.create(user=user, company=company)
         cu.roles.add(admin_role)
+
+        # Employee record in the home company (superuser is an operational /
+        # developer account; the record is convenient). A BD employee belongs to
+        # a company and carries a code and an English name, so it follows the
+        # company. Login access keeps its default, as before.
+        Employee.objects.create(
+            company=company, user=user, code=next_code(company), name_en=user.name, email=email
+        )
 
         return user
 

@@ -186,7 +186,10 @@ class VoidPayrollRoundTripTests(TestCase):
             name="Michael olyse", email="void-round-trip@example.com",
             password="pass1234!",
         )
-        cls.employee = Employee.objects.create(user=cls.user, name="Michael olyse")
+        cls.employee = Employee.objects.create(
+            company=cls.company, user=cls.user,
+            code="EMP-0001", name_en="Michael olyse",
+        )
         cls.bank = ChartOfAccount.objects.create(
             company=cls.company, title="City Bank", code="1000",
             kind=ChartOfAccountKindChoices.ASSETS,

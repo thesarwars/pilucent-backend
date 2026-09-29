@@ -8,9 +8,11 @@ migration, and the US employee API in `weapi`. This file is every place outside 
 referred to any of it — the fix-up queue for the payroll phase, so breakage is found here and not
 by accident.
 
-**How to read it.** Line numbers are as of the strip commit. Only the items needed for
-`manage.py check` and the test suite to pass were fixed in Phase 1; they are marked **[fixed]**
-where that happened. Everything else is still broken at runtime and waits for the payroll phase.
+**How to read it.** Line numbers are as of the strip commit. Phase 1 fixed what `manage.py
+check` and the test suite needed, plus every break found on a non-payroll path (login, company,
+accounting, dashboards, notifications); those are marked **[fixed]** below and described in the
+reconnect log. Everything else is still broken at runtime and waits for the payroll phase — the
+confirmed list is under "Still broken".
 
 **How it was produced.** An AST scan of imports from `employeeio`, plus a pattern scan for removed
 `Employee` fields and helpers read through an employee-like receiver (`employee.`, `emp.`,
@@ -24,12 +26,94 @@ What was reconnected to get `manage.py check` and the test suite green, and how.
 "Fixed" means the project imports and boots -- not that the US behaviour
 behind it works on BD employees.
 
+- **Login access (every login was broken)** — `has_login_access` queries
+  `Employee.is_access_enabled`, and the strip removed that column with the US
+  model, so password, TOTP and Google sign-in and onboarding raised
+  `FieldError` for *every* user, employee-linked or not. `is_access_enabled` and
+  `is_joined` are account behaviour, not HR, and are restored on the BD
+  `Employee` with their old defaults (migration `0002_employee_login_access`).
+  The only way to grant access lived in the removed US employee API; it is now
+  `PATCH /we/employees/{code}/access {isAccessEnabled}`, open only to an admin
+  *of the active company* (its system admin role — not the global `is_admin`
+  flag that every self-signup carries into companies it was merely invited to;
+  `IsCompanyAdmin` has that gap and still guards the role endpoints). Granting
+  and the invitation email are one locked, atomic step, so a failed send leaves
+  access off and a retry sends again. The lock is `FOR UPDATE OF` the employee
+  row only: `user` is a nullable FK, and PostgreSQL refuses a bare FOR UPDATE on
+  the nullable side of the outer join — which SQLite, and so the test suite,
+  cannot show. The email uses a BD template without the
+  US "Password: <email>" line. Revoking is silent and works without a linked
+  login; deleting a login clears its employees' access flags, so a grant cannot
+  pass to whoever is linked next. Granting with no linked login is a 409.
+  Linking a login to a BD employee (the US create-with-user flow) is not rebuilt:
+  that is the self-service onboarding phase.
+- **Superuser and developer registration** — `create_superuser` and
+  `custom_user_register` created an employee with no company (`company_email=`).
+  They now create the company first, then a BD employee in it (next `EMP-` code,
+  `name_en` from the user). Access keeps its default (off), as before.
+- **User onboarding admin** — responses no longer carry the US HR
+  `employee_id` (the BD business key is `code`, already present); setting a
+  different `employee_code` is refused ("never reassigned") during validation,
+  before the user or an uploaded image is saved; the same code is accepted. The
+  employee shown and checked is the one in the editor's active company. Before,
+  a user employed by two companies could show the other company's code,
+  designation and department, and whether a user was listed at all ("joined",
+  "is_employee") was decided by their employee record in *any* company; every
+  employee predicate in the list is now scoped to the active company, and the
+  detail view is a 404 when there is no active company (an unscoped lookup
+  matched any user with no membership).
+- **Chart-of-account register** — search matched `employee__first_name` /
+  `last_name` (every search raised `FieldError`); it now matches `name_en` /
+  `name_bn`. The payee column resolved names through US fields and would have
+  rendered every payroll leg's payee **blank**; it now reads `name_en`.
+- **Chat expense-report test** — `chatio/tests_expense_report_sides.py` guarded
+  the journal sides of the removed expense-report posting (literal
+  "addition"/"substraction" inverted on a credit-card payment account). Deleted
+  with the feature; **re-add that guard when expense reports are rebuilt.**
+- **Purging users** — `purge_users` promises to take a purged user's employee
+  records with it. The US `Employee.user` cascaded; the BD one is `SET_NULL`,
+  because an employee is the company's statutory record and outlives a deleted
+  login in ordinary use. The command now collects the users' employees
+  explicitly, inside the same guarded collector run, and its plan no longer
+  lists them a second time as "nulled". `EmployeeSalaryStructure.superseded_by`
+  is `RESTRICT` rather than `PROTECT` (migration 0003): a superseding structure
+  still cannot be deleted on its own, but PROTECT refused any purge — and any
+  company delete — of an employee whose salary had been revised.
+- **Model `__str__` on a login-less employee** — two payroll models (one is
+  `PayrollSalaryProcess`) printed `employee.user.name`, and two attendance
+  models `employee.user`. The audit log calls `str()` on every save and delete it
+  records, so any such row for a BD employee without a login crashed auditing.
+  They print `employee.name_en`.
+- **Names through `created_by` / `actor`** — `created_by` on sales, purchases,
+  bills and many settings models, and `actor` on subscription events, are
+  foreign keys to `Employee`. Names read through them fell back to "someone" or
+  blank. Sale and purchase notifications and the subscription audit log read
+  `name_en` now.
+- **HR dashboard cards** — employee overview and upcoming events queried
+  `confirmation_date`, `date_of_birth`, `contract_end_date` (every call raised);
+  the pending-leave card showed "Unknown" for every name. The US model used the
+  confirmation date as a stand-in for joining; the BD one has `doj`, so joiners
+  and work anniversaries (after a full year) count from `doj`, birthdays from
+  `dob`, contract ends from `contract_end`. "Upcoming confirmations" counts
+  unconfirmed, unseparated probationers whose `probation_end` falls in the
+  window — a future `confirmation` date is a data error the BD contract blocks
+  payroll on. Still open: `status` is the record lifecycle, not employment, so
+  a separated employee stays ACTIVE and remains in headcount, birthdays and
+  anniversaries until "currently employed" is defined with the separation flow
+  (doc §6.3).
+- **Admin search** — `leaveio` (three admins) searched `employee__name` and
+  `payrollio`'s accounting-preferences admin `created_by__name`; any search term
+  raised. They search `name_en`.
 - **datamigrationio** — the three employee-import services imported
   `EmployeeKindChoices` at app-ready time, so nothing booted. The spreadsheet's
   employment-type column maps onto BD `EmploymentTypeChoices`
   (FULL_TIME / PART_TIME / CONTRACT), so the import was renamed. The importer's
-  `create()` and the validator still speak US columns (first/last name, kind);
-  a BD employee import is its own piece of work.
+  `create()` still writes US columns and failed on every row inside the Celery
+  task, so the "employees" migration type is switched off: `import_available`
+  and `template_available` are False, confirm / dry run / rollback are refused
+  by the views, validate and review-impact answer "not implemented" instead of
+  running the US validator, and the US template (SSN, US country) is no longer
+  served. A BD employee import is its own piece of work.
 - **Pay schedules** — `GET /we/payroll/pay-schedule/employees/<uid>/` (employees
   on a pay schedule) was built on the removed employee serializers, and a BD
   employee has no pay schedule. Its view, serializer and route are removed.
@@ -54,10 +138,76 @@ behind it works on BD employees.
 - **Roles** — `/we/employees/<uuid>/roles` and `/extra-permissions` are kept
   (see above) and resolve BD employees by uid.
 
+## Still broken — confirmed by the reconnect sweep, deferred
+
+After the first pass, four independent finders swept production code for
+runtime breakage (ORM lookups, attribute and template reads, writes, removed
+relations), and every finding had to be reproduced by two skeptics before it
+counted. A second, mechanical check resolved every string `<fk>__<field>`
+lookup through each of the 9 foreign keys that point at `Employee`
+(`employee`, `created_by`, `manager`, `assigned_to`, `approved_by`, `actor`,
+`redeemed_by`, `closed_by`, `undone_by`) against the BD model: every lookup
+that still fails is in the list below. These are the plan's deferred areas
+(payroll, leave, attendance); none is on a login, company, accounting or
+dashboard path.
+
+**Attendance** (every endpoint below errors today)
+
+- `weapi/django_rest/serializers/attendances.py:80-81` —
+  `PrivateAttendanceEmployeeSerializer` lists `employee_id` and
+  `source="get_image"`; DRF raises `ImproperlyConfigured`, and it is nested in
+  the attendance list and detail serializers, so `GET/POST /we/attendances`,
+  the detail route and the `?is_pdf=true` export all fail. BD: `code`, `photo`.
+- `attendances.py:468` — `employee.holiday` (`POST /we/attendances/processes`,
+  for any day without a punch record — the normal case).
+- `attendances.py:525` — `Employee.objects.get(employee_id=…)`; the
+  `FieldError` escapes the `except (DoesNotExist, ValueError)`
+  (`POST /we/attendances/punch-data`). `:537` builds its error message from
+  `employee.employee_id` and `employee.user.name` (None without a login).
+- `attendanceio/django_rest/helpers/context.py:27` — `emp.holiday_id`, and
+  `weapi/django_rest/serializers/attendance_bulk.py:105` — `employee.employee_id`
+  (`POST /we/attendances/bulk/preview` and `/bulk/commit`).
+- `templates/reports/payrolls/daily_attendances.html:100` reads `employee_id`
+  and `first_name` (unreachable until the serializer above is fixed).
+
+**Leave**
+
+- Search raises `FieldError`: `weapi/django_rest/views/leaves/leave_balance.py:60`
+  (`employee__first_name/last_name`), `leave_encashment.py:52` and
+  `leave_request.py:102` (`employee__name`).
+- `weapi/django_rest/serializers/leaves/leave_balance.py:180` —
+  `getattr(emp, "full_name", "")` falls back to the login's name, so a BD
+  employee without a login shows a blank name.
+
+**Payroll**
+
+- *Payroll posting* — `weapi/django_rest/helpers/salary_process_journal_entry.py:381`
+  `_resolve_employee_state` reads `employee.work_locations`, so it always
+  returns None and the whole state-tax credit block is skipped for every
+  employee: every state tax lands on the residual `Payroll Liabilities` leg.
+  The log text at `:589` still tells operators to check the work location.
+  The six tests in `payrollio/tests_salary_process_entry_balance.py` that are
+  about state routing are skipped with that reason (`NO_STATE_ROUTING`): they
+  would otherwise pass on the no-state path without exercising what they are
+  named for.
+- *Reports* — `work_locations`, `first_name`/`last_name` and
+  `employeebankinginformation_set` lookups raise in
+  `weapi/django_rest/views/payroll/reports/paycheck.py` (40, 46, 84, 85),
+  `payroll_details.py` (58, 70), `payroll_summary_by_employee.py` (64, 78) and
+  its serializer (24), and `payroll/tax_center.py:59`.
+- *Tenant scoping by login* — payroll reports, `payroll/salary_process.py` and
+  `salary_adjustment.py:38,76` scope with `employee__user__companyuser__company`
+  or `employee__user__id__in=<company users>`. Valid lookups, but a BD employee
+  need not have a login, so these silently drop every employee without one.
+  BD scope is `employee__company`.
+- `weapi/django_rest/views/moov_money/transfer_money.py:814-815` — search on
+  `employee__first_name/last_name`.
+
 ## What the BD `Employee` still answers to
 
 `uid`, `code`, `status` (`EmployeeStatusChoices`: DRAFT / ACTIVE / IN_ACTIVE / REMOVED), `user`,
-`company` (related name `employees`), `department`, `designation`, `shift`, `father_name`.
+`company` (related name `employees`), `department`, `designation`, `shift`, `father_name`,
+`is_access_enabled`, `is_joined`.
 `gender` survives as a name but its values are now `MALE / FEMALE / THIRD_GENDER`. A slim nested
 serializer is still exported as `PrivateCompanyEmployeeSlimSerializer`, rebuilt on BD fields.
 

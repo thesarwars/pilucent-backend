@@ -21,7 +21,8 @@ def create_purchase_notification(sender, instance, created, **kwargs):
             if instance.is_bill == False
             else NotificationKindChoices.BILL_CREATED
         )
-        created_by = getattr(instance.created_by, "name", "someone")
+        # created_by is a BD Employee: its name is name_en.
+        created_by = getattr(instance.created_by, "name_en", None) or "someone"
         NotificationService.create_notification(
             status=NotificationStatusChoices.PUBLISHED,
             model_kind=NotificationModelKindChoices.PURCHASE,
