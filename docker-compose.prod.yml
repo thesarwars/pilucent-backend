@@ -1,38 +1,71 @@
-name: balanzify-production
+# Pilucent -- production. The database (managed Postgres), S3 bucket, domains
+# and every secret come from `.env` on the host (see env_sample.txt); nothing
+# here defaults to another deployment's resources.
+#
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Migrations run separately, as the database OWNER (scripts/deploy.sh): the app
+# connects as the restricted `pilucent_app` role, which cannot run DDL.
+
+name: pilucent-production
+
+# Bounded container logs: the json-file driver grows without limit otherwise.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "3"
+
+x-django: &django
+  build: .
+  image: pilucent-backend:latest
+  restart: unless-stopped
+  logging: *default-logging
+  env_file: .env
+  environment:
+    CELERY_BROKER_URL: redis://redis:6379/0
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    LOG_DIR: /var/log/pilucent
+    # Bound the ASGI sync thread pool so the app cannot open an unbounded number
+    # of DB connections under load: workers x ASGI_THREADS caps connections.
+    ASGI_THREADS: "8"
+  volumes:
+    # Django's app_out/app_error handlers and the background loggers write here.
+    - /var/log/pilucent:/var/log/pilucent
+  depends_on:
+    - redis
 
 services:
   app:
-    build: .
-    volumes:
-      - .:/app
+    <<: *django
+    # Gunicorn-managed uvicorn ASGI workers (websockets for chatio), recycled
+    # after ~max-requests so leaked connections and memory are reclaimed.
+    command: >
+      gunicorn master.asgi:application
+      -k uvicorn_worker.UvicornWorker
+      -b 0.0.0.0:5000
+      --workers 3
+      --max-requests 800
+      --max-requests-jitter 200
+      --timeout 120
+      --graceful-timeout 30
+      --access-logfile -
+      --error-logfile -
     ports:
-      - 8000:8000
-    depends_on:
-      db:
-        condition: service_healthy
-    image: balanzify:balanzify
-    container_name: balanzify_backend
-    command: python3 manage.py runserver 0.0.0.0:8000
-    env_file:
-      - .env
+      - "5000:5000"
 
-  db:
-    image: postgres:bullseye
-    container_name: balanzify_db
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: balanzify
-    ports:
-      - "6543:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+  celery:
+    <<: *django
+    # --max-tasks-per-child recycles each worker process after N tasks.
+    command: celery -A master worker --loglevel=info --max-tasks-per-child=200
 
-volumes:
-  postgres_data:
+  # Separate from the worker so a beat crash cannot take task execution down.
+  celery_beat:
+    <<: *django
+    command: celery -A master beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *default-logging

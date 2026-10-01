@@ -109,7 +109,7 @@ class ItClassifiesTests(RepairAccountBalancesTestCase):
         self.assertIn("SIGN_INVERTED", output)
 
     def test_a_control_account_carrying_drift_is_held_back(self):
-        """Balanzify INC's A/R holds 2,399,995 a human entered."""
+        """Pilucent INC's A/R holds 2,399,995 a human entered."""
         receivable = self.account(
             "Accounts Receivable (A/R)", ChartOfAccountKindChoices.ASSETS,
             "2399995", system_key=ChartOfAccountSystemKeyChoices.AR,

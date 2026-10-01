@@ -70,7 +70,7 @@ def send_invitation_email(invitation, *, link_token=None):
         },
         "emails/onboard/user_invitation.html",
         invitation.email,
-        "Invitation to join Balanzify",
+        "Invitation to join Pilucent",
     )
 
 

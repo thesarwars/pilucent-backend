@@ -1,8 +1,8 @@
-# Balanzify v2 Dashboard — Frontend Integration Guide
+# Pilucent v2 Dashboard — Frontend Integration Guide
 
 This document describes the **v2 Dashboard API** and what the frontend needs to
 build to consume it. It covers the 26 feature cards from
-`Balanzify_Dashboard_Feature_Cards_Documentation.pdf`.
+`Pilucent_Dashboard_Feature_Cards_Documentation.pdf`.
 
 - **v1 is unchanged.** Existing endpoints (e.g. `/dashboards/finance-overview`)
   keep working exactly as before. Migrate to v2 card-by-card.

@@ -26,34 +26,34 @@ Create a dedicated, restricted role and point the app at it:
 
 ```sql
 -- Run once, as an admin/superuser, against each environment's database.
-CREATE ROLE balanzify_app LOGIN PASSWORD 'CHANGE_ME';
+CREATE ROLE pilucent_app LOGIN PASSWORD 'CHANGE_ME';
 
 -- Explicitly ensure it cannot bypass RLS (default, but be explicit):
-ALTER ROLE balanzify_app NOBYPASSRLS;
+ALTER ROLE pilucent_app NOBYPASSRLS;
 
 -- It must NOT be a superuser (superusers bypass RLS):
-ALTER ROLE balanzify_app NOSUPERUSER;
+ALTER ROLE pilucent_app NOSUPERUSER;
 
 -- Grant the privileges the app needs.
-GRANT CONNECT ON DATABASE balanzify_dev TO balanzify_app;
-GRANT USAGE ON SCHEMA public TO balanzify_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO balanzify_app;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO balanzify_app;
+GRANT CONNECT ON DATABASE pilucent_dev TO pilucent_app;
+GRANT USAGE ON SCHEMA public TO pilucent_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO pilucent_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO pilucent_app;
 
 -- Make future tables/sequences (created by later migrations) inherit the grants.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO balanzify_app;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO pilucent_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT USAGE, SELECT ON SEQUENCES TO balanzify_app;
+    GRANT USAGE, SELECT ON SEQUENCES TO pilucent_app;
 ```
 
 Then set `DATABASES["default"]["USER"]`/`PASSWORD` (ideally via env vars) to
-`balanzify_app` and redeploy.
+`pilucent_app` and redeploy.
 
 ### Verifying isolation
 
 ```sql
--- As balanzify_app:
+-- As pilucent_app:
 SET app.company_id = '1';
 SELECT count(*) FROM customerio_customer;   -- only company 1's rows
 SET app.company_id = '2';
@@ -63,7 +63,7 @@ RESET app.company_id;                        -- permissive (app-level filtering)
 
 ### Migrations & schema changes
 
-Run `migrate`/`makemigrations` as the **owner/admin** role (not `balanzify_app`),
+Run `migrate`/`makemigrations` as the **owner/admin** role (not `pilucent_app`),
 since DDL and `FORCE ROW LEVEL SECURITY` require ownership. Only the runtime app
 connects as the restricted role.
 

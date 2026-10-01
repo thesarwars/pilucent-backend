@@ -7,7 +7,7 @@ urlpatterns = [
     path(r"/access-token", MoovAccessTokenView.as_view(), name="moov-access-token"),
     path(
         r"/webhook", MoovWebhookView.as_view(), name="moov-webhook"
-    ),  # https://balanzifyapi.jumatechs.xyz/api/v1/we/moov-money/webhook
+    ),  # https://api.pilucent.com/api/v1/we/moov-money/webhook
     path(r"/account", include("weapi.django_rest.urls.moov_money.account_settings")),
     path(
         r"/bank-account",

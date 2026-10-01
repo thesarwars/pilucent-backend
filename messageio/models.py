@@ -49,7 +49,7 @@ class Inbox(BaseModelWithUID):
         blank=True,
         null=True,
     )
-    # is_balanzify = models.BooleanField(default=False)
+    # is_pilucent = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("-updated_at",)

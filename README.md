@@ -1,6 +1,6 @@
-# Balanzify Backend
+# Pilucent Backend
 
-**Balanzify** is a multi-tenant accounting, ERP, and US payroll SaaS platform. This
+**Pilucent** is a multi-tenant accounting, ERP, and US payroll SaaS platform. This
 repository is the backend — a **Django 5.1 + Django REST Framework** service that
 powers a double-entry general ledger, sales/purchasing, inventory, HR & payroll,
 US tax compliance, banking, subscriptions, and real-time collaboration behind one
@@ -165,7 +165,7 @@ Grouped by capability:
   signed `company_id` claim, and sets the Postgres session variable `app.company_id`.
   RLS policies read `current_setting('app.company_id')`, so isolation is enforced by the
   database, not just the ORM. The GUC is always cleared in `finally`.
-- **DB roles matter.** The app connects as the restricted, DML-only role `balanzify_app`
+- **DB roles matter.** The app connects as the restricted, DML-only role `pilucent_app`
   (a superuser would bypass RLS). Migrations run as a separate owner role — see
   [Notes & Gotchas](#notes--gotchas).
 - **ASGI everywhere.** HTTP and WebSockets share the `master.asgi` app via
@@ -179,52 +179,54 @@ Grouped by capability:
 ## Running with Docker
 
 > Docker is the supported way to run this project. You only need **Docker** (with the
-> Compose plugin) installed on your machine or server.
+> Compose plugin).
 
-### 1. Clone the repository
+There are two compose files:
 
-```bash
-git clone <repository_url>
-cd balanzify_backend
-```
+| File | For | Database |
+|---|---|---|
+| [`docker-compose.yml`](docker-compose.yml) | Local development | Postgres in the stack |
+| [`docker-compose.prod.yml`](docker-compose.prod.yml) | Production ([`scripts/deploy.sh`](scripts/deploy.sh)) | Managed Postgres from `.env` |
 
-### 2. Create your `.env`
-
-Copy the sample and fill in real values (see [Configuration](#configuration-env)):
+### Local development
 
 ```bash
-cp env_sample.txt .env
+git clone git@github.com:thesarwars/pilucent-backend.git
+cd pilucent-backend
+docker compose up --build            # builds, migrates, starts everything
+docker compose run --rm app python manage.py seed_bd_rule_book
+docker compose run --rm app python manage.py createsuperuser
 ```
 
-### 3. Build and start
+The database name, app role and password come from `.env` (`DB_NAME`, `DB_USER`,
+`DB_PASSWORD`, `DB_PORT`); without one, built-in dev defaults apply. Inside the stack the
+host is always the `db` service, so `.env` can never point the containers at a remote
+database. With `DB_HOST=localhost` in `.env`, `manage.py` run on the host reaches the same
+Postgres. Third-party keys (email, Google, Moov, ...) are read from `.env` too.
+
+| Service | Purpose | Host port |
+|---|---|---|
+| `db` | Postgres 16. Owner role `pilucent` (runs migrations); the app role from `DB_USER` (DML only, so Row-Level Security is enforced) — created by [`docker/postgres/init`](docker/postgres/init) | **`DB_PORT` (5432)** |
+| `redis` | Celery broker + Channels layer | **6381** |
+| `migrate` | One-off: applies migrations as the owner, then exits | — |
+| `app` | `runserver` (ASGI, HTTP + WebSocket) | **8000** |
+| `celery` / `celery_beat` | Background worker and scheduler | — |
+
+The API is at **http://127.0.0.1:8000** and docs at **http://127.0.0.1:8000/api/docs/**.
+Files are stored under `media/` locally (S3 only when `AWS_STORAGE_BUCKET_NAME` is set).
+Ports can be moved with `DB_PORT`, `PILUCENT_APP_PORT`, `PILUCENT_REDIS_PORT`. The app
+role is created when the database volume is first made, so after changing `DB_USER` or
+`DB_PASSWORD` run `docker compose down -v` (this wipes the local database).
+
+### Production
 
 ```bash
-docker compose up --build
+cp env_sample.txt .env      # fill in DB_*, SECRET_KEY, AWS_STORAGE_BUCKET_NAME, domains
+docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-Run it detached (in the background):
-
-```bash
-docker compose up --build -d
-```
-
-### Services
-
-`docker compose` starts three containers (defined in [`docker-compose.yml`](docker-compose.yml)):
-
-| Service | Container | Purpose | Host port |
-|---|---|---|---|
-| `app` | `balanzify_backend` | Gunicorn + Uvicorn ASGI (HTTP + WebSocket) | **5000 → 5000** |
-| `celery` | `balanzify_celery` | Celery worker for background jobs | — |
-| `redis` | `balanzify_redis` | Broker + Channels layer | **6380 → 6379** |
-
-Once up, the API is at **http://127.0.0.1:5000** and docs at
-**http://127.0.0.1:5000/api/docs/**.
-
-> **Database:** PostgreSQL is expected to be **external** (e.g. AWS RDS) and is configured
-> entirely through `.env`. A local Postgres service is included but commented out at the
-> bottom of `docker-compose.yml` — uncomment it (and point `DB_HOST=db` in `.env`) if you
-> want a self-contained local database.
+`app` runs Gunicorn + Uvicorn ASGI workers on **5000**, with `celery`, `celery_beat` and
+`redis`. Migrations are run by `scripts/deploy.sh` as the database owner.
 
 ---
 
@@ -236,24 +238,35 @@ the sample lists — the important ones are called out below.
 **Core**
 ```
 DEBUG=True
-ALLOWED_HOSTS=*
-BASE_FRONTEND_URL=http://localhost:3000
-DJANGO_ENV=development
+SECRET_KEY=...
+```
+
+**Brand and public endpoints** (all optional; pilucent.com defaults)
+```
+PRODUCT_NAME=Pilucent
+PUBLIC_API_URL=https://api.pilucent.com
+APP_URL=https://app.pilucent.com
+SELF_SERVICE_URL=https://me.pilucent.com
+SUPPORT_EMAIL=support@pilucent.com
+DEFAULT_FROM_EMAIL=no-reply@pilucent.com
+BRAND_LOGO_URL=... / BRAND_ICON_URL=...
+CORS_ALLOWED_ORIGINS=... / CSRF_TRUSTED_ORIGINS=...   # comma-separated
 ```
 
 **Database (PostgreSQL)**
 ```
-DB_ENGINE=django.db.backends.postgresql
-DB_NAME=...
-DB_USER=...        # app connects as the restricted 'balanzify_app' role in prod
+DB_NAME=pilucent
+DB_USER=pilucent_app   # the restricted runtime role
 DB_PASSWORD=...
-DB_HOST=...        # external RDS host, or 'db' if using the local compose Postgres
+DB_HOST=...            # no default host: it must be set
 DB_PORT=5432
+DB_SSLMODE=require     # 'disable' for a local Postgres without TLS
 ```
 
 **Redis / Celery** (needed for the `celery` worker and Channels)
 ```
-redis_local_server=redis://redis:6379/0   # Celery broker URL (service name 'redis')
+CELERY_BROKER_URL=redis://redis:6379/0   # (older name: redis_local_server)
+REDIS_HOST=redis / REDIS_PORT=6379       # Channels layer
 ```
 
 **Email (SMTP)**
@@ -282,9 +295,8 @@ STRIPE_SECRET_KEY=... / STRIPE_PUBLISHABLE_KEY=... / STRIPE_WEBHOOK_SECRET=...
 TAXBANDITS_DOMAIN_REFERENCE_ID=...
 ```
 
-> **Secrets hygiene:** never commit real credentials. Some integration keys currently live
-> as literals in `master/settings.py` and are flagged in-code for rotation — move them to
-> `.env` and rotate them.
+> **Secrets hygiene:** never commit real credentials. Every key and password is read from
+> the environment; `master/settings.py` holds no secret values.
 
 ---
 
@@ -315,9 +327,9 @@ token embeds the `company_id` claim that drives tenant scoping.
 
 ## Background Jobs & Realtime
 
-- **Celery** (`balanzify_celery`) runs recurring/async work — recurring-transaction
-  generation, notifications, tax/payroll processing, imports. Broker is Redis
-  (`redis_local_server`); results are stored in Postgres.
+- **Celery** (`celery` / `celery_beat` services) runs recurring/async work —
+  recurring-transaction generation, notifications, tax/payroll processing, imports.
+  Broker is Redis (`CELERY_BROKER_URL`); results are stored in Postgres.
 - **Channels/WebSockets** power `chatio`. The `app` container serves both HTTP and
   WebSocket traffic through the same ASGI process; Redis is the channel layer.
 
@@ -325,16 +337,16 @@ token embeds the `company_id` claim that drives tenant scoping.
 
 ## Common Operations
 
-Run these against the running `app` container:
+Local stack (add `-f docker-compose.prod.yml` for production):
 
 ```bash
-# Apply migrations (see role note below)
-docker compose exec app python manage.py migrate
+# Apply migrations (runs as the owner role)
+docker compose run --rm migrate
 
 # Create an admin user
 docker compose exec app python manage.py createsuperuser
 
-# Collect static files (S3)
+# Collect static files (S3 in production)
 docker compose exec app python manage.py collectstatic --noinput
 
 # Tail logs
@@ -373,7 +385,7 @@ chatio/ notificationio/ messageio/ attachmentio/ fileroomio/ datamigrationio/ li
 
 ## Notes & Gotchas
 
-- **Migrations run as a different DB role.** The app's runtime role (`balanzify_app`) is
+- **Migrations run as a different DB role.** The app's runtime role (`pilucent_app`) is
   intentionally DML-only and **cannot run migrations**. Apply migrations with a role that
   owns the schema (configure a separate `.env`/connection for migration runs, or run them
   as the DB owner), otherwise `migrate` will fail with a permissions error.
@@ -382,5 +394,5 @@ chatio/ notificationio/ messageio/ attachmentio/ fileroomio/ datamigrationio/ li
   role for the app.
 - **`django-silk` is DEBUG-only.** Profiling (`/profiling`) is enabled only when
   `DEBUG=True`; it's disabled in production because its per-request DB writes add load.
-- **Redis host port is `6380`** on the host (mapped to `6379` in the container) to avoid
-  clashing with a local Redis.
+- **Local Redis is published on 6381** to avoid clashing with a Redis already on the
+  machine; Postgres uses `DB_PORT` from `.env`.

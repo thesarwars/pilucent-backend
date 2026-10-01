@@ -1,9 +1,9 @@
 
 
-| BALANZIFY   ·   PRODUCT DOCUMENTATION Sales Tax Liability Report Logic · Calculations · Filtering · Columns · Data Representation · Use Cases |
+| PILUCENT   ·   PRODUCT DOCUMENTATION Sales Tax Liability Report Logic · Calculations · Filtering · Columns · Data Representation · Use Cases |
 | :---- |
 
-This guide explains exactly how Balanzify builds the Sales Tax Liability Report. It walks through every column, the formulas behind each figure, how sales are grouped by tax agency and split into the rate components that make up each jurisdiction’s tax, the controls that shape the report, and the day-to-day decisions it is designed to support. It is written for U.S. small-business owners, bookkeepers, and accountants who need to know — quickly and accurately — how much sales tax they owe each agency and how that figure was reached.
+This guide explains exactly how Pilucent builds the Sales Tax Liability Report. It walks through every column, the formulas behind each figure, how sales are grouped by tax agency and split into the rate components that make up each jurisdiction’s tax, the controls that shape the report, and the day-to-day decisions it is designed to support. It is written for U.S. small-business owners, bookkeepers, and accountants who need to know — quickly and accurately — how much sales tax they owe each agency and how that figure was reached.
 
 **Module:**  Sales Tax · Reporting        **Market:**  U.S. SMB        **Version:**  1.0
 
@@ -75,7 +75,7 @@ Last updated: June 2026
 
 ## **1.1  About this guide**
 
-Balanzify reports are most useful when you know precisely what each number means and where it comes from. This document removes the guesswork from the Sales Tax Liability Report. By the end of it you should be able to read any line on the report with confidence, reproduce every total by hand, and use it to file accurate returns — answering the questions that matter at filing time: “how much do I owe each agency?”, “what part of my sales was taxable?”, and “does this tie out to my books?”
+Pilucent reports are most useful when you know precisely what each number means and where it comes from. This document removes the guesswork from the Sales Tax Liability Report. By the end of it you should be able to read any line on the report with confidence, reproduce every total by hand, and use it to file accurate returns — answering the questions that matter at filing time: “how much do I owe each agency?”, “what part of my sales was taxable?”, and “does this tie out to my books?”
 
 ## **1.2  What the Sales Tax Liability Report is**
 
@@ -156,7 +156,7 @@ At the agency level, only the Tax Amount is totaled. The Gross, Non-taxable, and
 
 ## **5.1  The taxable base**
 
-Every rate row starts from the sales it touched. Balanzify gathers all sales in the period that carry the rate’s jurisdiction, splits them into the exempt part and the part that is actually taxed, and the difference is the base the rate is charged on:
+Every rate row starts from the sales it touched. Pilucent gathers all sales in the period that carry the rate’s jurisdiction, splits them into the exempt part and the part that is actually taxed, and the difference is the base the rate is charged on:
 
 | Gross total      \=  all sales carrying this rate (taxable \+ non-taxable) Taxable amount   \=  Gross total  −  Non-taxable   Non-taxable includes: exempt customers, exempt products, and sales outside the taxing jurisdiction. |
 | :---- |
@@ -387,4 +387,4 @@ The report earns its keep at every filing cycle. A few of the most common ways t
 | Reading the report Grouping — by tax agency, then by rate component (state / county / city / district) Same base, many rates — one sale can appear under several component rates of one agency Agency total — Tax Amount only — the amount you remit to that agency Basis — Accrual \= tax at invoice; Cash \= tax at payment (shown in the footer) |
 | :---- |
 
-Balanzify · Sales Tax Reporting · Sales Tax Liability Report
+Pilucent · Sales Tax Reporting · Sales Tax Liability Report

@@ -661,7 +661,7 @@ class TaxCenterPayMethod(BaseModelWithUID):
     payment_date = models.DateField(blank=True, null=True)
     check_number = models.CharField(max_length=100, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-    is_inside_balanzify = models.BooleanField(default=False)
+    is_inside_pilucent = models.BooleanField(default=False)
     liability_period = models.CharField(max_length=100, blank=True, null=True)
     is_paid = models.BooleanField(default=False)
     is_filed = models.BooleanField(default=False)

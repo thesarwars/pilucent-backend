@@ -20,7 +20,7 @@ This command only reads. It changes nothing, so it is safe to run against
 production.
 
     python manage.py audit_ledger
-    python manage.py audit_ledger --company "Balanzify INC" --limit 40
+    python manage.py audit_ledger --company "Pilucent INC" --limit 40
     python manage.py audit_ledger --only equation
     python manage.py audit_ledger --only subledger
 """

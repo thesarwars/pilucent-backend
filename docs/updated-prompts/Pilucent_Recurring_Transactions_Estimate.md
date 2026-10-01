@@ -1,4 +1,4 @@
-**BALANZIFY**  
+**PILUCENT**  
 **Accounting Platform  ·  Product & Engineering**
 
 **Recurring Transactions**
@@ -13,7 +13,7 @@ End-to-End Product Requirements & Technical Specification
 | :---- | :---- |
 | Document title | Recurring Transactions (Estimate) — Product & Technical Requirements Document |
 | Product area | Sales domain · Customer quotes / proposals · Recurring Transactions |
-| Prepared for | Balanzify Product, Engineering & QA teams |
+| Prepared for | Pilucent Product, Engineering & QA teams |
 | Document type | Feature specification / build reference (developer-facing) |
 | Version | 1.0 (Initial release for build) |
 | Status | **Ready for development** |
@@ -81,7 +81,7 @@ End-to-End Product Requirements & Technical Specification
 
 [7.4 What makes an estimate different from an invoice or sales receipt	15](#heading=)
 
-[7.5 Where the feature lives in Balanzify	15](#heading=)
+[7.5 Where the feature lives in Pilucent	15](#heading=)
 
 [7.6 Template lifecycle	15](#heading=)
 
@@ -339,14 +339,14 @@ End-to-End Product Requirements & Technical Specification
 
 # **1\. Introduction & Purpose**
 
-This document is the complete build reference for the Recurring Estimate feature in Balanzify. It specifies, in one place, everything a product manager, engineer, or QA analyst needs to design, build, and verify the feature: why it exists, how it behaves on every screen, the rules that govern scheduling and estimate numbering, how an estimate flows through its status lifecycle, why it is non-posting, exactly what accounting happens when it is later converted into an invoice (or sales receipt), the data it stores, the APIs it exposes, and how it connects to the rest of the platform.
+This document is the complete build reference for the Recurring Estimate feature in Pilucent. It specifies, in one place, everything a product manager, engineer, or QA analyst needs to design, build, and verify the feature: why it exists, how it behaves on every screen, the rules that govern scheduling and estimate numbering, how an estimate flows through its status lifecycle, why it is non-posting, exactly what accounting happens when it is later converted into an invoice (or sales receipt), the data it stores, the APIs it exposes, and how it connects to the rest of the platform.
 
-A recurring estimate is a saved template for a quote the business sends a customer on a regular cadence — a repeating service proposal, a standing quote for a retainer client, a periodic price bid. Instead of re-creating the same quote every period, the user sets it up once and Balanzify either creates the estimate automatically (and can email it to the customer) or reminds them to.
+A recurring estimate is a saved template for a quote the business sends a customer on a regular cadence — a repeating service proposal, a standing quote for a retainer client, a periodic price bid. Instead of re-creating the same quote every period, the user sets it up once and Pilucent either creates the estimate automatically (and can email it to the customer) or reminds them to.
 
 | The one fact that shapes this entire module An estimate is non-posting. It is a proposal to a customer — a quote of what work will cost — not an accounting event. Creating an estimate writes no journal entry and has no effect on the profit & loss, the balance sheet, income, Accounts Receivable, or sales tax. The accounting happens later, when the customer accepts and the estimate is converted into an invoice (or a sales receipt). Every rule and field here follows from that. |
 | :---- |
 
-An estimate is a sales-side, customer-facing document — the mirror image of a purchase order, which is the purchase-side, vendor-facing non-posting document. Both are proposals that post nothing until converted: a purchase order becomes a bill (Dr expense, Cr A/P); an estimate becomes an invoice (Dr A/R, Cr income). Balanzify already ships a Sales module including Invoices and Sales Receipts — the posting transactions an estimate turns into. This feature adds the recurring layer on top of the existing Estimate, reusing its form and its place in the sales cycle, and shares the same scheduling engine as the Recurring Invoice, Bill, Expense, Cheque, and Purchase Order modules.
+An estimate is a sales-side, customer-facing document — the mirror image of a purchase order, which is the purchase-side, vendor-facing non-posting document. Both are proposals that post nothing until converted: a purchase order becomes a bill (Dr expense, Cr A/P); an estimate becomes an invoice (Dr A/R, Cr income). Pilucent already ships a Sales module including Invoices and Sales Receipts — the posting transactions an estimate turns into. This feature adds the recurring layer on top of the existing Estimate, reusing its form and its place in the sales cycle, and shares the same scheduling engine as the Recurring Invoice, Bill, Expense, Cheque, and Purchase Order modules.
 
 ## **1.1 Where an estimate sits in the sales cycle**
 
@@ -402,7 +402,7 @@ The feature removes repetitive data entry for repeat quotes, gets estimates to c
 
 ## **3.1 Business goals**
 
-* **Automate repeat quotes.** Set up a recurring proposal once; Balanzify creates (and can email) the estimate every period.
+* **Automate repeat quotes.** Set up a recurring proposal once; Pilucent creates (and can email) the estimate every period.
 
 * **Get quotes to customers on time.** Timely, consistent estimates keep deals moving and reduce manual effort for repeat work.
 
@@ -468,13 +468,13 @@ Before designing the feature, we studied how estimates — also called quotes �
 
 ## **4.2 What the market has in common**
 
-Despite different naming (“estimate” vs “quote”), the platforms converge on the same core ideas. This convergence is the strongest signal for what Balanzify should adopt.
+Despite different naming (“estimate” vs “quote”), the platforms converge on the same core ideas. This convergence is the strongest signal for what Pilucent should adopt.
 
 * **An estimate is non-posting.** Every platform treats an estimate/quote as a proposal to a customer that writes no journal entry. It affects nothing on the financial statements until it is converted into an invoice or sales receipt.
 
 * **Template-driven, parent–child.** A reusable template produces many dated estimates; editing the template affects future children only, never those already created.
 
-* **A behavior spectrum.** From automatic creation (and emailing), to a reminder to create/send, to a purely on-demand template — the same three types Balanzify adopts.
+* **A behavior spectrum.** From automatic creation (and emailing), to a reminder to create/send, to a purely on-demand template — the same three types Pilucent adopts.
 
 * **A status lifecycle.** Estimates move Draft → Sent/Pending → Accepted or Declined (or Expired), then Invoiced when converted; declined/expired estimates are kept for the record, not deleted.
 
@@ -488,13 +488,13 @@ Despite different naming (“estimate” vs “quote”), the platforms converge
 
 | Dimension | Observed variation across platforms |
 | :---- | :---- |
-| Naming | Some call it “estimate”, others “quote”; a few expose both. Balanzify uses “Estimate” consistently. |
-| Status granularity | Some use Pending/Accepted/Declined/Converted; others add Draft, Sent, and Expired. Balanzify adopts the fuller lifecycle (Section 7.3). |
-| Acceptance channel | Customer acceptance may be via a portal, a public link, email, or manual marking. Balanzify supports manual status updates in v1 and reserves portal e-acceptance for a fast-follow. |
-| Convert targets | An estimate may convert to an invoice, a sales order, or a sales receipt. Balanzify supports invoice and sales receipt in v1, matching its existing posting modules. |
-| Progress invoicing | Support for invoicing an estimate in stages varies. Balanzify supports manual progress invoicing (partial conversion); scheduled progress plans are future work. |
-| Deposits / retainers | Some auto-create a deposit/retainer invoice on acceptance. Balanzify treats this as future work (Section 22). |
-| **R\&D conclusion** Adopt the market-standard model: a template-driven, parent–child recurring estimate with the three-type spectrum, a customer and optional auto-email, full sales pricing (line items, discount, sales tax, shipping), a clear Draft→Sent→Accepted/Declined/Expired→Invoiced lifecycle, and — above all — non-posting behavior with a clean one-click conversion to an invoice or sales receipt (in full or in stages) where the accounting actually happens. Delivered through Balanzify's existing Estimate form so it feels native, and positioned to automate repeat and retainer quotes. |  |
+| Naming | Some call it “estimate”, others “quote”; a few expose both. Pilucent uses “Estimate” consistently. |
+| Status granularity | Some use Pending/Accepted/Declined/Converted; others add Draft, Sent, and Expired. Pilucent adopts the fuller lifecycle (Section 7.3). |
+| Acceptance channel | Customer acceptance may be via a portal, a public link, email, or manual marking. Pilucent supports manual status updates in v1 and reserves portal e-acceptance for a fast-follow. |
+| Convert targets | An estimate may convert to an invoice, a sales order, or a sales receipt. Pilucent supports invoice and sales receipt in v1, matching its existing posting modules. |
+| Progress invoicing | Support for invoicing an estimate in stages varies. Pilucent supports manual progress invoicing (partial conversion); scheduled progress plans are future work. |
+| Deposits / retainers | Some auto-create a deposit/retainer invoice on acceptance. Pilucent treats this as future work (Section 22). |
+| **R\&D conclusion** Adopt the market-standard model: a template-driven, parent–child recurring estimate with the three-type spectrum, a customer and optional auto-email, full sales pricing (line items, discount, sales tax, shipping), a clear Draft→Sent→Accepted/Declined/Expired→Invoiced lifecycle, and — above all — non-posting behavior with a clean one-click conversion to an invoice or sales receipt (in full or in stages) where the accounting actually happens. Delivered through Pilucent's existing Estimate form so it feels native, and positioned to automate repeat and retainer quotes. |  |
 
 # **5\. Scope, Assumptions & Dependencies**
 
@@ -618,7 +618,7 @@ An estimate moves through states as the customer responds and the work is invoic
 
 ## **7.4 What makes an estimate different from an invoice or sales receipt**
 
-Because Balanzify also offers invoices and sales receipts (and their recurring versions), it is worth stating the difference plainly — it drives the fields and (the absence of) accounting.
+Because Pilucent also offers invoices and sales receipts (and their recurring versions), it is worth stating the difference plainly — it drives the fields and (the absence of) accounting.
 
 | Aspect | Estimate | Invoice | Sales Receipt |
 | :---- | :---- | :---- | :---- |
@@ -630,7 +630,7 @@ Because Balanzify also offers invoices and sales receipts (and their recurring v
 
 *The purchase-side analog of an estimate is a purchase order: both are non-posting proposals that convert into a posting transaction (an estimate→invoice on the sales side; a purchase order→bill on the purchase side).*
 
-## **7.5 Where the feature lives in Balanzify**
+## **7.5 Where the feature lives in Pilucent**
 
 Recurring Transactions is a shared list that hosts multiple transaction types; this release adds Estimate alongside the sales and purchase transactions. Conceptually it sits at the front of the Sales domain. The entry points are:
 
@@ -1071,7 +1071,7 @@ These flows trace the main journeys end to end, step by step. They complement th
 
 3. She picks Customer \= “Acme Co” (email and address auto-fill) and sets Interval \= Monthly on the 1st, Start \= the 1st of next month, End \= None.
 
-4. She adds a service line: “Monthly design retainer”, qty 1, rate $2,000, taxable per location, and saves. Balanzify computes Next Date \= the 1st of next month.
+4. She adds a service line: “Monthly design retainer”, qty 1, rate $2,000, taxable per location, and saves. Pilucent computes Next Date \= the 1st of next month.
 
 5. Three days before the 1st, the Generation Job creates the estimate (dated the 1st), emails the PDF to Acme, and sets status Sent.
 
@@ -1117,7 +1117,7 @@ These flows trace the main journeys end to end, step by step. They complement th
 
 2. From the Estimates view, the user opens the estimate and chooses Convert → Invoice.
 
-3. Balanzify creates an invoice pre-filled from the estimate (customer, lines, discount, tax, shipping) and links the two.
+3. Pilucent creates an invoice pre-filled from the estimate (customer, lines, discount, tax, shipping) and links the two.
 
 4. The user sets terms/due date and confirms; on save, the invoice posts: Dr Accounts Receivable, Cr Income, and Cr Sales Tax Payable (Section 12). The estimate is set Invoiced (Closed).
 
@@ -1500,7 +1500,7 @@ The feature exposes a small, REST-style API. All endpoints are tenant-scoped and
 
 # **15\. Integration with Other Modules**
 
-The feature is not standalone — it reuses and connects to existing parts of Balanzify. This section lists every connection and what flows across it, so engineers know what they touch and QA knows what to regression-test. Note that, because an estimate is non-posting, the ledger-facing integrations are exercised only at conversion.
+The feature is not standalone — it reuses and connects to existing parts of Pilucent. This section lists every connection and what flows across it, so engineers know what they touch and QA knows what to regression-test. Note that, because an estimate is non-posting, the ledger-facing integrations are exercised only at conversion.
 
 | Module | How the feature connects to it |
 | :---- | :---- |

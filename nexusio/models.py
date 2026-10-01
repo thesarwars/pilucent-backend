@@ -5,7 +5,7 @@ Two tables here:
 * ``NexusStateRule`` — the effective-dated per-state threshold rules. This is
   **global reference data** (like ``payrollio.PayrollTaxConfig``): no ``company``
   FK, and deliberately NOT under the tenant RLS policy. Seeded from
-  ``docs/updated-prompts/Balanzify_State_Economic_Nexus_Rules_Reference.md``.
+  ``docs/updated-prompts/Pilucent_State_Economic_Nexus_Rules_Reference.md``.
 * ``NexusStateStatus`` — the computed dashboard row per (company, state). Tenant
   data: carries ``company`` and the tenant-isolation RLS policy.
 

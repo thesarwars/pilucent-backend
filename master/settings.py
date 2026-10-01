@@ -23,15 +23,18 @@ SECRET_KEY = os.environ.get("SECRET_KEY") or "django-insecure-pilucent-local-dev
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG")
 
+# Brand and public endpoints. Every external name the product shows or calls is
+# read here, from the environment, with pilucent.com defaults -- set the real
+# values in .env. Nothing below may default to another deployment's resources.
+PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "Pilucent")
+PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://api.pilucent.com")
+APP_URL = os.environ.get("APP_URL", "https://app.pilucent.com")
+SELF_SERVICE_URL = os.environ.get("SELF_SERVICE_URL", "https://me.pilucent.com")
+SUPPORT_EMAIL = os.environ.get("SUPPORT_EMAIL", "support@pilucent.com")
+BRAND_LOGO_URL = os.environ.get("BRAND_LOGO_URL", f"{APP_URL}/images/logo_blue.png")
+BRAND_ICON_URL = os.environ.get("BRAND_ICON_URL", f"{APP_URL}/icons/logo.svg")
+
 ALLOWED_HOSTS = ["*"]
-# ALLOWED_HOSTS = [
-#     "127.0.0.1",
-#     "balanzifyapi.jumatechs.xyz",
-#     "4xf0rlft-8000.asse.devtunnels.ms",
-#     "localhost:8000",
-#     "localhost",
-#     "145.223.75.199",
-# ]
 
 
 # Application definition
@@ -59,7 +62,7 @@ THIRD_PARTY_APPS = [
     "django_otp.plugins.otp_totp",
     "storages",
 ]
-BALANZIFY_APPS = [
+PILUCENT_APPS = [
     "accounts",
     "adminio",
     "addressio",
@@ -106,7 +109,7 @@ BALANZIFY_APPS = [
     "wirehouseio",
 ]
 
-INSTALLED_APPS = ["daphne"] + DJANGO_APPS + THIRD_PARTY_APPS + BALANZIFY_APPS
+INSTALLED_APPS = ["daphne"] + DJANGO_APPS + THIRD_PARTY_APPS + PILUCENT_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -188,21 +191,19 @@ DATABASES = (
     else {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("DB_NAME", "balanzify_dev"),
-            # The running app connects as the restricted role `balanzify_app` so
+            "NAME": os.environ.get("DB_NAME", "pilucent_dev"),
+            # The running app connects as the restricted role `pilucent_app` so
             # PostgreSQL Row-Level Security is actually enforced (a superuser like
             # postgres_dev bypasses RLS).
             #
-            # IMPORTANT: `balanzify_app` has DML only (SELECT/INSERT/UPDATE/DELETE)
+            # IMPORTANT: `pilucent_app` has DML only (SELECT/INSERT/UPDATE/DELETE)
             # and CANNOT run migrations. Run `manage.py migrate` as the owner by
             # overriding the env for that step, e.g.:
-            #     DB_USER=postgres_dev DB_PASSWORD='<postgres_dev pw>' python manage.py migrate
-            "USER": os.environ.get("DB_USER", "balanzify_app"),
-            # No fallback, deliberately. This carried the live `balanzify_app`
-            # password as a literal default from 17b550ba until 2026-08-21, so
-            # the production credential was readable by anyone with repo access
-            # -- and it is in git history, which removing it here does not
-            # undo. Rotate the role's password to actually close that.
+            #     DB_USER=pilucent DB_PASSWORD='<owner pw>' python manage.py migrate
+            # (docker-compose.yml's `migrate` service does exactly this).
+            "USER": os.environ.get("DB_USER", "pilucent_app"),
+            # No fallback, deliberately: a missing password should say it is
+            # missing.
             #
             # Required rather than defaulted to "": an empty password fails at
             # connect time with `password authentication failed`, which reads
@@ -214,9 +215,10 @@ DATABASES = (
             # "test" is in sys.argv, and a conditional expression only
             # evaluates the branch it takes -- this dict is never built there.
             "PASSWORD": _require_env("DB_PASSWORD"),
-            "HOST": os.environ.get(
-                "DB_HOST", "balanzify-db-dev-v2.c9gk2imws53j.us-east-2.rds.amazonaws.com"
-            ),
+            # No remote default: the US product's RDS host used to be the
+            # fallback here, so an unset DB_HOST pointed this product at
+            # another deployment's database.
+            "HOST": os.environ.get("DB_HOST", "localhost"),
             "PORT": os.environ.get("DB_PORT", "5432"),
             # Keep connections NON-persistent. The RDS instance has a small
             # connection ceiling (max_connections=79); persistent connections
@@ -225,7 +227,15 @@ DATABASES = (
             # and closed at request end.
             "CONN_MAX_AGE": int(os.environ.get("DB_CONN_MAX_AGE", "0")),
             "OPTIONS": {
-                "sslmode": "require",
+                # TLS is required for any remote database. A local one (the
+                # docker-compose.yml Postgres, reached as `db` or localhost)
+                # has no TLS. DB_SSLMODE overrides either way.
+                "sslmode": os.environ.get(
+                    "DB_SSLMODE",
+                    "disable"
+                    if os.environ.get("DB_HOST", "localhost") in ("localhost", "127.0.0.1", "db")
+                    else "require",
+                ),
                 # Cap how long the app waits for a DB connection so a saturated
                 # pool fails fast instead of piling up slow requests.
                 "connect_timeout": int(os.environ.get("DB_CONNECT_TIMEOUT", "10")),
@@ -296,29 +306,18 @@ SIMPLE_JWT = {
     "TOKEN_TYPE_CLAIM": "token_type",
 }
 
-# This settings now for development
+# Comma-separated in the environment; the defaults are local dev plus pilucent.com.
+_LOCAL_ORIGINS = "https://localhost:3000,http://localhost:3000,http://127.0.0.1:3000"
 CORS_ALLOWED_ORIGINS = [
-    "https://localhost:3000",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:*",
-    "https://balanzifyapi.jumatechs.xyz",
-    "http://balanzifyapi.jumatechs.xyz",
-    "https://balanzify.com",
-    "https://4xf0rlft-8000.asse.devtunnels.ms",
-    "https://balanzifyapi.jumatechs.xyz",
+    o.strip()
+    for o in os.environ.get("CORS_ALLOWED_ORIGINS", f"{_LOCAL_ORIGINS},{APP_URL},{PUBLIC_API_URL}").split(",")
+    if o.strip()
 ]
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "contenttype"]
 CSRF_TRUSTED_ORIGINS = [
-    "https://localhost:3000",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:*",
-    "https://balanzifyapi.jumatechs.xyz",
-    "http://balanzifyapi.jumatechs.xyz",
-    "https://balanzify.com",
-    "https://4xf0rlft-8000.asse.devtunnels.ms",
-    "https://balanzifyapi.jumatechs.xyz",
+    o.strip()
+    for o in os.environ.get("CSRF_TRUSTED_ORIGINS", f"{_LOCAL_ORIGINS},{APP_URL},{PUBLIC_API_URL}").split(",")
+    if o.strip()
 ]
 ACCESS_CONTROL_ALLOW_ORIGIN = ["*"]
 CORS_ALLOW_CREDENTIALS = True
@@ -358,10 +357,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 # SSL Security settings - commented out for local development (avoid HTTPS redirect/timeouts)
-SECURE_SSL_REDIRECT = True
+# On in production (the default). The local docker stack serves plain HTTP and
+# turns these off via the environment.
+_HTTPS_ONLY = os.environ.get("HTTPS_ONLY", "True") == "True"
+SECURE_SSL_REDIRECT = _HTTPS_ONLY
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = _HTTPS_ONLY
+CSRF_COOKIE_SECURE = _HTTPS_ONLY
 USE_X_FORWARDED_HOST = True
 
 # Default primary key field type
@@ -372,7 +374,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Google OAuth2 settings
 BASE_BACKEND_URL = os.environ.get("DJANGO_BASE_BACKEND_URL")
-BASE_FRONTEND_URL = os.environ.get("DJANGO_BASE_FRONTEND_URL")
+BASE_FRONTEND_URL = os.environ.get("DJANGO_BASE_FRONTEND_URL") or os.environ.get("BASE_FRONTEND_URL")
 GOOGLE_OAUTH2_CLIENT_ID = os.environ.get("GOOGLE_OAUTH2_CLIENT_ID")
 GOOGLE_OAUTH2_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH2_CLIENT_SECRET")
 GOOGLE_OAUTH2_PROJECT_ID = os.environ.get("GOOGLE_OAUTH2_PROJECT_ID")
@@ -382,12 +384,12 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST")
 EMAIL_PORT = os.environ.get("EMAIL_PORT")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-DEFAULT_HOST_USER = "no-reply@balanzify.com"
+DEFAULT_HOST_USER = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@pilucent.com")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS")
 
 # TOTP / 2FA
-OTP_TOTP_ISSUER = "Balanzify"
+OTP_TOTP_ISSUER = PRODUCT_NAME
 
 # Remove warning for urls check
 SILENCED_SYSTEM_CHECKS = ["urls.W002", "security.W019"]
@@ -400,7 +402,7 @@ SILENCED_SYSTEM_CHECKS = ["urls.W002", "security.W019"]
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "balanzify-default",
+        "LOCATION": "pilucent-default",
     }
 }
 
@@ -423,14 +425,15 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("redis", 6379)],
+            "hosts": [(os.environ.get("REDIS_HOST", "redis"), int(os.environ.get("REDIS_PORT", "6379")))],
         },
     },
 }
 ASGI_APPLICATION = "master.asgi.application"
 
 # Celery settings
-CELERY_BROKER_URL = os.environ.get("redis_local_server")
+# CELERY_BROKER_URL is the documented name; `redis_local_server` is the older one.
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL") or os.environ.get("redis_local_server")
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
@@ -456,12 +459,9 @@ CELERY_BEAT_SCHEDULE = {
 
 
 # moov settings sandbox
-# MOOV_USERNAME = "IP5DSHyRhYzc64FT"  # 8PH_vXFoUdTXZGOH public key from moov
-# MOOV_PASSWORD = "mFLY0YaTdxoJ7CA-fPWE5VzN108uFO6y"  # 4nZ0whIePNY45a8_NcjtJS4h9h_jYzn_  secret key from moov
-# MOOV_ACCOUNT_UID = "36d656f4-adba-4160-be10-aabe853f3244"  # moov account uid for balanzify 8b55272b-6f2d-4ebd-a3ae-bf231567ceba // main account uid 2166eb98-c70d-4162-a168-e1940f11f903
 # Frontend origin registered with Moov — used as the Origin header on server-to-server
 # calls so Cloudflare does not block them. Must match the origin embedded in Moov tokens.
-MOOV_ORIGIN = os.environ.get("MOOV_ORIGIN", "https://accounting.balanzify.com")
+MOOV_ORIGIN = os.environ.get("MOOV_ORIGIN", APP_URL)
 
 
 # moov settings production development
@@ -508,23 +508,32 @@ STATICFILES_DIRS = [
 ]
 MEDIA_ROOT = BASE_DIR / "media"
 
-# AWS S3 settings
-AWS_STORAGE_BUCKET_NAME = "balanzify-s3-511590151275-us-east-2-an"
-AWS_S3_REGION_NAME = "us-east-2"
-AWS_S3_CUSTOM_DOMAIN = (
-    f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
-)
-STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
-MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
-
-STORAGES = {
-    "default": {
-        "BACKEND": "master.storages.MediaStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "master.storages.StaticStorage",
-    },
-}
+# File storage. S3 when a bucket is configured (production); local files under
+# MEDIA_ROOT / STATIC_ROOT otherwise (local development, docker-compose.yml).
+# There is no default bucket: the US product's bucket used to be hardcoded here.
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "")
+AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "ap-southeast-1")
+if AWS_STORAGE_BUCKET_NAME:
+    AWS_S3_CUSTOM_DOMAIN = (
+        f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+    )
+    STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
+    STORAGES = {
+        "default": {
+            "BACKEND": "master.storages.MediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "master.storages.StaticStorage",
+        },
+    }
+else:
+    STATIC_URL = "/static/"
+    MEDIA_URL = "/media/"
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
 
 
 AWS_ACCESS_KEY_ID = None
@@ -535,7 +544,7 @@ AWS_QUERYSTRING_AUTH = False
 AWS_S3_FILE_OVERWRITE = False
 AWS_S3_SIGNATURE_VERSION = "s3v4"
 # Logging configuration
-LOG_DIR = "/var/log/balanzify"
+LOG_DIR = os.environ.get("LOG_DIR", "/var/log/pilucent")
 if not os.access(LOG_DIR, os.W_OK):
     LOG_DIR = os.path.join(BASE_DIR, "logs")
 CELERY_LOG_DIR = os.path.join(LOG_DIR, "celery")

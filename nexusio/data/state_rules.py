@@ -1,6 +1,6 @@
 """Seed data for NexusStateRule — economic-nexus thresholds for all 52 US
 sales-tax jurisdictions (50 states + DC + PR), compiled from
-``docs/updated-prompts/Balanzify_State_Economic_Nexus_Rules_Reference.md``
+``docs/updated-prompts/Pilucent_State_Economic_Nexus_Rules_Reference.md``
 (current as of July 6, 2026).
 
 Each entry is one effective-dated rule row. Values reflect CURRENT law with the

@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 def send_forget_password_link_email(to_email, uid, token, reply_to=None):
-    subject = "Blanzify reset password link"
+    subject = f"{settings.PRODUCT_NAME} reset password link"
     send_email(
         {
-            "url" : f"https://balanzify-me.vercel.app/password/{uid}?token={token}"
+            "url": f"{settings.SELF_SERVICE_URL}/password/{uid}?token={token}"
         },
         "emails/forget_password/reset_password.html",
         to_email,

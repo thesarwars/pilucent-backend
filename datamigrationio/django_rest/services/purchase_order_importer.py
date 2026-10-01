@@ -220,7 +220,7 @@ class MigrationPurchaseOrderCreateService:
                         },
                         "emails/purchases/purchase_email_template.html",
                         emails,
-                        f"Balanzify {title}",
+                        f"Pilucent {title}",
                     )
             except Exception:
                 logger.exception("Failed to send migration email for purchase order uid=%s", purchase.uid)

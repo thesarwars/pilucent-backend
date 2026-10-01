@@ -5,7 +5,7 @@ ledger transaction) that produces real bills over time. Lines live on
 ``RecurringTemplateLine``; each produced bill/reminder is logged as a
 ``RecurringOccurrence`` (its ``unique(template, occurrence_date)`` is the
 generation idempotency key). See
-``docs/updated-prompts/Balanzify_Recurring_Transactions_Bill.md`` (section 12).
+``docs/updated-prompts/Pilucent_Recurring_Transactions_Bill.md`` (section 12).
 
 Every table carries ``company`` so the same RLS tenant policy used on the core
 tables applies (see ``common/db/rls.py``).

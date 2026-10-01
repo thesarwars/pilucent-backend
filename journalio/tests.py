@@ -1690,7 +1690,7 @@ class CreatePostingCharacterizationTests(SaleReversalTests):
     """
 
     OUT = ("/private/tmp/claude-501/-Users-sarwars-Desktop-Projects-Jumatechs-"
-           "Balanzify-balanzify-backend/db40ffd5-63d7-400f-96ab-49b5c346cd0f/"
+           "Pilucent-pilucent-backend/db40ffd5-63d7-400f-96ab-49b5c346cd0f/"
            "scratchpad/create_fingerprint.txt")
 
     def _fingerprint(self, sale, label, lines):
@@ -1791,7 +1791,7 @@ class UpdatePostingCharacterizationTests(SaleReversalTests):
     """
 
     OUT = ("/private/tmp/claude-501/-Users-sarwars-Desktop-Projects-Jumatechs-"
-           "Balanzify-balanzify-backend/db40ffd5-63d7-400f-96ab-49b5c346cd0f/"
+           "Pilucent-pilucent-backend/db40ffd5-63d7-400f-96ab-49b5c346cd0f/"
            "scratchpad/update_fingerprint.txt")
 
     def _update(self, sale, payload):

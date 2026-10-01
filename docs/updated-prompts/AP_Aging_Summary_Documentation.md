@@ -1,5 +1,5 @@
   
-**BALANZIFY**
+**PILUCENT**
 
 Accounting & Bookkeeping Platform
 
@@ -22,7 +22,7 @@ Product & Reporting Documentation
 
 # **1\. Introduction & Overview**
 
-The Accounts Payable (A/P) Aging Summary Report in Balanzify gives you a clear, single-screen picture of every unpaid amount your business owes to its vendors and suppliers — organized by how long each balance has been outstanding. Rather than scrolling through individual bills, you see one consolidated line per vendor, with that vendor’s open balance spread across a row of time-based “aging” columns.
+The Accounts Payable (A/P) Aging Summary Report in Pilucent gives you a clear, single-screen picture of every unpaid amount your business owes to its vendors and suppliers — organized by how long each balance has been outstanding. Rather than scrolling through individual bills, you see one consolidated line per vendor, with that vendor’s open balance spread across a row of time-based “aging” columns.
 
 In plain terms, the report turns a long list of bills into a short, prioritized snapshot. It is one of the most frequently used reports in any bookkeeping routine because it connects directly to cash: it tells you what you owe, to whom, and how urgent each payment has become.
 
@@ -48,16 +48,16 @@ A single A/P Aging Summary is designed to answer three questions at a glance:
 
 ## **1.3 Where it sits in the payables workflow**
 
-Every time you enter a bill, apply a vendor credit, or record a bill payment, Balanzify updates the underlying Accounts Payable ledger. The A/P Aging Summary is the reporting lens placed over that ledger. It does not create or change any data — it reads the current open balances and re-presents them by age. Because of this, the report is always only as accurate as the bills, credits, and payments behind it.
+Every time you enter a bill, apply a vendor credit, or record a bill payment, Pilucent updates the underlying Accounts Payable ledger. The A/P Aging Summary is the reporting lens placed over that ledger. It does not create or change any data — it reads the current open balances and re-presents them by age. Because of this, the report is always only as accurate as the bills, credits, and payments behind it.
 
-| Summary vs. Detail Balanzify offers two related reports. The A/P Aging Summary (this document) shows one rolled-up row per vendor. The A/P Aging Detail report breaks the same balances down into the individual transactions — each bill, its date, due date, and open amount. Whenever you need to see what makes up a number on the Summary, drill into the Detail. |
+| Summary vs. Detail Pilucent offers two related reports. The A/P Aging Summary (this document) shows one rolled-up row per vendor. The A/P Aging Detail report breaks the same balances down into the individual transactions — each bill, its date, due date, and open amount. Whenever you need to see what makes up a number on the Summary, drill into the Detail. |
 | :---- |
 
 # **2\. Key Concepts & Terminology**
 
 A few core ideas drive everything in this report. Getting comfortable with them makes the calculations and settings that follow easy to read.
 
-| Term | Meaning in Balanzify |
+| Term | Meaning in Pilucent |
 | :---- | :---- |
 | **Accounts Payable (A/P)** | The money your business owes to vendors for goods or services received but not yet paid for. It is a liability. |
 | **Bill** | A transaction recording an obligation to pay a vendor. Entering a bill increases A/P. |
@@ -103,7 +103,7 @@ The body is a simple matrix. Each row is a vendor; each column is an aging bucke
 
 ## **3.4 The footer**
 
-Below the grid, Balanzify stamps the exact date and time the report was generated, along with the time zone. This timestamp matters: because aging is measured against a reference date, two copies of the same report run on different days can legitimately show different numbers. There is also an option to attach a note for context.
+Below the grid, Pilucent stamps the exact date and time the report was generated, along with the time zone. This timestamp matters: because aging is measured against a reference date, two copies of the same report run on different days can legitimately show different numbers. There is also an option to attach a note for context.
 
 # **4\. Columns Explained**
 
@@ -132,14 +132,14 @@ Every balance is measured against a single reference date, called the aging date
 
 ## **5.2 Step two — measure days outstanding**
 
-For each open transaction, Balanzify calculates how many days have elapsed between its due date and the aging date:
+For each open transaction, Pilucent calculates how many days have elapsed between its due date and the aging date:
 
 | Days Past Due  \=  Aging Date  −  Due Date |
 | :---: |
 
 A positive result means the balance is overdue by that many days. A result of zero or below means it is *not yet due* and is therefore considered current.
 
-| Which date drives aging: due date vs. transaction date By default, Balanzify ages each balance from its due date — the most common and intuitive choice, because a bill is only “late” once its due date has passed. If you prefer, the aging method can instead measure from the transaction (bill) date, which ages everything from when it was billed regardless of terms. The bucket boundaries below work identically either way; only the date you subtract changes. |
+| Which date drives aging: due date vs. transaction date By default, Pilucent ages each balance from its due date — the most common and intuitive choice, because a bill is only “late” once its due date has passed. If you prefer, the aging method can instead measure from the transaction (bill) date, which ages everything from when it was billed regardless of terms. The bucket boundaries below work identically either way; only the date you subtract changes. |
 | :---- |
 
 ## **5.3 Step three — assign the bucket**
@@ -317,7 +317,7 @@ The bottom row and grand total can be reproduced exactly using the four-pass met
 
 # **11\. Reconciliation & Validation**
 
-Because the report is just the A/P subledger re-presented by age, its grand total should tie back to the Accounts Payable balance reported elsewhere in Balanzify.
+Because the report is just the A/P subledger re-presented by age, its grand total should tie back to the Accounts Payable balance reported elsewhere in Pilucent.
 
 ## **11.1 The key relationship**
 
@@ -417,4 +417,4 @@ The same report supports several day-to-day and periodic decisions:
 | **Payment terms** | The agreed window for payment (for example, Net 30\) used to derive due dates. |
 | **Vendor credit** | An amount owed back by a vendor; it lowers A/P and can show as a negative balance. |
 
-*End of document  ·  Balanzify — A/P Aging Summary Report Documentation  ·  v1.0*
+*End of document  ·  Pilucent — A/P Aging Summary Report Documentation  ·  v1.0*

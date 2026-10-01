@@ -536,7 +536,7 @@ class MigrationExpenseCreateService:
                         },
                         "emails/purchases/purchase_email_template.html",
                         emails,
-                        f"Balanzify {title}",
+                        f"Pilucent {title}",
                     )
             except Exception:
                 logger.exception("Failed to send migration email for expense uid=%s", expense.uid)

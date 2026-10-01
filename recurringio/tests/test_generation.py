@@ -671,7 +671,7 @@ class PurchaseOrderPostingTests(TestCase):
             company=self.company, supplier=self.supplier,
             frequency="MONTHLY", interval_count=1, start_date=date(2026, 1, 1),
             end_type="NONE", next_run_date=date(2026, 1, 1),
-            full_shipping_address="Balanzify Inc\n12 Main St",
+            full_shipping_address="Pilucent Inc\n12 Main St",
             shipping_by="FedEx",
         )
         defaults.update(overrides)

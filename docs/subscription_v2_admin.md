@@ -600,4 +600,4 @@ Keep v1 checkout behind a feature flag until v2 verified in staging.
 
 - [`SUBSCRIPTION_ENGINE.md`](./SUBSCRIPTION_ENGINE.md) — full API reference, frontend integration guide
 - [`Super Admin - Design Spec & Prompt.md`](./Super%20Admin%20-%20Design%20Spec%20%26%20Prompt.md) — UI spec for Super Admin screens
-- [`Balanzify_Advanced_Subscription_Management_PRD.md`](./Balanzify_Advanced_Subscription_Management_PRD.md) — product requirements
+- [`Pilucent_Advanced_Subscription_Management_PRD.md`](./Pilucent_Advanced_Subscription_Management_PRD.md) — product requirements

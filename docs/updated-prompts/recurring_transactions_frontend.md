@@ -2,8 +2,8 @@
 
 What the frontend needs to build the Recurring Transactions screens against the
 Phase 1 backend. Pairs with the four specs in this folder
-(`Balanzify_Recurring_Transactions_Bill.md`, `Balanzify_Recurring_Transactions_Expense.md`,
-`Balanzify_Recurring_Transactions_Cheque.docx`, `Balanzify_Recurring_Transactions_Estimate.md`).
+(`Pilucent_Recurring_Transactions_Bill.md`, `Pilucent_Recurring_Transactions_Expense.md`,
+`Pilucent_Recurring_Transactions_Cheque.docx`, `Pilucent_Recurring_Transactions_Estimate.md`).
 
 All four transaction types — **Bill**, **Expense**, **Cheque**, and **Estimate** —
 share one template model, one endpoint, and one scheduling engine; they differ

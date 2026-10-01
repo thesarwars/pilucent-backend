@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+{% load brand %}<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Balanzify: Email verification</title>
+    <title>Pilucent: Email verification</title>
     <style>
       .header-content {
         display: flex;
@@ -62,15 +62,15 @@
                 <div class="header-content">
                   <!-- Logo -->
                   <img
-                    src="https://balanzify-seven.vercel.app/icons/logo.svg"
-                    alt="Balanzify Logo"
+                    src="{% brand "BRAND_ICON_URL" %}"
+                    alt="Pilucent Logo"
                     width="40"
                     height="40"
                     class="header-logo"
                     style="height: 40px; width: 40px; border-radius: 8px"
                   />
                   <!-- Company Name -->
-                  <h1 class="header-title">Balanzify</h1>
+                  <h1 class="header-title">Pilucent</h1>
                 </div>
               </td>
             </tr>
@@ -118,10 +118,10 @@
                 letter-spacing: 0.56px;
               "
             >
-              Thank you for choosing Balanzify Inc. Use the following OTP to
+              Thank you for choosing Pilucent Inc. Use the following OTP to
               verify your email address. OTP is valid for
               <span style="font-weight: 600; color: #1f1f1f">30 minutes</span>.
-              Do not share this code with others, including Balanzify employees.
+              Do not share this code with others, including Pilucent employees.
             </p>
             <p
               style="
@@ -152,7 +152,7 @@
           <a
             href="mailto:archisketch@gmail.com"
             style="color: #499fb6; text-decoration: none"
-            >support@balanzify.com</a
+            >{% brand "SUPPORT_EMAIL" %}</a
           >
         </p>
       </main>
@@ -175,7 +175,7 @@
             color: #434343;
           "
         >
-          Balanzify
+          Pilucent
         </p>
         <p style="margin: 0; margin-top: 8px; color: #434343">
           Address 540, City, State.
@@ -221,7 +221,7 @@
           /></a>
         </div>
         <p style="margin: 0; margin-top: 16px; color: #434343">
-          Copyright © 2025 Balanzify Company. All rights reserved.
+          Copyright © 2025 Pilucent Company. All rights reserved.
         </p>
       </footer>
     </div>

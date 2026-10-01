@@ -15,7 +15,7 @@ is applied per month and never mutates the underlying day-of-month rule, so a
 
 Weekdays follow Python's convention: 0 = Monday … 6 = Sunday.
 
-See ``docs/updated-prompts/Balanzify_Recurring_Transactions_Bill.md`` section 11.
+See ``docs/updated-prompts/Pilucent_Recurring_Transactions_Bill.md`` section 11.
 """
 
 import calendar

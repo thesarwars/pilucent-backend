@@ -595,7 +595,7 @@ class PrivateWeSaleListSerializer(CompanyScopedRelatedFieldsMixin, ModelSerializ
         # Email sending
         if is_invoice == True or is_estimated == True or is_sale_receipt == True:
             customer_address = customer.addressconnector_set.first()
-            subject = f"Balanzify {title}"
+            subject = f"Pilucent {title}"
             invoice = get_pdf(
                 self,
                 False,
@@ -1324,7 +1324,7 @@ class PrivateWeSalePaymentReceiveListSerializer(CompanyScopedRelatedFieldsMixin,
 
         # Email sending
         title = "PAYMENT RECEIVE"
-        subject = f"Balanzify {title}"
+        subject = f"Pilucent {title}"
         payment_receive_pdf = get_pdf(
             self,
             False,

@@ -50,7 +50,7 @@ from payrollio.models import PayrollSalaryProcess
 
 class PurgeUsersTests(TestCase):
     def setUp(self):
-        self.company = Company.objects.create(name="Balanzify LTD")
+        self.company = Company.objects.create(name="Pilucent LTD")
         self.bank = ChartOfAccount.objects.create(
             company=self.company,
             title="City Bank",

@@ -1,54 +1,48 @@
-# FROM python:3.12-alpine
+# Pilucent backend image, used by docker-compose.yml (local development) and
+# docker-compose.prod.yml (production). Configuration comes from the environment
+# at run time -- no .env is baked into the image.
 
-# RUN apk update && apk add --no-cache \
-#     postgresql-dev \
-#     gcc \
-#     g++ \
-#     make \
-#     cmake \
-#     python3-dev \
-#     musl-dev \
-#     libmagic \
-#     libjpeg-turbo-dev \
-#     libpng-dev \
-#     openblas-dev \
-#     linux-headers
+FROM python:3.12-bookworm
 
-FROM python:3.12
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-RUN apt update && apt install -y \
-    build-essential \
-    libpq-dev \
-    cmake \  
-    libjpeg-dev \
-    libpng-dev \
-    libavcodec-dev \
-    libavformat-dev \
-    libswscale-dev \
-    libmagic-dev \
-    libopenblas-dev
-
-ENV PYTHONBUFFERED=1
+# Build: compilers and libpq for the packages without wheels (psycopg2, ...).
+# Runtime: Pango and HarfBuzz for WeasyPrint (invoice/report PDFs), libGL and
+# GLib for OpenCV (bank-statement PDF extraction, imported at URLconf load),
+# libmagic, image codecs, and Bangla fonts so Bangla text renders in PDFs.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        cmake \
+        libpq-dev \
+        libjpeg-dev \
+        libpng-dev \
+        libopenblas-dev \
+        libmagic1 \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        libharfbuzz0b \
+        libharfbuzz-subset0 \
+        libffi-dev \
+        libgl1 \
+        libglib2.0-0 \
+        fonts-dejavu-core \
+        fonts-beng \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements/development.txt requirements/development.txt
-
 RUN pip install -r requirements/development.txt
-# RUN pip install --no-cache-dir -r requirements/development.txt
-
-COPY env_sample.txt .env
 
 COPY . .
 
-# CMD python3 manage.py runserver 0.0.0.0:5000
-# CMD ["gunicorn", "--chdir", "/app", "master.wsgi:application", "--bind", "0.0.0.0:5000", "--workers", "4", "--threads", "2"]
 EXPOSE 5000
 
 # Gunicorn-managed uvicorn ASGI workers: keeps websockets, and recycles workers
 # (--max-requests) so leaked DB connections/memory are reclaimed over time.
-# The docker-compose `command:` mirrors this and is what runs in prod.
+# docker-compose.prod.yml runs this; docker-compose.yml overrides it with
+# runserver for local development.
 CMD ["gunicorn", "master.asgi:application", "-k", "uvicorn_worker.UvicornWorker", "-b", "0.0.0.0:5000", "--workers", "3", "--max-requests", "800", "--max-requests-jitter", "200", "--timeout", "120", "--graceful-timeout", "30", "--access-logfile", "-", "--error-logfile", "-"]
-# Old single-process server (no worker recycling):
-# CMD ["daphne", "-b", "0.0.0.0", "-p", "5000", "master.asgi:application"]
-# CMD ["python3", "manage.py", "runserver", "0.0.0.0:6000"]

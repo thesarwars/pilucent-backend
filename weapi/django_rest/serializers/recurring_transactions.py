@@ -5,7 +5,7 @@ A template is a parent/child aggregate: the header + embedded schedule on
 The write serializer accepts lines inline and, on save, recomputes the cached
 total and the first/next run date via the scheduling engine.
 
-See ``docs/updated-prompts/Balanzify_Recurring_Transactions_Bill.md`` sections 9 & 12.
+See ``docs/updated-prompts/Pilucent_Recurring_Transactions_Bill.md`` sections 9 & 12.
 """
 
 from decimal import Decimal

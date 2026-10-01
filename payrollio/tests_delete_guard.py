@@ -48,7 +48,7 @@ from weapi.django_rest.views.payroll.salary_process import (
 class PayrollDeleteGuardTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.company = Company.objects.create(name="Balanzify LTD")
+        cls.company = Company.objects.create(name="Pilucent LTD")
         cls.user = User.objects.create_user(
             name="Michael olyse", email="payroll-delete@example.com",
             password="pass1234!",

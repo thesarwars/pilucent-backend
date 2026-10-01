@@ -1,7 +1,7 @@
 """Bangladesh rule sets, ported from the front end's `rules.js`.
 
 Every value, confidence state, citation and note below is transcribed from
-`Balanzify Bangladesh - complete/rules.js` (and its catalogue, which states the
+`Pilucent Bangladesh - complete/rules.js` (and its catalogue, which states the
 confidence of the labour values the per-set objects leave untagged). Changes
 from the source, all deliberate:
 

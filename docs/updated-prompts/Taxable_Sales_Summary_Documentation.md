@@ -1,5 +1,5 @@
   
-**BALANZIFY**
+**PILUCENT**
 
 Accounting & Bookkeeping Platform
 
@@ -101,7 +101,7 @@ Functional Specification · US Small & Mid-Sized Business
 
 # **1\. Introduction & Overview**
 
-The Taxable Sales Summary Report in Balanzify shows how much of a business’s sales were subject to sales tax, broken down by product or service, for a chosen period and accounting basis. For a US small or mid-sized business, it is the report that answers the central question on every sales tax return: “of everything we sold, how much was taxable?” It isolates the taxable sales base — the amount that sales tax is calculated on — from exempt and non-taxable sales, and rolls it up into a single, filing-ready figure.
+The Taxable Sales Summary Report in Pilucent shows how much of a business’s sales were subject to sales tax, broken down by product or service, for a chosen period and accounting basis. For a US small or mid-sized business, it is the report that answers the central question on every sales tax return: “of everything we sold, how much was taxable?” It isolates the taxable sales base — the amount that sales tax is calculated on — from exempt and non-taxable sales, and rolls it up into a single, filing-ready figure.
 
 Each row is a product or service, and the Total column is the taxable sales amount for that item over the period. Items can be grouped under categories with their own subtotals, and a grand total at the bottom gives the company-wide taxable sales. Because sales tax in the United States is administered state by state (and often by county and city), this total is what a business carries to the taxable-sales line of the return it files with each tax agency it is registered in.
 
@@ -131,7 +131,7 @@ A single Taxable Sales Summary is designed to answer three questions at a glance
 
 ## **1.3 Where it sits in the sales tax workflow**
 
-Every time you create an invoice, sales receipt, credit memo, or refund, Balanzify records whether each line is taxable and how much sales tax applies. The Taxable Sales Summary is the reporting lens over that activity: it reads the taxable sales lines and re-presents them by product or service. It does not create or change any data, so the report is always only as accurate as the tax settings on your items and customers and the transactions behind them.
+Every time you create an invoice, sales receipt, credit memo, or refund, Pilucent records whether each line is taxable and how much sales tax applies. The Taxable Sales Summary is the reporting lens over that activity: it reads the taxable sales lines and re-presents them by product or service. It does not create or change any data, so the report is always only as accurate as the tax settings on your items and customers and the transactions behind them.
 
 | Taxable vs. total vs. tax collected Three figures are easy to confuse. Total sales is everything you sold. Taxable sales (this report) is the portion subject to sales tax — total sales minus exempt and non-taxable sales. Sales tax collected is the tax itself, calculated on the taxable base; that lives on the Sales Tax Liability report, not here. This report shows the base, not the tax. |
 | :---- |
@@ -140,7 +140,7 @@ Every time you create an invoice, sales receipt, credit memo, or refund, Balanzi
 
 A few core ideas drive everything in this report. Getting comfortable with them makes the calculations and settings that follow easy to read.
 
-| Term | Meaning in Balanzify |
+| Term | Meaning in Pilucent |
 | :---- | :---- |
 | **Taxable sales** | The portion of sales that is subject to sales tax. This report sums the taxable sales amount, grouped by product or service. |
 | **Non-taxable / exempt sales** | Sales not subject to sales tax — for example, sales to an exempt customer, resale, or a product that is not taxable. These are excluded here. |
@@ -188,7 +188,7 @@ The body lists each product or service as a row, with its taxable sales in the T
 
 ## **3.4 The footer**
 
-Below the grid, Balanzify shows the accounting basis and stamps the exact date, time, and time zone the report was generated (for example, “Accrual basis | Wednesday, June 24, 2026 03:32 PM GMT+06:00”). Because the basis and the run moment both affect the figures, this line is part of the audit trail. There is also an option to attach a note.
+Below the grid, Pilucent shows the accounting basis and stamps the exact date, time, and time zone the report was generated (for example, “Accrual basis | Wednesday, June 24, 2026 03:32 PM GMT+06:00”). Because the basis and the run moment both affect the figures, this line is part of the audit trail. There is also an option to attach a note.
 
 # **4\. Columns Explained**
 
@@ -497,4 +497,4 @@ The same report supports several recurring tasks for a US small or mid-sized bus
 | **Taxable sales** | The portion of sales subject to sales tax — the base this report summarizes. |
 | **Tax status** | The taxable-or-exempt flag on an item or customer that decides what the report includes. |
 
-*End of document  ·  Balanzify — Taxable Sales Summary Report Documentation  ·  v1.0*
+*End of document  ·  Pilucent — Taxable Sales Summary Report Documentation  ·  v1.0*

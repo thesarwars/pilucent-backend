@@ -966,7 +966,7 @@ class PrivateWeCreditNoteListSerializer(CompanyScopedRelatedFieldsMixin, ModelSe
 
         # Email sending
         title = "CREDIT NOTE"
-        subject = f"Balanzify {title}"
+        subject = f"Pilucent {title}"
         credit_note_pdf = get_pdf(
             self,
             False,

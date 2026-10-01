@@ -1,4 +1,4 @@
-**BALANZIFY**
+**PILUCENT**
 
 **Economic Nexus**
 
@@ -759,7 +759,7 @@ Nexus reports answer "where and when am I obligated?"; the Sales Tax Liability r
 
 # **26   Frontend architecture**
 
-The frontend is a small, focused feature area inside the Sales Tax section of Balanzify. It reads everything from the Nexus API (Part D) and holds almost no business logic of its own — the verdicts, percentages, and statuses all arrive pre-computed. Its job is to present them clearly, keep them fresh, and make the next action obvious.
+The frontend is a small, focused feature area inside the Sales Tax section of Pilucent. It reads everything from the Nexus API (Part D) and holds almost no business logic of its own — the verdicts, percentages, and statuses all arrive pre-computed. Its job is to present them clearly, keep them fresh, and make the next action obvious.
 
 ![][image5]
 
@@ -946,7 +946,7 @@ One dashboard row. Presentational; emits a click for the drawer and a set-up act
 
 # **33   Design tokens & styling**
 
-The module inherits Balanzify's design system and adds a small, semantic status palette. Colour, type, spacing, and radius come from tokens — never hard-coded — so the module themes and stays consistent.
+The module inherits Pilucent's design system and adds a small, semantic status palette. Colour, type, spacing, and radius come from tokens — never hard-coded — so the module themes and stays consistent.
 
 ## **33.1   Status palette (semantic)**
 

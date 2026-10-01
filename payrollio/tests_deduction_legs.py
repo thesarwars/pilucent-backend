@@ -1,6 +1,6 @@
 """Every payroll deduction must reach a liability, or be reported.
 
-Company 184 "Balanzify LTD", payroll process 180, journal 2699, out by 240.840.
+Company 184 "Pilucent LTD", payroll process 180, journal 2699, out by 240.840.
 
     gross_pay 250.32, employee_taxes_deductions 243.71, net_pay 6.61
 
@@ -100,7 +100,7 @@ class MatcherNormalisationTests(TestCase):
 class OtherLiabilityWithholdingTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.company = Company.objects.create(name="Balanzify LTD")
+        cls.company = Company.objects.create(name="Pilucent LTD")
 
     def account(self, title, kind=ChartOfAccountKindChoices.LIABILITIES):
         return ChartOfAccount.objects.create(

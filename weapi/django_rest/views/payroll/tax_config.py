@@ -1,7 +1,7 @@
 """Statutory payroll tax config endpoints (reference data, year x jurisdiction).
 
 Reads assemble FEDERAL + the requested states into one CONFIG-shaped document
-(gated to payroll subscribers). Writes/publish are Balanzify-staff only — this
+(gated to payroll subscribers). Writes/publish are Pilucent-staff only — this
 is not tenant data, so there is no company scoping here.
 """
 

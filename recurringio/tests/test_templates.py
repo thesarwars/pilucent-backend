@@ -620,7 +620,7 @@ class RefundReceiptTemplateTests(TestCase):
             "message_on_receipt": "Sorry to see you go.",
             "reference_number": "CHQ-004182",
             "tracking_number": "RR-2026-0091",
-            "statement_memo": "BALANZIFY REFUND",
+            "statement_memo": "PILUCENT REFUND",
             "tax_kind": "EXCLUSIVE",
             "lines": [
                 {"line_type": "ITEM", "product": str(self.product.uid),
@@ -647,7 +647,7 @@ class RefundReceiptTemplateTests(TestCase):
         self.assertEqual(t.message_on_estimate, "Sorry to see you go.")
         self.assertEqual(t.reference_number, "CHQ-004182")
         self.assertEqual(t.tracking_number, "RR-2026-0091")
-        self.assertEqual(t.statement_memo, "BALANZIFY REFUND")
+        self.assertEqual(t.statement_memo, "PILUCENT REFUND")
         self.assertEqual(t.tax_kind, "EXCLUSIVE")
         self.assertEqual(t.total_amount, Decimal("199.000"))
 
@@ -1006,13 +1006,13 @@ class PurchaseOrderTemplateTests(TestCase):
             "supplier": str(self.supplier.uid),
             "mailing_address": "48 Industrial Pkwy Round Rock TX",
             "ship_to": str(self.ship_to.uid),
-            "full_shipping_address": "Balanzify Inc\n12 Main St\nAustin TX 73301",
+            "full_shipping_address": "Pilucent Inc\n12 Main St\nAustin TX 73301",
             "shipping_by": "FedEx",
             "warehouse": str(self.warehouse.uid),
             "permit_number": "TX-RS-884120",
             "email": "orders@packrightco.com",
-            "cc_emails": "ap@balanzify.com,ops@balanzify.com",
-            "bcc_emails": "audit@balanzify.com",
+            "cc_emails": "ap@pilucent.com,ops@pilucent.com",
+            "bcc_emails": "audit@pilucent.com",
             "tax_kind": "EXCLUSIVE",
             "memo": "Deliver to the loading dock.",
             "frequency": "MONTHLY", "interval_count": 1,
@@ -1043,7 +1043,7 @@ class PurchaseOrderTemplateTests(TestCase):
         self.assertEqual(t.shipping_by, "FedEx")
         self.assertIn("\n", t.full_shipping_address)  # newlines preserved
         self.assertEqual(t.email_to, "orders@packrightco.com")  # `email` alias
-        self.assertEqual(t.email_cc, "ap@balanzify.com,ops@balanzify.com")
+        self.assertEqual(t.email_cc, "ap@pilucent.com,ops@pilucent.com")
 
     def test_mixed_category_and_item_lines_are_kept(self):
         t = self._save()
@@ -1120,14 +1120,14 @@ class SalesReceiptTemplateTests(TestCase):
             "tax_kind": "EXCLUSIVE",
             "memo": "Thanks for being a member.",
             "message_on_receipt": "Thanks for being a member.",
-            "statement_memo": "BALANZIFY MEMBERSHIP",
+            "statement_memo": "PILUCENT MEMBERSHIP",
             "auto_email": True,
             "print_later": True,
             # the ONE nested object on this resource
             "email": {
                 "customer_email": "dana@northgate.example",
                 "cc_emails": "accounts@northgate.example",
-                "bcc_emails": "archive@balanzify.example",
+                "bcc_emails": "archive@pilucent.example",
             },
             "frequency": "MONTHLY", "interval_count": 1,
             "day_mode": "DAY_OF_MONTH", "day_of_month": 1,
@@ -1155,7 +1155,7 @@ class SalesReceiptTemplateTests(TestCase):
         t = self._save()
         self.assertEqual(t.email_to, "dana@northgate.example")
         self.assertEqual(t.email_cc, "accounts@northgate.example")
-        self.assertEqual(t.email_bcc, "archive@balanzify.example")
+        self.assertEqual(t.email_bcc, "archive@pilucent.example")
 
     def test_email_reads_back_nested(self):
         data = PrivateWeRecurringTemplateSerializer(
@@ -1169,7 +1169,7 @@ class SalesReceiptTemplateTests(TestCase):
         self.assertEqual(t.payment_account, self.bank)   # deposit_to alias
         self.assertEqual(t.payment_method, self.method)
         self.assertEqual(t.shipping_from, "480 Congress Ave Austin TX 78701")
-        self.assertEqual(t.statement_memo, "BALANZIFY MEMBERSHIP")
+        self.assertEqual(t.statement_memo, "PILUCENT MEMBERSHIP")
         self.assertTrue(t.print_later)
         self.assertTrue(t.auto_email)
 
@@ -1588,12 +1588,12 @@ class CreditMemoTemplateTests(TestCase):
             "email": {
                 "customer_email": "ada@northwind.co",
                 "cc_emails": "billing@northwind.co",
-                "bcc_emails": "archive@balanzify.com",
+                "bcc_emails": "archive@pilucent.com",
             },
             "tax_kind": "EXCLUSIVE",
             "memo": "Loyalty credit applied.",
             "message_on_credit_memo": "Loyalty credit applied.",
-            "statement_memo": "BALANZIFY LOYALTY CREDIT",
+            "statement_memo": "PILUCENT LOYALTY CREDIT",
             "frequency": "MONTHLY", "interval_count": 1,
             "day_mode": "DAY_OF_MONTH", "day_of_month": 1,
             "start_date": "2026-08-01", "end_type": "NONE",
@@ -1621,7 +1621,7 @@ class CreditMemoTemplateTests(TestCase):
         self.assertEqual(t.txn_type, "CREDIT_MEMO")
         self.assertEqual(t.customer, self.customer)
         self.assertEqual(t.warehouse, self.warehouse)
-        self.assertEqual(t.statement_memo, "BALANZIFY LOYALTY CREDIT")
+        self.assertEqual(t.statement_memo, "PILUCENT LOYALTY CREDIT")
         self.assertEqual(t.shipping_from, "440 Congress Ave Austin TX")
 
     def test_total_is_positive(self):

@@ -1,7 +1,7 @@
-# Balanzify — Super Admin · Subscription Management
+# Pilucent — Super Admin · Subscription Management
 ## Complete Design Specification & Generation Prompt
 
-> A production-ready, build-from-scratch prompt for the **platform-operator (Super Admin)** side of Balanzify's billing engine — the internal cockpit where staff define plans, entitlements, limits, add-ons, coupons, referrals, trials, and manage every tenant subscription, invoice, and audit event. Every value below is exact (colors, type, dimensions, components, screens, data, interactions). Hand this to a designer, a frontend developer, or an AI design tool to reproduce the panel faithfully.
+> A production-ready, build-from-scratch prompt for the **platform-operator (Super Admin)** side of Pilucent's billing engine — the internal cockpit where staff define plans, entitlements, limits, add-ons, coupons, referrals, trials, and manage every tenant subscription, invoice, and audit event. Every value below is exact (colors, type, dimensions, components, screens, data, interactions). Hand this to a designer, a frontend developer, or an AI design tool to reproduce the panel faithfully.
 
 > **This is a different surface from the company-side module.** Company-side = violet `#7C4DFF`, Plus Jakarta Sans, lavender glassmorphism, scaled fixed canvas. Super Admin = **indigo `#5B5BF0`**, **Sora + Inter + JetBrains Mono**, **dark sidebar rail on a light `#F5F6FB` workspace**, responsive fluid layout. Keep them visually distinct.
 
@@ -9,7 +9,7 @@
 
 ## 0. Role & Goal
 
-You are a **senior product designer + frontend engineer** building the **Super Admin Subscription Management** console for **Balanzify**, an enterprise SaaS finance/HR platform. Build a **fully navigable, fully functional internal web app** (desktop, design width **1440**, fluid to ~1280–1920) with a **calm data-dense operator aesthetic**: dark left rail, light glassy workspace, indigo accent, hand-built charts, and **real CRUD** — every create/edit/delete/toggle mutates shared state, reflects across screens, and writes to an audit trail.
+You are a **senior product designer + frontend engineer** building the **Super Admin Subscription Management** console for **Pilucent**, an enterprise SaaS finance/HR platform. Build a **fully navigable, fully functional internal web app** (desktop, design width **1440**, fluid to ~1280–1920) with a **calm data-dense operator aesthetic**: dark left rail, light glassy workspace, indigo accent, hand-built charts, and **real CRUD** — every create/edit/delete/toggle mutates shared state, reflects across screens, and writes to an audit trail.
 
 **Tone:** precise, trustworthy, operational. This is a back-office control panel, not a marketing surface. Density over whitespace, clarity over flourish. No dark patterns; destructive actions always confirm.
 
@@ -142,7 +142,7 @@ Padding 4px, bg `#EEF0F6`, radius 11px. Active segment = white pill + `0 2px 6px
 
 ### 4.11 Progress bar (`SProgress`) — track `#EEF0F6`, rounded; fill auto-colors brand→warn(≥85%)→bad(≥100%); used in usage cells, redemption caps, plan-link counts.
 
-### 4.12 Avatar (`SAvatar`) — rounded-square (radius = size×0.3), brand/teal gradient, Sora white monogram. Logo (`SLogo`) — conic mark + "Balanzify" wordmark, optional "SUPER ADMIN" eyebrow.
+### 4.12 Avatar (`SAvatar`) — rounded-square (radius = size×0.3), brand/teal gradient, Sora white monogram. Logo (`SLogo`) — conic mark + "Pilucent" wordmark, optional "SUPER ADMIN" eyebrow.
 
 ### 4.13 Table scaffold (`THead` + grid rows)
 CSS-grid rows (`grid-template-columns` per screen), header is uppercase 10.5px faint; rows `.sa-tr` hover `#FAFAFE`; row-level icon buttons (`.sa-iconbtn`, 30–34px, hover → brand). Tables scroll horizontally inside their card on narrow widths.
@@ -161,7 +161,7 @@ CSS-grid rows (`grid-template-columns` per screen), header is uppercase 10.5px f
 ```
 <div .sa-root> (fixed, flex, #F5F6FB)
  ├─ <Sidebar> 260px, dark gradient + radial glow
- │   ├─ Logo (B mark + "Balanzify", eyebrow "SUPER ADMIN")
+ │   ├─ Logo (B mark + "Pilucent", eyebrow "SUPER ADMIN")
  │   ├─ Nav groups (label + items):
  │   │    OVERVIEW   → Dashboard
  │   │    CATALOG    → Plans (4) · Modules & Features · Limits & Metrics · Add-ons

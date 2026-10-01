@@ -64,7 +64,7 @@ class LegRoundTripTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.company = Company.objects.create(name="Balanzify LTD")
+        cls.company = Company.objects.create(name="Pilucent LTD")
 
     _seq = 0
 
@@ -181,7 +181,7 @@ class VoidPayrollRoundTripTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.company = Company.objects.create(name="Balanzify LTD")
+        cls.company = Company.objects.create(name="Pilucent LTD")
         cls.user = User.objects.create_user(
             name="Michael olyse", email="void-round-trip@example.com",
             password="pass1234!",

@@ -386,12 +386,12 @@ class TransferDetailsBuilderTests(TestCase):
             "amount": {"currency": "USD", "value": 661},
             "facilitatorFee": {"totalDecimal": "0.00"},
             "source": {
-                "account": {"displayName": "Balanzify inc"},
+                "account": {"displayName": "Pilucent inc"},
                 "bankAccount": {"lastFourAccountNumber": "7521",
                                 "bankAccountType": "checking"},
                 "achDetails": {"secCode": "CCD", "traceNumber": "27397",
                                "debitHoldPeriod": "2-day",
-                               "companyEntryDescription": "Balanzify inc"},
+                               "companyEntryDescription": "Pilucent inc"},
             },
             "destination": {"bankAccount": {"lastFourAccountNumber": "6189",
                                             "bankAccountType": "savings"}},
@@ -403,7 +403,7 @@ class TransferDetailsBuilderTests(TestCase):
         self.assertEqual(details["source"]["last_four"], "7521")
         self.assertEqual(details["destination"]["last_four"], "6189")
         self.assertEqual(details["ach_debit"],
-                         {"company_name": "Balanzify inc", "ach_hold": "2-day",
+                         {"company_name": "Pilucent inc", "ach_hold": "2-day",
                           "sec_code": "CCD", "trace_number": "27397"})
 
     def test_empty_transfer_is_safe(self):
@@ -700,7 +700,7 @@ class TermsOfServiceBodyTests(TestCase):
                 "manual": {
                     "accepted_date": "2026-07-14T10:00:00Z",
                     "accepted_user_agent": "Mozilla/5.0",
-                    "accepted_domain": "app.balanzify.ai",
+                    "accepted_domain": "app.pilucent.com",
                 }
             },
             request,
@@ -713,7 +713,7 @@ class TermsOfServiceBodyTests(TestCase):
                     "acceptedDate": "2026-07-14T10:00:00Z",
                     "acceptedIP": "203.0.113.7",
                     "acceptedUserAgent": "Mozilla/5.0",
-                    "acceptedDomain": "app.balanzify.ai",
+                    "acceptedDomain": "app.pilucent.com",
                 }
             },
         )

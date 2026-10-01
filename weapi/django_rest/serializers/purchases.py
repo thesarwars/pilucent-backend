@@ -860,7 +860,7 @@ class PrivateWePurchaseListSerializer(CompanyScopedRelatedFieldsMixin, ModelSeri
                 title = "PURCHASE"
                 label = "purchases"
 
-            subject = f"Balanzify {title}"
+            subject = f"Pilucent {title}"
             request = self.context["request"]
 
             # Get all purchase items, both product items and custom expense items
@@ -2958,7 +2958,7 @@ class PrivateWePurchasePaymentListSerializer(CompanyScopedRelatedFieldsMixin, Mo
             title = "PAYMENT"
             label = "payments"
 
-            subject = f"Balanzify {title}"
+            subject = f"Pilucent {title}"
             request = self.context["request"]
 
             # Generate PDF

@@ -1,18 +1,18 @@
 
 
-| BALANZIFY PRD Advanced Subscription Management System Dynamic plans, entitlement control, employee/user limits, overage billing, add-ons, coupons, offers, referrals, free trials, upgrade and downgrade lifecycle. |
+| PILUCENT PRD Advanced Subscription Management System Dynamic plans, entitlement control, employee/user limits, overage billing, add-ons, coupons, offers, referrals, free trials, upgrade and downgrade lifecycle. |
 | :---- |
 
 | Field | Details |
 | :---- | :---- |
-| Product | Balanzify SaaS Platform |
+| Product | Pilucent SaaS Platform |
 | Module | Advanced Subscription Management |
 | Prepared For | Product, Design, Engineering, QA, Sales and Support Teams |
 | Prepared Date | 08 June 2026 |
 | Version | v1.0 PRD |
-| Document Goal | Define the subscription engine that lets Balanzify Super Admins dynamically create and manage subscription plans, limits, modules, features, add-ons, billing rules and customer self-service subscription changes. |
+| Document Goal | Define the subscription engine that lets Pilucent Super Admins dynamically create and manage subscription plans, limits, modules, features, add-ons, billing rules and customer self-service subscription changes. |
 
-Core pricing example requested: Starter plan includes 1-25 employees and up to 10 users for $150 per month. If the company needs 5 additional employees beyond the plan limit, Balanzify charges $6 per additional employee per month, making the monthly total $180.
+Core pricing example requested: Starter plan includes 1-25 employees and up to 10 users for $150 per month. If the company needs 5 additional employees beyond the plan limit, Pilucent charges $6 per additional employee per month, making the monthly total $180.
 
 # **Contents**
 
@@ -70,11 +70,11 @@ Core pricing example requested: Starter plan includes 1-25 employees and up to 1
 
 # **1\. Executive Summary**
 
-Balanzify needs an advanced, dynamic subscription management system that controls how each tenant can access accounting, HR, payroll, inventory, tax, reporting, AI and support capabilities. The system must be manageable from the Super Admin panel without code changes. It must support base subscription plans, included employee and user limits, add-on overage pricing, coupon and offer logic, referral credits, free trials, upgrade/downgrade workflows, usage monitoring, payment lifecycle, invoicing, access enforcement and auditability.
+Pilucent needs an advanced, dynamic subscription management system that controls how each tenant can access accounting, HR, payroll, inventory, tax, reporting, AI and support capabilities. The system must be manageable from the Super Admin panel without code changes. It must support base subscription plans, included employee and user limits, add-on overage pricing, coupon and offer logic, referral credits, free trials, upgrade/downgrade workflows, usage monitoring, payment lifecycle, invoicing, access enforcement and auditability.
 
-The most important rule is that Balanzify should not hard-code plans. A Super Admin should be able to configure plan names, prices, billing cycles, modules, feature access, limits, add-on rates, discounts and customer eligibility from the admin panel. Companies should be able to select a plan, start a trial, upgrade, downgrade, buy additional employee capacity, manage payment methods and view invoices from their own subscription area.
+The most important rule is that Pilucent should not hard-code plans. A Super Admin should be able to configure plan names, prices, billing cycles, modules, feature access, limits, add-on rates, discounts and customer eligibility from the admin panel. Companies should be able to select a plan, start a trial, upgrade, downgrade, buy additional employee capacity, manage payment methods and view invoices from their own subscription area.
 
-Product direction: Balanzify should use a subscription entitlement engine, not only a payment page. Payment, invoice and pricing data decide what the customer has purchased; the entitlement service enforces what the customer can actually access inside the application.
+Product direction: Pilucent should use a subscription entitlement engine, not only a payment page. Payment, invoice and pricing data decide what the customer has purchased; the entitlement service enforces what the customer can actually access inside the application.
 
 # **2\. Goals, Non-Goals and Success Metrics**
 
@@ -109,11 +109,11 @@ Product direction: Balanzify should use a subscription entitlement engine, not o
 
 # **3\. Market and Product Research Summary**
 
-Subscription systems in modern SaaS products generally combine a fixed plan fee with seat-based, quantity-based or usage-based billing. Public billing documentation from major billing infrastructure providers describes flat-rate plans, per-seat pricing, tiered pricing and usage-based pricing as standard recurring pricing models. Payroll/accounting products commonly use a base subscription plus a per-employee or per-person monthly charge. Balanzify should use this pattern but keep plan structure dynamic inside its own Super Admin panel.
+Subscription systems in modern SaaS products generally combine a fixed plan fee with seat-based, quantity-based or usage-based billing. Public billing documentation from major billing infrastructure providers describes flat-rate plans, per-seat pricing, tiered pricing and usage-based pricing as standard recurring pricing models. Payroll/accounting products commonly use a base subscription plus a per-employee or per-person monthly charge. Pilucent should use this pattern but keep plan structure dynamic inside its own Super Admin panel.
 
-| Pattern | R\&D Finding | Balanzify Decision |
+| Pattern | R\&D Finding | Pilucent Decision |
 | :---- | :---- | :---- |
-| Plan base fee | A fixed monthly or annual price for a package of modules and included capacity. | Balanzify can define Starter, Growth, Scale and Enterprise plans with configurable base price. |
+| Plan base fee | A fixed monthly or annual price for a package of modules and included capacity. | Pilucent can define Starter, Growth, Scale and Enterprise plans with configurable base price. |
 | Included capacity | Plans include employee count, user count, company/branch count, storage, payroll runs or transaction volume. | Starter example: 1-25 employees, up to 10 users, $150/month. |
 | Overage/add-on | Additional usage beyond included limits can be charged per employee, per user, per payroll run, per company, per branch or per GB. | Employee overage example: each employee over 25 costs $6/month. |
 | Annual discount | Annual billing can reduce effective monthly price while collecting upfront payment. | Admin can configure 10%, 15%, 20% or custom annual discount per plan. |
@@ -141,9 +141,9 @@ Design principle: the pricing page shown to customers should be simple, while th
 
 | Persona | Who | Access/Responsibility |
 | :---- | :---- | :---- |
-| Super Admin | Balanzify internal admin | Create plans, manage pricing, modules, coupons, trials, referrals, payment settings, global subscription reports and tenant overrides. |
-| Billing Admin | Balanzify finance/support user | View invoices, payments, refunds, failed payments, credits, dunning events and subscription history. |
-| Sales Admin | Balanzify sales team | Create sales-assisted offers, apply coupon/discount within permission limits, extend trials and view lead-to-subscription progress. |
+| Super Admin | Pilucent internal admin | Create plans, manage pricing, modules, coupons, trials, referrals, payment settings, global subscription reports and tenant overrides. |
+| Billing Admin | Pilucent finance/support user | View invoices, payments, refunds, failed payments, credits, dunning events and subscription history. |
+| Sales Admin | Pilucent sales team | Create sales-assisted offers, apply coupon/discount within permission limits, extend trials and view lead-to-subscription progress. |
 | Company Owner | Tenant owner/customer | Subscribe, upgrade, downgrade, buy add-ons, update payment method, download invoices and manage cancellation. |
 | Company Admin | Tenant admin | View subscription usage, receive warnings and request upgrade, subject to owner approval if configured. |
 | Manager/Employee | Tenant users | Only see modules and features available under subscription and their role permissions. |
@@ -153,7 +153,7 @@ Design principle: the pricing page shown to customers should be simple, while th
 
 | Term | Definition |
 | :---- | :---- |
-| Tenant / Company | A customer account using Balanzify. One tenant can have one active subscription at a time in MVP. |
+| Tenant / Company | A customer account using Pilucent. One tenant can have one active subscription at a time in MVP. |
 | Plan | A sellable package such as Starter, Growth or Enterprise. A plan contains modules, features, limits and pricing rules. |
 | Plan Version | A locked version of a plan. Existing customers keep their version unless migrated to a new version. |
 | Module | Large functional area such as Accounting, Sales, Expenses, Inventory, HRIS, Payroll, Reports, Tax Center or AI Assistant. |
@@ -173,7 +173,7 @@ Design principle: the pricing page shown to customers should be simple, while th
 
 ## **7.1 Plan Architecture**
 
-Balanzify pricing should be constructed from four layers:
+Pilucent pricing should be constructed from four layers:
 
 1. Base plan fee: fixed monthly/annual subscription charge.  
 2. Included limits: employee, user, company, branch, storage, payroll run, transaction and API usage allowances.  
@@ -243,7 +243,7 @@ This pricing matrix is a recommended starting configuration. The actual values m
 
 * **Billable employee count:** By default, count Active employees, Active contractors if included in payroll/HR module, and employees paid in the current billing cycle. Terminated/inactive employees are excluded unless they were paid or active during the billable period.  
 * **Billable user count:** Count active login users with access to the tenant. Suspended users are excluded. Invited but not activated users may be excluded until activation, configurable by admin.  
-* **Branch/company count:** Count active business units using Balanzify operational modules.  
+* **Branch/company count:** Count active business units using Pilucent operational modules.  
 * **Payroll run count:** Count finalized payroll runs in the billing cycle. Draft payroll runs are excluded.  
 * **Storage count:** Count uploaded documents and attachments after compression, with daily or monthly snapshot logic.  
 * **AI credit count:** Count successful AI actions only; failed or canceled actions should not consume credits.
@@ -268,7 +268,7 @@ This pricing matrix is a recommended starting configuration. The actual values m
 | Hard Block | Do not allow company to exceed included limit until they upgrade or buy add-on capacity. Best for high-risk actions such as payroll finalization without payment method. |
 | Soft Warning | Allow temporary overage with warning and projected invoice. Good for adding employees/users during growth. |
 | Auto Overage Billing | Allow overage automatically if payment method is valid. Invoice line items show quantity and rate. |
-| Manual Approval | Company admin requests extra capacity; Balanzify Sales/Billing approves custom add-on. |
+| Manual Approval | Company admin requests extra capacity; Pilucent Sales/Billing approves custom add-on. |
 | Grace Overage | Allow limited excess for a short period, then restrict creating new resources if unresolved. |
 
 # **9\. Super Admin Panel Requirements**
@@ -482,7 +482,7 @@ This pricing matrix is a recommended starting configuration. The actual values m
 
 | Story ID | User Story | Acceptance Criteria |
 | :---- | :---- | :---- |
-| US-001 | As a Super Admin, I want to create a subscription plan with price, employee limit, user limit, modules and add-ons so that Balanzify can launch new packages without code changes. | Given I enter all required plan fields, when I publish the plan, then the plan appears in the admin plan list and can be displayed on pricing page if public. |
+| US-001 | As a Super Admin, I want to create a subscription plan with price, employee limit, user limit, modules and add-ons so that Pilucent can launch new packages without code changes. | Given I enter all required plan fields, when I publish the plan, then the plan appears in the admin plan list and can be displayed on pricing page if public. |
 | US-002 | As a Super Admin, I want to set Starter at $150/month for 1-25 employees and up to 10 users with $6 per extra employee so that companies can scale beyond the included employee limit. | Given a company has 30 billable employees on Starter, when the billing preview runs, then it shows 5 extra employees, $30 overage and $180 total before tax/discount. |
 | US-003 | As a Company Owner, I want to see my current employee/user usage against plan limits so that I understand whether I need to upgrade or pay overage. | Given I open Subscription Overview, when my employee count exceeds the included limit, then the page displays overage quantity, unit price and projected invoice impact. |
 | US-004 | As a Company Owner, I want to upgrade my plan with a clear price preview so that I can unlock features immediately without hidden charges. | Given payment succeeds, when I confirm upgrade, then the system updates subscription, unlocks entitlements and sends confirmation. |
@@ -704,7 +704,7 @@ Example response for Starter plan with 30 employees:
 | Trial card requirement | Should Starter trial require card? Recommended: no-card trial for marketing campaigns, card-required for sales-assisted demos if needed. |
 | Downgrade timing | Should downgrade happen immediately or at renewal? Recommended: schedule at renewal by default. |
 | Data access after cancellation | How long can canceled customers access/download data? Recommended: configurable retention policy. |
-| Tax collection | Will Balanzify collect sales tax/VAT on SaaS subscription? Recommended: plan tax category and tax engine integration later if launch region requires it. |
+| Tax collection | Will Pilucent collect sales tax/VAT on SaaS subscription? Recommended: plan tax category and tax engine integration later if launch region requires it. |
 | Custom enterprise contract | Will enterprise customers be billed outside payment provider? Recommended: support manual invoice and custom terms in Phase 6\. |
 | Referral reward amount | What credit should be offered? Recommended: make dynamic per campaign, such as $50 account credit after first paid invoice. |
 
@@ -717,9 +717,9 @@ Example response for Starter plan with 30 employees:
 | Stripe Billing \- Recurring payments and subscription billing | https://stripe.com/billing |
 | QuickBooks Payroll pricing page | https://quickbooks.intuit.com/payroll/pricing/ |
 | Gusto pricing page | https://gusto.com/product/pricing |
-| Balanzify internal product documentation | Existing Balanzify accounting, payroll, HR, tax, report, inventory and module management documentation supplied in project context. |
+| Pilucent internal product documentation | Existing Pilucent accounting, payroll, HR, tax, report, inventory and module management documentation supplied in project context. |
 
-All external references were used for product research patterns only. Final pricing, plan names and business rules should be controlled by Balanzify Super Admin configuration and approved internally before launch.
+All external references were used for product research patterns only. Final pricing, plan names and business rules should be controlled by Pilucent Super Admin configuration and approved internally before launch.
 
 # **Appendix A \- Pricing Engine Pseudocode**
 

@@ -1,9 +1,9 @@
 
 
-| BALANZIFY   ·   PRODUCT DOCUMENTATION A/R Aging Detail Report Logic · Calculations · Filtering · Columns · Data Representation · Use Cases |
+| PILUCENT   ·   PRODUCT DOCUMENTATION A/R Aging Detail Report Logic · Calculations · Filtering · Columns · Data Representation · Use Cases |
 | :---- |
 
-This guide explains exactly how Balanzify builds the Accounts Receivable (A/R) Aging Detail Report. It walks through every column, the formulas behind each figure, how transactions are sorted into aging buckets, the filtering and customization options available to you, and the day-to-day decisions the report is designed to support. It is written for business owners, bookkeepers, accountants, and anyone on the finance team who needs a clear picture of what customers owe and when it is due.
+This guide explains exactly how Pilucent builds the Accounts Receivable (A/R) Aging Detail Report. It walks through every column, the formulas behind each figure, how transactions are sorted into aging buckets, the filtering and customization options available to you, and the day-to-day decisions the report is designed to support. It is written for business owners, bookkeepers, accountants, and anyone on the finance team who needs a clear picture of what customers owe and when it is due.
 
 **Module:**  Accounts Receivable · Reporting        **Report type:**  Detail        **Version:**  1.0
 
@@ -75,13 +75,13 @@ Last updated: June 2026
 
 ## **1.1  About this guide**
 
-Balanzify reports are most useful when you know precisely what each number means and where it comes from. This document removes the guesswork from the A/R Aging Detail Report. By the end of it you should be able to read any line on the report with confidence, reproduce every total by hand, and adjust the report so it answers the specific question in front of you — whether that is “who owes us right now?”, “what is dangerously overdue?”, or “does this balance tie out at month-end?”
+Pilucent reports are most useful when you know precisely what each number means and where it comes from. This document removes the guesswork from the A/R Aging Detail Report. By the end of it you should be able to read any line on the report with confidence, reproduce every total by hand, and adjust the report so it answers the specific question in front of you — whether that is “who owes us right now?”, “what is dangerously overdue?”, or “does this balance tie out at month-end?”
 
 ## **1.2  What the A/R Aging Detail Report is**
 
 **Accounts Receivable (A/R)** is the money your customers owe your business for goods or services you have delivered but have not yet been paid for. The A/R Aging Detail Report takes every **open** (unpaid) receivable in your books and lists it transaction by transaction, organized by how overdue it is. Instead of a single lump sum, you see each individual invoice and credit memo: who owes it, when it was due, how many days it has been outstanding, and how much is still open.
 
-The word **Detail** is the important part. Balanzify offers two closely related reports built from the same data:
+The word **Detail** is the important part. Pilucent offers two closely related reports built from the same data:
 
 * **A/R Aging Summary —** collapses everything into one row per customer, spread across a set of aging columns. It answers “how much, and how old, per customer.”
 
@@ -169,7 +169,7 @@ The report ages each open item by comparing a reference date — the **as-of dat
 
 ## **5.2  The default buckets**
 
-Balanzify files items into these standard bands. Reading them as a ladder, “Current” sits at the top (nothing overdue) and each step down is another period of lateness.
+Pilucent files items into these standard bands. Reading them as a ladder, “Current” sits at the top (nothing overdue) and each step down is another period of lateness.
 
 * **Current** — due today or in the future (0 days past due).
 
@@ -192,7 +192,7 @@ In plain terms, the report walks the days-past-due value through a simple ladder
 
 ## **5.4  Credits and items without a due date**
 
-Credit memos reduce what a customer owes and normally carry no payment due date. When a transaction has no due date, Balanzify ages it by its transaction date instead — so a credit memo dated several months ago would appear in an older band even though its Due date and Past due columns are blank. In the sample report there are no credit memos: both invoices are dated 06/24/2026 and due 07/24/2026, so — measured against the as-of date — they are not yet due and sit together in the “CURRENT” band.
+Credit memos reduce what a customer owes and normally carry no payment due date. When a transaction has no due date, Pilucent ages it by its transaction date instead — so a credit memo dated several months ago would appear in an older band even though its Due date and Past due columns are blank. In the sample report there are no credit memos: both invoices are dated 06/24/2026 and due 07/24/2026, so — measured against the as-of date — they are not yet due and sit together in the “CURRENT” band.
 
 # **6  Calculations**
 
@@ -392,4 +392,4 @@ The report earns its keep in everyday finance work. A few of the most common way
 | Reading the bands Current — due today or later (0 days past due) 1 – 30 / 31 – 60 / 61 – 90 — increasing degrees of lateness, 30 days apart 91 or more — the most overdue — chase this band first Empty bands — are hidden; only bands with transactions appear |
 | :---- |
 
-Balanzify · Accounts Receivable Reporting · A/R Aging Detail Report
+Pilucent · Accounts Receivable Reporting · A/R Aging Detail Report

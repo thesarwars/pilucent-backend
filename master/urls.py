@@ -10,7 +10,7 @@ from django.urls import path, include
 from common.django_rest.views.home import home_view
 
 # Change Admin Top Nav Header
-admin.site.site_header = "Balanzify"
+admin.site.site_header = "Pilucent"
 
 urlpatterns = [
     # Swagger

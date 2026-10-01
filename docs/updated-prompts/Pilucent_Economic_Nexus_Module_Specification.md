@@ -1,4 +1,4 @@
-**BALANZIFY**
+**PILUCENT**
 
 **Economic Nexus**
 
@@ -6,7 +6,7 @@ Module Specification & Technical Design
 
 *Sales-tax obligation tracking for the Sales Tax suite*
 
-This document is the end-to-end blueprint for the Economic Nexus module — the part of Balanzify that watches a business's sales in every U.S. state, compares them against each state's sales-tax registration thresholds, and tells the owner exactly where and when they have become obligated to collect and remit sales tax. It is written so that a product manager, an engineer, and an accountant can all read the same pages and share one mental model of the feature.
+This document is the end-to-end blueprint for the Economic Nexus module — the part of Pilucent that watches a business's sales in every U.S. state, compares them against each state's sales-tax registration thresholds, and tells the owner exactly where and when they have become obligated to collect and remit sales tax. It is written so that a product manager, an engineer, and an accountant can all read the same pages and share one mental model of the feature.
 
 | Document | Economic Nexus — Module Specification (PRD \+ Technical Design) |
 | :---- | :---- |
@@ -38,7 +38,7 @@ The document moves from the general to the specific. If you only have five minut
 
 * **Sections 17–21** close the loop with business rules, non-functional requirements, risks, a delivery plan, and appendices.
 
-| A NOTE ON WORDING Throughout, "the business" means the company whose books are open in Balanzify, and "the user" means whoever is looking at the screen — usually the owner, a bookkeeper, or their accountant. "State" is shorthand for any U.S. sales-tax jurisdiction we track, which includes the District of Columbia. |
+| A NOTE ON WORDING Throughout, "the business" means the company whose books are open in Pilucent, and "the user" means whoever is looking at the screen — usually the owner, a bookkeeper, or their accountant. "State" is shorthand for any U.S. sales-tax jurisdiction we track, which includes the District of Columbia. |
 | :---- |
 
 **Table of contents**
@@ -219,7 +219,7 @@ The document moves from the general to the specific. If you only have five minut
 
 Every business that sells across state lines faces a quiet, creeping risk: it can become legally obligated to collect sales tax in a new state without doing anything except growing. The trigger is not opening an office or hiring staff — it is simply crossing a sales or transaction threshold that each state sets for out-of-state sellers. Cross it unknowingly and the business is on the hook for tax it never collected, plus penalties and interest. This is the problem the Economic Nexus module exists to solve.
 
-The module continuously reads the sales the business has already recorded in Balanzify, groups them by the state the customer is in, and measures that activity against each state's published thresholds. It presents the result as a single, scannable dashboard: one row per state, showing how much the business has sold there, how many transactions that represents, and — the answer everyone actually wants — whether the state's threshold has been *met*. When a threshold is crossed, the module flags it, points the user toward registering with that state's tax agency, and hands off cleanly to the Sales Tax module so that tax starts being calculated on new invoices.
+The module continuously reads the sales the business has already recorded in Pilucent, groups them by the state the customer is in, and measures that activity against each state's published thresholds. It presents the result as a single, scannable dashboard: one row per state, showing how much the business has sold there, how many transactions that represents, and — the answer everyone actually wants — whether the state's threshold has been *met*. When a threshold is crossed, the module flags it, points the user toward registering with that state's tax agency, and hands off cleanly to the Sales Tax module so that tax starts being calculated on new invoices.
 
 Crucially, nexus tracking is a monitoring and compliance layer, not a bookkeeping event in itself. Watching sales cross a line does not create a journal entry. What it does is tell the business when to switch tax collection on for a state; the journal entries follow from that collection and its later remittance. Section 14 documents that accounting lifecycle in full so there is no ambiguity about what posts, when, and to which accounts.
 
@@ -238,12 +238,12 @@ That changed in June 2018 with the U.S. Supreme Court decision in *South Dakota 
 
 ## **2.2   Physical nexus vs. economic nexus**
 
-Both kinds of nexus create the same obligation to collect tax; they simply arise for different reasons. The module focuses on economic nexus because that is the one driven by data Balanzify already holds. Physical nexus is a fact the user must tell us about, because we cannot infer an office or a remote employee from sales records.
+Both kinds of nexus create the same obligation to collect tax; they simply arise for different reasons. The module focuses on economic nexus because that is the one driven by data Pilucent already holds. Physical nexus is a fact the user must tell us about, because we cannot infer an office or a remote employee from sales records.
 
 |  | Physical nexus | Economic nexus |
 | :---- | :---- | :---- |
 | Triggered by | A physical footprint: office, store, warehouse, inventory, employees, or contractors in the state. | Crossing the state's sales-dollar and/or transaction-count threshold for remote sellers. |
-| How we know | The user declares it (Balanzify cannot detect it from data). | Balanzify calculates it automatically from recorded sales. |
+| How we know | The user declares it (Pilucent cannot detect it from data). | Pilucent calculates it automatically from recorded sales. |
 | This module's role | Lets the user mark a state as having nexus manually, so it is treated as registered. | The core job — measure activity and detect when a threshold is met. |
 
 ## **2.3   How a threshold is measured**
@@ -281,7 +281,7 @@ This matters because marketplace sales are often already taxed by the facilitato
 
 ## **2.6   Why this matters to our users**
 
-For the people using Balanzify, economic nexus is equal parts confusing and consequential. The rules vary by state, they change from year to year, and the penalty for missing a threshold is real money. A small seller who quietly crossed a state's line three years ago can face a demand for years of back tax, plus penalties and interest, on sales for which they never collected a cent. The module's whole reason for existing is to turn that invisible, ever-moving risk into a plain-language status the user can act on in time.
+For the people using Pilucent, economic nexus is equal parts confusing and consequential. The rules vary by state, they change from year to year, and the penalty for missing a threshold is real money. A small seller who quietly crossed a state's line three years ago can face a demand for years of back tax, plus penalties and interest, on sales for which they never collected a cent. The module's whole reason for existing is to turn that invisible, ever-moving risk into a plain-language status the user can act on in time.
 
 # **3   Module goals & success metrics**
 
@@ -337,7 +337,7 @@ For the people using Balanzify, economic nexus is equal parts confusing and cons
 
 * Automated state registration. We guide and link out; we do not file the registration.
 
-* Pulling sales from external channels that are not already synced into Balanzify. The measurement is only as complete as the sales recorded in the product.
+* Pulling sales from external channels that are not already synced into Pilucent. The measurement is only as complete as the sales recorded in the product.
 
 * Income-tax nexus, franchise-tax nexus, and non-U.S. (VAT/GST) obligations. This module is U.S. sales-and-use tax only.
 
@@ -362,7 +362,7 @@ Three people touch this module. Designing for all three keeps it both simple eno
 | Persona | Who they are | What they need from this module |
 | :---- | :---- | :---- |
 | **Priya** — Owner / founder | Runs a growing online business. Not an accountant; understands her numbers but not 46 state tax codes. | A plain-language answer to "am I about to owe tax somewhere new?" and a nudge before it becomes a problem. |
-| **Marcus** — Bookkeeper | Keeps the books day to day, in Balanzify constantly. | Reliable alerts, a clear per-state status, and a clean path to turn on collection once a state is triggered. |
+| **Marcus** — Bookkeeper | Keeps the books day to day, in Pilucent constantly. | Reliable alerts, a clear per-state status, and a clean path to turn on collection once a state is triggered. |
 | **Elena** — Accountant / CPA | Advises several client businesses via the accountant tools; owns compliance risk. | An accurate exposure view per client, an audit trail of when thresholds were crossed, and confidence the books reflect it. |
 
 | *Design implication:* the default surface is scannable and non-technical for Priya; the detail view and reports carry the depth Marcus and Elena need. Nothing forces an owner to understand measurement periods to get value, but the information is one click away for those who do. |
@@ -575,7 +575,7 @@ As an accountant, I want to see the exact measurement window a state uses, so th
 
 * At a year boundary, current-year windows reset; the module recalculates windows as the calendar advances.
 
-* A business onboarded mid-year has a window that legitimately starts before it began using Balanzify; the module measures only the sales it actually holds and notes that history may be incomplete.
+* A business onboarded mid-year has a window that legitimately starts before it began using Pilucent; the module measures only the sales it actually holds and notes that history may be incomplete.
 
 **Acceptance criteria**
 
@@ -1417,7 +1417,7 @@ A consolidated reference of the rules scattered through the spec, plus the corne
 | 9 | Manual physical-nexus mark | State treated as having nexus regardless of numeric verdict; pins to top. |
 | 10 | Marketplace-channel sales | Included in measurement by default (configurable); excluded from what the business itself collects. |
 | 11 | Year-boundary reset | Current-year windows reset as the calendar advances; the engine recomputes windows. |
-| 12 | Mid-year onboarding | Measures only the sales Balanzify holds; flags that history may be incomplete. |
+| 12 | Mid-year onboarding | Measures only the sales Pilucent holds; flags that history may be incomplete. |
 | 13 | Duplicate-alert prevention | One alert per state per episode via the alert log and episode key. |
 | 14 | Rule change mid-period | Effective-dated rules; verdicts follow the new rule from its effective date. |
 | 15 | Existing agency for a state | Link to it; never create a duplicate agency. |
@@ -1460,7 +1460,7 @@ A consolidated reference of the rules scattered through the spec, plus the corne
 
 ## **19.1   Assumptions**
 
-* Sales recorded in Balanzify are the complete picture of the business's sales for the states measured; channels not synced are out of scope for accuracy.
+* Sales recorded in Pilucent are the complete picture of the business's sales for the states measured; channels not synced are out of scope for accuracy.
 
 * Customer records carry usable ship-to (or billing) addresses, and items carry a taxability setting.
 
@@ -1520,6 +1520,6 @@ A few recent, real-world style changes that the effective-dated rule engine must
 
 The threshold reference data in §9 was compiled from widely used public sales-tax references (state-by-state economic-nexus guides and charts maintained by established tax-content publishers), cross-checked for the 2025–2026 changes noted. Because these rules change, treat §9 as a snapshot to be maintained (§18.2), and confirm any specific state's current rule against that state's department of revenue before relying on it for a filing decision.
 
-| CLOSING NOTE This module earns its keep by converting an invisible, shifting legal risk into a clear, timely status a business can act on. Build the engine correctly, keep the rule set current, keep monitoring cleanly separate from accounting, and hand off smoothly to tax collection — and the result is a feature that quietly protects every multi-state seller who uses Balanzify. |
+| CLOSING NOTE This module earns its keep by converting an invisible, shifting legal risk into a clear, timely status a business can act on. Build the engine correctly, keep the rule set current, keep monitoring cleanly separate from accounting, and hand off smoothly to tax collection — and the result is a feature that quietly protects every multi-state seller who uses Pilucent. |
 | :---- |
 

@@ -1,4 +1,4 @@
-**BALANZIFY**  
+**PILUCENT**  
 **Accounting Platform  ·  Product & Engineering**
 
 **Recurring Transactions**
@@ -13,7 +13,7 @@ End-to-End Product Requirements & Technical Specification
 | :---- | :---- |
 | Document title | Recurring Transactions (Expense) — Product & Technical Requirements Document |
 | Product area | Expenses domain · Direct spend / money-out · Recurring Transactions |
-| Prepared for | Balanzify Product, Engineering & QA teams |
+| Prepared for | Pilucent Product, Engineering & QA teams |
 | Document type | Feature specification / build reference (developer-facing) |
 | Version | 1.0 (Initial release for build) |
 | Status | **Ready for development** |
@@ -77,7 +77,7 @@ End-to-End Product Requirements & Technical Specification
 
 [7.3 What makes an expense different from a bill	12](#heading=)
 
-[7.4 Where the feature lives in Balanzify	12](#heading=)
+[7.4 Where the feature lives in Pilucent	12](#heading=)
 
 [7.5 Template lifecycle	13](#heading=)
 
@@ -321,14 +321,14 @@ End-to-End Product Requirements & Technical Specification
 
 # **1\. Introduction & Purpose**
 
-This document is the complete build reference for the Recurring Expense feature in Balanzify. It specifies, in one place, everything a product manager, engineer, or QA analyst needs to design, build, and verify the feature: why it exists, how it behaves on every screen, the rules that govern scheduling, the exact accounting it posts, the data it stores, the APIs it exposes, and how it connects to the rest of the platform.
+This document is the complete build reference for the Recurring Expense feature in Pilucent. It specifies, in one place, everything a product manager, engineer, or QA analyst needs to design, build, and verify the feature: why it exists, how it behaves on every screen, the rules that govern scheduling, the exact accounting it posts, the data it stores, the APIs it exposes, and how it connects to the rest of the platform.
 
-A recurring expense is a saved template for a purchase the business pays for repeatedly and immediately — a monthly software subscription paid by card, weekly fuel paid from checking, a rent payment drawn straight from the bank. Instead of re-entering the same expense every period, the user sets it up once and Balanzify either posts it automatically or reminds them to.
+A recurring expense is a saved template for a purchase the business pays for repeatedly and immediately — a monthly software subscription paid by card, weekly fuel paid from checking, a rent payment drawn straight from the bank. Instead of re-entering the same expense every period, the user sets it up once and Pilucent either posts it automatically or reminds them to.
 
 | The one distinction that shapes this entire module An Expense is money already paid. Unlike a Bill — which records money owed and sits in Accounts Payable until settled — an Expense posts immediately against a payment account (a bank or credit card). It never touches Accounts Payable, has no due date, and hits the profit & loss the moment it is created. Every rule, field, and journal entry in this document follows from that fact. |
 | :---- |
 
-Balanzify already ships a Sales module and an Expense module for one-off spend. This feature adds the recurring layer on top of the existing Expense transaction, reusing its form, its posting logic, and its place in the ledger. It is a sibling to the Recurring Bill module and shares the same scheduling engine; the two differ only in what they post and when money moves.
+Pilucent already ships a Sales module and an Expense module for one-off spend. This feature adds the recurring layer on top of the existing Expense transaction, reusing its form, its posting logic, and its place in the ledger. It is a sibling to the Recurring Bill module and shares the same scheduling engine; the two differ only in what they post and when money moves.
 
 ## **1.1 Who this document is for**
 
@@ -435,13 +435,13 @@ Before designing the feature, we studied how recurring, immediately-paid spend i
 
 ## **4.2 What the market has in common**
 
-Despite different naming, the platforms converge on the same core ideas. This convergence is the strongest signal for what Balanzify should adopt.
+Despite different naming, the platforms converge on the same core ideas. This convergence is the strongest signal for what Pilucent should adopt.
 
 * **Expense is separate from Bill.** Every platform treats a recurring expense as a paid transaction that posts directly, and a recurring bill as an unpaid obligation that sits in Accounts Payable until settled. The two are distinct features with distinct accounting.
 
 * **Template-driven, parent–child.** A reusable template (or “profile”) produces many dated expenses; editing the template affects future children only, never those already posted.
 
-* **A behavior spectrum.** From fully automatic, to a reminder that requires review, to a purely manual on-demand template — the same three types Balanzify will adopt.
+* **A behavior spectrum.** From fully automatic, to a reminder that requires review, to a purely manual on-demand template — the same three types Pilucent will adopt.
 
 * **A payment account is mandatory.** Because the money is already gone, every expense names the bank or card it came from; that account is the credit side of the entry.
 
@@ -457,13 +457,13 @@ Despite different naming, the platforms converge on the same core ideas. This co
 
 | Dimension | Observed variation across platforms |
 | :---- | :---- |
-| Behavior model | Platform A offers three explicit types (auto / reminder / on-demand). Platforms B and C lean on “auto-post vs. profile” toggles rather than a named spectrum. Balanzify adopts the clearer three-type model. |
-| Item vs. category lines | Some expose only a category (account) grid; others also expose an item (product/service) grid on purchase forms, sometimes behind a setting. Balanzify includes both, matching its existing Expense screen. |
-| Billable treatment | Platforms differ on whether a billable expense posts to the expense account and is flagged, or to a current-asset holding account. Balanzify posts to the expense account and tracks the billable amount (see Section 12.6). |
-| Tax on purchases | Handling of input/purchase tax varies by region and configuration — embedded in the amount, or split to a tax-on-purchases account. Balanzify defers to the existing Tax engine and the company's setup. |
-| Generation timing | Generation runs on a platform schedule in the organization's time zone (commonly early morning). Balanzify runs at least daily in the company's configured time zone. |
-| Stop vs. delete | Some offer Stop/Resume plus delete; others only delete. In all cases, deleting or stopping affects future generation only. Balanzify ships delete in v1 and reserves Stop/Resume for a fast-follow. |
-| **R\&D conclusion** Adopt the market-standard model: a template-driven, parent–child recurring expense with the three-type spectrum, a mandatory payment account, no terms/due date, the shared frequency engine, billable-to-customer support, and direct posting to the ledger — delivered through Balanzify's existing Expense form and accounting so it feels native, not bolted on. |  |
+| Behavior model | Platform A offers three explicit types (auto / reminder / on-demand). Platforms B and C lean on “auto-post vs. profile” toggles rather than a named spectrum. Pilucent adopts the clearer three-type model. |
+| Item vs. category lines | Some expose only a category (account) grid; others also expose an item (product/service) grid on purchase forms, sometimes behind a setting. Pilucent includes both, matching its existing Expense screen. |
+| Billable treatment | Platforms differ on whether a billable expense posts to the expense account and is flagged, or to a current-asset holding account. Pilucent posts to the expense account and tracks the billable amount (see Section 12.6). |
+| Tax on purchases | Handling of input/purchase tax varies by region and configuration — embedded in the amount, or split to a tax-on-purchases account. Pilucent defers to the existing Tax engine and the company's setup. |
+| Generation timing | Generation runs on a platform schedule in the organization's time zone (commonly early morning). Pilucent runs at least daily in the company's configured time zone. |
+| Stop vs. delete | Some offer Stop/Resume plus delete; others only delete. In all cases, deleting or stopping affects future generation only. Pilucent ships delete in v1 and reserves Stop/Resume for a fast-follow. |
+| **R\&D conclusion** Adopt the market-standard model: a template-driven, parent–child recurring expense with the three-type spectrum, a mandatory payment account, no terms/due date, the shared frequency engine, billable-to-customer support, and direct posting to the ledger — delivered through Pilucent's existing Expense form and accounting so it feels native, not bolted on. |  |
 
 # **5\. Scope, Assumptions & Dependencies**
 
@@ -567,7 +567,7 @@ A user can change a template's type at any time. Switching to Scheduled or Remin
 
 ## **7.3 What makes an expense different from a bill**
 
-Because Balanzify also offers recurring bills, it is worth stating the difference plainly — it drives the fields and the accounting.
+Because Pilucent also offers recurring bills, it is worth stating the difference plainly — it drives the fields and the accounting.
 
 | Aspect | Recurring Expense (this doc) | Recurring Bill (companion) |
 | :---- | :---- | :---- |
@@ -578,7 +578,7 @@ Because Balanzify also offers recurring bills, it is worth stating the differenc
 | P\&L / cash impact | Immediate | Expense now, cash on payment |
 | Key extra field | Payment account \+ method | Vendor terms |
 
-## **7.4 Where the feature lives in Balanzify**
+## **7.4 Where the feature lives in Pilucent**
 
 Recurring Transactions is a shared list that can host multiple transaction types, but in v1 it hosts expenses. Conceptually it sits in the Expenses domain alongside the existing Expense and Bill screens. The entry points are:
 
@@ -981,7 +981,7 @@ These flows trace the main journeys end to end, step by step. They complement th
 
 5. She adds one category line: Software Subscriptions, $49.00, not billable.
 
-6. She clicks Save template. Balanzify computes Next Date \= the 1st of next month and marks the template active.
+6. She clicks Save template. Pilucent computes Next Date \= the 1st of next month and marks the template active.
 
 7. On that date the Generation Job posts a $49 expense against the credit card, links it to the template, and advances Previous/Next Date. The card liability rises by $49 and the P\&L shows the subscription (Section 12.2).
 
@@ -1174,7 +1174,7 @@ A $100.00 office-supplies purchase from Checking with $10.00 recoverable input t
 | Checking (Bank) |  | $110.00 |
 | **Total** | **$110.00** | **$110.00** |
 
-*Where tax is not separately recoverable, the tax is included in the expense line instead. Balanzify defers to the existing Tax engine and the company's setup to decide which treatment applies.*
+*Where tax is not separately recoverable, the tax is included in the expense line instead. Pilucent defers to the existing Tax engine and the company's setup to decide which treatment applies.*
 
 ## **12.6 Billable / reimbursable expenses**
 
@@ -1386,7 +1386,7 @@ Body may include a mode flag: draft (return an editable expense payload without 
 
 # **15\. Integration with Other Modules**
 
-The feature is not standalone — it reuses and updates existing parts of Balanzify. This section lists every connection and what flows across it, so engineers know what they touch and QA knows what to regression-test.
+The feature is not standalone — it reuses and updates existing parts of Pilucent. This section lists every connection and what flows across it, so engineers know what they touch and QA knows what to regression-test.
 
 | Module | How the feature connects to it |
 | :---- | :---- |

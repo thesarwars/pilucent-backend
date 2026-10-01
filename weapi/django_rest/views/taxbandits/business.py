@@ -57,7 +57,7 @@ def _own_business_entries(payload, owned_ids):
 class GetBusinessListView(APIView):
     """List the caller's businesses -- not the platform's.
 
-    `get_access_token()` authenticates as Balanzify, not as the company, so
+    `get_access_token()` authenticates as Pilucent, not as the company, so
     `list_businesses` returns every business registered on the shared account:
     legal name, EIN, address, contact, for every tenant. This endpoint required
     no identifier at all, so nothing had to be guessed to read them.

@@ -1,6 +1,6 @@
 # Manual Attendance — Backend Algorithm & Logic Prompt
 
-A complete, implementation-ready specification for the **manual attendance** subsystem of Balanzify (US SMB payroll).
+A complete, implementation-ready specification for the **manual attendance** subsystem of Pilucent (US SMB payroll).
 Covers single + bulk manual entry, validation, status derivation, worked-hours math, conflict resolution against
 shifts/holidays/leave, audit trail, and the downstream link into the daily-attendance process and payroll. Database-,
 language- and framework-agnostic — express as services, jobs, or stored procedures as you see fit.

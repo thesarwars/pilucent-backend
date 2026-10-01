@@ -269,7 +269,7 @@ class MigrationEstimateCreateService:
                         },
                         "emails/invoices/invoice_email_template.html",
                         emails,
-                        f"Balanzify {title}",
+                        f"Pilucent {title}",
                     )
             except Exception:
                 logger.exception("Failed to send migration email for estimate sale uid=%s", sale.uid)

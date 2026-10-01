@@ -2,7 +2,7 @@ version: 0.0
 os: linux
 files:
   - source: /
-    destination: /home/ubuntu/balanzify/balanzify_backend
+    destination: /home/ubuntu/pilucent/pilucent-backend
 file_exists_behavior: OVERWRITE
 hooks:
   AfterInstall:

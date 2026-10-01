@@ -1,4 +1,4 @@
-**BALANZIFY**  
+**PILUCENT**  
 **Accounting Platform  ·  Product & Engineering**
 
 **Recurring Transactions**
@@ -13,7 +13,7 @@ End-to-End Product Requirements & Technical Specification
 | :---- | :---- |
 | Document title | Recurring Transactions (Bill) — Product & Technical Requirements Document |
 | Product area | Expenses domain · Accounts Payable · Recurring Transactions |
-| Prepared for | Balanzify Product, Engineering & QA teams |
+| Prepared for | Pilucent Product, Engineering & QA teams |
 | Document type | Feature specification / build reference (developer-facing) |
 | Version | 1.0 (Initial release for build) |
 | Status | **Ready for development** |
@@ -76,7 +76,7 @@ End-to-End Product Requirements & Technical Specification
 
 [7.2 The three template types	13](#heading=)
 
-[7.3 Where the feature lives in Balanzify	14](#heading=)
+[7.3 Where the feature lives in Pilucent	14](#heading=)
 
 [7.4 Template lifecycle	14](#heading=)
 
@@ -312,11 +312,11 @@ End-to-End Product Requirements & Technical Specification
 
 # **1\. Introduction & Purpose**
 
-This document is the single source of truth for the Recurring Transactions – Bill feature in Balanzify. It is written so that a product manager, a backend engineer, a frontend engineer, a QA engineer, or a new team member can each read it end-to-end and understand not just what to build, but why it exists, how it behaves in every state, and how it connects to the rest of the accounting platform.
+This document is the single source of truth for the Recurring Transactions – Bill feature in Pilucent. It is written so that a product manager, a backend engineer, a frontend engineer, a QA engineer, or a new team member can each read it end-to-end and understand not just what to build, but why it exists, how it behaves in every state, and how it connects to the rest of the accounting platform.
 
-Balanzify already ships a complete Sales module and a complete Expense module. Bills (money the business owes its vendors) already exist inside the Expense domain today: a user can create a one-off bill, attach line items, assign a vendor, and record it against accounts payable. What is missing is the ability to make a bill repeat. Businesses pay the same suppliers on a predictable rhythm — office rent, internet, software subscriptions, cleaning services, equipment leases — and re-typing those bills every month is slow and error-prone.
+Pilucent already ships a complete Sales module and a complete Expense module. Bills (money the business owes its vendors) already exist inside the Expense domain today: a user can create a one-off bill, attach line items, assign a vendor, and record it against accounts payable. What is missing is the ability to make a bill repeat. Businesses pay the same suppliers on a predictable rhythm — office rent, internet, software subscriptions, cleaning services, equipment leases — and re-typing those bills every month is slow and error-prone.
 
-The Recurring Transactions feature solves this by letting a user save a bill once as a reusable template, attach a schedule to it, and then have Balanzify either create the bill automatically, remind the user to create it, or keep it on a shelf to be used on demand. This first release targets the Bill transaction type only, but the engine is intentionally designed so the same template, list, and scheduler can later power recurring invoices, expenses, and journal entries with minimal additional work.
+The Recurring Transactions feature solves this by letting a user save a bill once as a reusable template, attach a schedule to it, and then have Pilucent either create the bill automatically, remind the user to create it, or keep it on a shelf to be used on demand. This first release targets the Bill transaction type only, but the engine is intentionally designed so the same template, list, and scheduler can later power recurring invoices, expenses, and journal entries with minimal additional work.
 
 ## **1.1 Who this document is for**
 
@@ -342,9 +342,9 @@ To avoid ambiguity, the whole team should use these terms consistently. They are
 | :---- | :---- |
 | **Recurring Template** | The saved, reusable definition of a repeating transaction. It stores the vendor, line items, amounts, schedule, and behavior type. A template does not itself appear in the ledger — it is a blueprint. Also called simply “template”. |
 | **Generated Bill** | An actual bill created from a template. This is a real, posted (or draft) transaction that lives in the Expense/AP ledger. Also called a “child transaction”. One template produces many generated bills over time. |
-| **Template Type** | One of three behaviors a template can have: Scheduled, Reminder, or Unscheduled. The type decides whether Balanzify acts automatically, nudges the user, or waits to be told. |
-| **Scheduled** | A template type where Balanzify creates the bill automatically on each scheduled date, with no user action required. |
-| **Reminder** | A template type where Balanzify does not create the bill, but places a reminder in the Reminders List (and notifies the user) a set number of days before each date, so the user can review, edit, and create it. |
+| **Template Type** | One of three behaviors a template can have: Scheduled, Reminder, or Unscheduled. The type decides whether Pilucent acts automatically, nudges the user, or waits to be told. |
+| **Scheduled** | A template type where Pilucent creates the bill automatically on each scheduled date, with no user action required. |
+| **Reminder** | A template type where Pilucent does not create the bill, but places a reminder in the Reminders List (and notifies the user) a set number of days before each date, so the user can review, edit, and create it. |
 | **Unscheduled** | A template type with no timetable at all. It simply sits in the list until the user chooses “Use” to create a bill from it on demand. |
 | **Interval** | The frequency rule that describes how often a Scheduled or Reminder template repeats (for example, monthly on the 1st of every 1 month). |
 | **Next Date** | The next date on which the template is due to produce a bill (Scheduled) or a reminder (Reminder). Calculated by the scheduling engine. |
@@ -367,7 +367,7 @@ The feature exists to remove repetitive manual work from accounts payable while 
 
 * **Improve cash-flow visibility.** Because upcoming bills are known in advance, the payables list and reports reflect obligations before they are due.
 
-* **Increase retention & stickiness.** Recurring templates encode a customer's operational routine into Balanzify, raising switching cost and daily engagement.
+* **Increase retention & stickiness.** Recurring templates encode a customer's operational routine into Pilucent, raising switching cost and daily engagement.
 
 * **Reach feature parity.** Recurring transactions are table-stakes in cloud accounting. Their absence is a common reason prospects reject a product during evaluation.
 
@@ -410,7 +410,7 @@ Stating what we are not building is as important as stating what we are. These a
 
 # **4\. Competitive Research & Market Analysis (R\&D)**
 
-Before designing the feature, we studied how recurring transactions work across the leading cloud accounting platforms used by small and mid-sized businesses. The goal was to identify the mental model users already expect, the fields that are genuinely necessary, and the edge cases that mature products have learned to handle. The findings below are distilled into concrete decisions for Balanzify. To keep this document vendor-neutral, competitors are referenced as Platform A, Platform B, and Platform C rather than by brand name.
+Before designing the feature, we studied how recurring transactions work across the leading cloud accounting platforms used by small and mid-sized businesses. The goal was to identify the mental model users already expect, the fields that are genuinely necessary, and the edge cases that mature products have learned to handle. The findings below are distilled into concrete decisions for Pilucent. To keep this document vendor-neutral, competitors are referenced as Platform A, Platform B, and Platform C rather than by brand name.
 
 ## **4.1 Research method**
 
@@ -420,17 +420,17 @@ Before designing the feature, we studied how recurring transactions work across 
 
 * Catalogued behavioral edge cases (month-end dates, editing a live template, deleting a template, timezone of generation).
 
-* Synthesized a common conceptual model that users already understand, then chose the subset that best fits Balanzify's existing Bill screen.
+* Synthesized a common conceptual model that users already understand, then chose the subset that best fits Pilucent's existing Bill screen.
 
 ## **4.2 What the market has in common**
 
-Despite different naming, the three platforms converge on the same core ideas. This convergence is the strongest possible signal for what Balanzify should adopt:
+Despite different naming, the three platforms converge on the same core ideas. This convergence is the strongest possible signal for what Pilucent should adopt:
 
 * **Template-driven.** Every platform stores a reusable template that is separate from the transactions it generates.
 
 * **Parent–child relationship.** One template (parent) produces many dated transactions (children). Editing the template affects future children only; already-generated children are never retroactively rewritten.
 
-* **A behavior spectrum.** From fully automatic, to a reminder that requires review, to a purely manual on-demand template — the exact three types Balanzify will adopt.
+* **A behavior spectrum.** From fully automatic, to a reminder that requires review, to a purely manual on-demand template — the exact three types Pilucent will adopt.
 
 * **A frequency engine.** Daily / weekly / monthly / yearly plus an “every N periods” multiplier and a day-of-week or day-of-month selector.
 
@@ -444,19 +444,19 @@ Despite different naming, the three platforms converge on the same core ideas. T
 
 | Dimension | Observed variation across platforms |
 | :---- | :---- |
-| Behavior model | Platform A offers three explicit types (auto / reminder / on-demand). Platforms B and C lean on “auto-create as draft vs. auto-approve” toggles instead of a named reminder type. Balanzify adopts the clearer three-type model. |
-| Terminology | “Recurring”, “Repeating”, and “Profile” are all used. Balanzify standardizes on “Recurring Transaction / Template”. |
-| Generation timing | Some platforms create children early via a “days in advance” field; others generate exactly on the date at a fixed hour in the org's timezone. Balanzify supports both: a days-in-advance offset and a fixed daily run time. |
-| Payment terms | Platform C ties a bill's due date to vendor payment terms (e.g., Net 15). Balanzify reuses its existing Terms field so due dates are derived automatically. |
-| Attachments | Most platforms let you attach a file to the template but do NOT copy it onto each child. Balanzify follows this convention and documents it explicitly to avoid confusion. |
-| Editing safeguards | Mature platforms warn when an item/vendor used by a template changes, offering “update all” vs. “one time only”. Balanzify adopts a lighter version of this safeguard. |
-| Stop vs. pause | Platform C supports pause/resume; others only delete. Balanzify ships delete now, and reserves pause/resume for a fast-follow. |
+| Behavior model | Platform A offers three explicit types (auto / reminder / on-demand). Platforms B and C lean on “auto-create as draft vs. auto-approve” toggles instead of a named reminder type. Pilucent adopts the clearer three-type model. |
+| Terminology | “Recurring”, “Repeating”, and “Profile” are all used. Pilucent standardizes on “Recurring Transaction / Template”. |
+| Generation timing | Some platforms create children early via a “days in advance” field; others generate exactly on the date at a fixed hour in the org's timezone. Pilucent supports both: a days-in-advance offset and a fixed daily run time. |
+| Payment terms | Platform C ties a bill's due date to vendor payment terms (e.g., Net 15). Pilucent reuses its existing Terms field so due dates are derived automatically. |
+| Attachments | Most platforms let you attach a file to the template but do NOT copy it onto each child. Pilucent follows this convention and documents it explicitly to avoid confusion. |
+| Editing safeguards | Mature platforms warn when an item/vendor used by a template changes, offering “update all” vs. “one time only”. Pilucent adopts a lighter version of this safeguard. |
+| Stop vs. pause | Platform C supports pause/resume; others only delete. Pilucent ships delete now, and reserves pause/resume for a fast-follow. |
 
 ## **4.4 Feature parity matrix**
 
-This matrix maps notable capabilities to each researched platform and states Balanzify's decision for v1. It doubles as a scope checklist.
+This matrix maps notable capabilities to each researched platform and states Pilucent's decision for v1. It doubles as a scope checklist.
 
-| Capability | Platform A | Platform B | Platform C | Balanzify v1 |
+| Capability | Platform A | Platform B | Platform C | Pilucent v1 |
 | :---- | :---- | :---- | :---- | :---- |
 | Reusable templates | **✔** | **✔** | **✔** | **✔ Yes** |
 | Scheduled (auto-create) | ✔ | ✔ | ✔ | **✔ Yes** |
@@ -472,7 +472,7 @@ This matrix maps notable capabilities to each researched platform and states Bal
 | Pause / Resume / Skip | — | — | ✔ | Fast-follow |
 | CSV import of templates | — | — | ✔ | Fast-follow |
 
-| R\&D takeaway Balanzify will adopt the three-type behavior model (Scheduled / Reminder / Unscheduled) because it is the clearest mental model and maps directly to the three real user needs: fixed bills, variable bills, and irregular bills. Everything else in this document follows from that decision. |
+| R\&D takeaway Pilucent will adopt the three-type behavior model (Scheduled / Reminder / Unscheduled) because it is the clearest mental model and maps directly to the three real user needs: fixed bills, variable bills, and irregular bills. Everything else in this document follows from that decision. |
 | :---- |
 
 # **5\. Scope, Assumptions & Dependencies**
@@ -594,7 +594,7 @@ Every template has exactly one type. The type is the single most important choic
 
 A user can change a template's type at any time. Switching to Scheduled or Reminder reveals the interval and start/end fields; switching to Unscheduled hides them because an unscheduled template has no timetable.
 
-## **7.3 Where the feature lives in Balanzify**
+## **7.3 Where the feature lives in Pilucent**
 
 Recurring Transactions is a shared list that can host multiple transaction types, but in v1 it hosts bills only. Conceptually it sits in the Expenses domain alongside the existing Bill and Expense screens, because a bill is an accounts-payable transaction. The entry points are:
 
@@ -621,7 +621,7 @@ To make the model concrete, here is a Scheduled rent bill from setup to steady s
 
 1. On 1 June, Priya opens New → Bill, names the template “Monthly Building Lease”, chooses Scheduled, picks vendor “Hall Properties”, adds one category line for $900 to Rent Expense, sets Monthly on the 1st of every 1 month, start date 1 July, end None, and Create 0 days in advance.
 
-2. Balanzify saves the template and calculates Next Date \= 1 July. Nothing is posted yet.
+2. Pilucent saves the template and calculates Next Date \= 1 July. Nothing is posted yet.
 
 3. On 1 July the Generation Job finds the template due, creates a real $900 bill dated 1 July for Hall Properties, links it to the template, then advances Previous Date \= 1 July and Next Date \= 1 August.
 
@@ -1026,7 +1026,7 @@ As a convenience, a user editing a normal one-off bill can convert it into a tem
 
 # **10\. User Flows**
 
-The flows below trace the main journeys end to end. Each is a step table showing the actor, the action, and the system's response, so both frontend and backend behavior are explicit. “User” \= the person in the app; “System” \= Balanzify (UI or background job).
+The flows below trace the main journeys end to end. Each is a step table showing the actor, the action, and the system's response, so both frontend and backend behavior are explicit. “User” \= the person in the app; “System” \= Pilucent (UI or background job).
 
 ## **10.1 Flow — Create a Scheduled recurring bill**
 
@@ -1377,7 +1377,7 @@ Body may include a mode flag: draft (return an editable bill payload without pos
 
 # **14\. Integration with Other Modules**
 
-Recurring Transactions is not a standalone silo — it is deliberately thin, reusing the accounting primitives Balanzify already has. This section describes exactly how it connects to each existing module, which direction data flows, and the nature of the coupling. Reusing these services (rather than duplicating them) is what keeps generated bills indistinguishable from manual bills.
+Recurring Transactions is not a standalone silo — it is deliberately thin, reusing the accounting primitives Pilucent already has. This section describes exactly how it connects to each existing module, which direction data flows, and the nature of the coupling. Reusing these services (rather than duplicating them) is what keeps generated bills indistinguishable from manual bills.
 
 | Module | Direction | How they connect |
 | :---- | :---- | :---- |
@@ -1448,7 +1448,7 @@ Recurring Transactions is not a standalone silo — it is deliberately thin, reu
 
 # **16\. Permissions & Roles**
 
-Recurring templates create real financial obligations, so access follows the same role model as manual bills. The matrix below is indicative and should map onto Balanzify's existing roles; the key rule is that anyone who can create a bill can create a recurring bill, and template management aligns with bill management.
+Recurring templates create real financial obligations, so access follows the same role model as manual bills. The matrix below is indicative and should map onto Pilucent's existing roles; the key rule is that anyone who can create a bill can create a recurring bill, and template management aligns with bill management.
 
 | Capability | Admin | Accountant | Bookkeeper | AP Clerk | Viewer |
 | :---- | :---- | :---- | :---- | :---- | :---- |

@@ -115,7 +115,7 @@ class PayrollTexCenterPayMethodSerializer(serializers.ModelSerializer):
             "payment_date",
             "check_number",
             "notes",
-            "is_inside_balanzify",
+            "is_inside_pilucent",
             "liability_period",
             "is_paid",
             "is_filed",

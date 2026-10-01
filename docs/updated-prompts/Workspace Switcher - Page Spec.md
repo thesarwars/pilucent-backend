@@ -1,7 +1,7 @@
 # Workspace Switcher (Multi-Company) — Page Spec
 
 Reproducible spec for the **Workspace Switcher** — the standalone pre-app screen where a user signs in, picks one of
-their companies, and lands in the redesigned Balanzify layout. Three full-screen states (Login → Company picker →
+their companies, and lands in the redesigned Pilucent layout. Three full-screen states (Login → Company picker →
 Entering) plus an **Add company modal**. Dark-canvas brand shell, Violet Suite accent. Inline-style friendly.
 
 ---
@@ -26,7 +26,7 @@ Entering) plus an **Add company modal**. Dark-canvas brand shell, Violet Suite a
 ## 2. State A — Login (split screen)
 
 `grid-template-columns: 1fr 1fr; min-height:100vh; popIn 0.4s`.
-- **Left brand panel** — `linear-gradient(165deg,#241B3D,#45357C 60%,#5B46A0 115%)`, `padding 52px 56px`: a 38px violet gradient **logo tile** (stacked-layers SVG) + "Balanzify" 19/800 white; a centered block with a "Multi-company workspace" pill (violet tint, green dot), an `H1` "One login. Every set of books." 42/800 white (`-0.035em`), a 15px muted paragraph, and **three feature rows** (30px glass icon chip + 13.5px text); a footer trust line ("SOC 2 Type II · Bank-grade encryption · US payroll ready").
+- **Left brand panel** — `linear-gradient(165deg,#241B3D,#45357C 60%,#5B46A0 115%)`, `padding 52px 56px`: a 38px violet gradient **logo tile** (stacked-layers SVG) + "Pilucent" 19/800 white; a centered block with a "Multi-company workspace" pill (violet tint, green dot), an `H1` "One login. Every set of books." 42/800 white (`-0.035em`), a 15px muted paragraph, and **three feature rows** (30px glass icon chip + 13.5px text); a footer trust line ("SOC 2 Type II · Bank-grade encryption · US payroll ready").
 - **Right form card** — centered, `max-width:396px`, white, radius 22, shadow `0 40px 90px -30px rgba(0,0,0,0.6)`, `padding 34px`, `riseIn`: "Sign in" 21/800 + subtitle; **Google + Apple** SSO buttons (white, `#E2DDF0` border, brand SVGs); an "or" divider; **Work email** + **Password** inputs (focus `#7C4DFF` + `0 0 0 3px #EEE9FF`) with a "Forgot?" link; a "Keep me signed in" checkbox; a full-width violet **Sign in** button (glow) → goes to picker; a "Create account" footer link.
 
 ---
@@ -34,7 +34,7 @@ Entering) plus an **Add company modal**. Dark-canvas brand shell, Violet Suite a
 ## 3. State B — Company picker
 
 `min-height:100vh; flex column; popIn 0.4s`.
-- **Top bar** (`padding 22px 40px`): 34px logo tile + "Balanzify" 17/800; spacer; an **account pill** (white, radius 999, `#ECE9F4` border) — 30px orange gradient avatar "AO" + name + email.
+- **Top bar** (`padding 22px 40px`): 34px logo tile + "Pilucent" 17/800; spacer; an **account pill** (white, radius 999, `#ECE9F4` border) — 30px orange gradient avatar "AO" + name + email.
 - **Centered column** `max-width:940px`:
   - **Greeting** block (`riseIn`): `H1` "Good morning, Amara" 32/800 + sub "{N} companies · {owned} you own, {managed} you manage".
   - **Search + Add row**: a search input (magnifier, "Search companies, EIN or role", radius 13, focus violet) + a glassy **Add company** button (+ icon) opening the modal.
@@ -52,7 +52,7 @@ Entering) plus an **Add company modal**. Dark-canvas brand shell, Violet Suite a
 
 ## 4. State C — Entering (hand-off)
 
-Centered, `popIn 0.3s`. An **86px rounded gradient tile** (24px radius) with the company initials + a diagonal **shimmer** sweep (`shimmer 1.4s`); the company name 21/800 + "Preparing your books & securing your session"; a 230px track with a violet **progress fill** (`barFill 1.8s`). After ~1.9s it navigates the top window to `Balanzify Redesign.dc.html` (the main app).
+Centered, `popIn 0.3s`. An **86px rounded gradient tile** (24px radius) with the company initials + a diagonal **shimmer** sweep (`shimmer 1.4s`); the company name 21/800 + "Preparing your books & securing your session"; a 230px track with a violet **progress fill** (`barFill 1.8s`). After ~1.9s it navigates the top window to `Pilucent Redesign.dc.html` (the main app).
 
 ---
 

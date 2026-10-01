@@ -9,7 +9,7 @@ onboarded before those templates were corrected. `Depreciation` typed under
 so on -- the same 63 pairs the seed validator now refuses.
 
     python manage.py repair_account_pairs
-    python manage.py repair_account_pairs --company "Balanzify LTD"
+    python manage.py repair_account_pairs --company "Pilucent LTD"
     python manage.py repair_account_pairs --apply
 
 The account type is corrected to the one that actually parents the detail type,

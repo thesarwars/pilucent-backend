@@ -451,7 +451,7 @@ class MigrationBillCreateService:
                         },
                         "emails/purchases/purchase_email_template.html",
                         emails,
-                        f"Balanzify {title}",
+                        f"Pilucent {title}",
                     )
             except Exception:
                 logger.exception("Failed to send migration email for bill purchase uid=%s", purchase.uid)

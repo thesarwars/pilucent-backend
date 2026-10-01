@@ -1,4 +1,4 @@
-**BALANZIFY**
+**PILUCENT**
 
 **State Economic Nexus Rules**
 
@@ -6,7 +6,7 @@ Sales-Tax Threshold Reference for All U.S. Jurisdictions
 
 *Sales thresholds, transaction thresholds, combination logic, includable-sales basis, measurement periods, and registration timing*
 
-This document is the authoritative reference data for Balanzify's Economic Nexus module: the sales-tax registration thresholds and rules for every U.S. state, plus the District of Columbia and Puerto Rico. Each jurisdiction's dollar threshold, transaction threshold, combining logic, which sales count, the measurement window, and when the obligation begins are compiled here in a structured, implementation-ready form so the rule engine can be seeded and maintained directly from it.
+This document is the authoritative reference data for Pilucent's Economic Nexus module: the sales-tax registration thresholds and rules for every U.S. state, plus the District of Columbia and Puerto Rico. Each jurisdiction's dollar threshold, transaction threshold, combining logic, which sales count, the measurement window, and when the obligation begins are compiled here in a structured, implementation-ready form so the rule engine can be seeded and maintained directly from it.
 
 | Purpose | Seed and maintenance data for the Economic Nexus rule engine (nexus\_state\_rule) |
 | :---- | :---- |
@@ -25,7 +25,7 @@ This document is the authoritative reference data for Balanzify's Economic Nexus
 
 * **Covers:** state-level economic (remote-seller) sales-tax nexus thresholds and their mechanics — the dollar threshold, transaction threshold, combining logic, includable-sales basis, measurement period, marketplace treatment, registration timing, and effective/change dates.
 
-* **Does not cover:** physical-presence nexus (inventory, employees, offices — which creates nexus regardless of these thresholds), local/home-rule jurisdiction thresholds (e.g. Alaska localities, Colorado home-rule cities, Louisiana parishes beyond the state framework), product-level taxability, tax rates, or income/franchise tax nexus. Those are handled elsewhere in Balanzify or are out of scope for this reference.
+* **Does not cover:** physical-presence nexus (inventory, employees, offices — which creates nexus regardless of these thresholds), local/home-rule jurisdiction thresholds (e.g. Alaska localities, Colorado home-rule cities, Louisiana parishes beyond the state framework), product-level taxability, tax rates, or income/franchise tax nexus. Those are handled elsewhere in Pilucent or are out of scope for this reference.
 
 * **Marketplace-facilitator note:** *individual seller's* economic-nexus threshold. This is the least consistent field across sources; where a state is borderline, confirm against its Department of Revenue. Sales a marketplace already collects tax on are generally excluded from what the seller itself must collect.
 
@@ -93,7 +93,7 @@ Since the U.S. Supreme Court's 2018 decision in South Dakota v. Wayfair, a state
 
 ## **1.1   The building blocks of a state rule**
 
-Each state's rule is made of the same parts. Balanzify encodes every state using these fields:
+Each state's rule is made of the same parts. Pilucent encodes every state using these fields:
 
 | Field | What it means | Values used in this reference |
 | :---- | :---- | :---- |
@@ -498,7 +498,7 @@ The change log the rule engine must reflect as effective-dated versions. Because
 
 * **Registration.** Sellers register once with the ARSSTC, which covers all participating member jurisdictions; collection begins per the local adoption timing.
 
-* **Implementation choice.** Balanzify may model Alaska as a single “Alaska (ARSSTC)” jurisdiction at the $100,000 gross, sales-only level for measurement, while noting that actual rate calculation and filing occur at the local level through the ARSSTC. Physical presence (e.g. inventory in an Alaska locality) creates local nexus regardless of the threshold.
+* **Implementation choice.** Pilucent may model Alaska as a single “Alaska (ARSSTC)” jurisdiction at the $100,000 gross, sales-only level for measurement, while noting that actual rate calculation and filing occur at the local level through the ARSSTC. Physical presence (e.g. inventory in an Alaska locality) creates local nexus regardless of the threshold.
 
 | HOME-RULE AND LOCAL THRESHOLDS ARE OUT OF SCOPE HERE Beyond Alaska, a few states have local jurisdictions that administer their own sales tax and may set separate thresholds — notably Colorado's home-rule cities and Louisiana's parish framework. This reference covers state-level economic nexus. Local/home-rule thresholds, where they apply, are a separate layer to be handled with local tax data. |
 | :---- |

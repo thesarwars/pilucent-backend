@@ -39,6 +39,6 @@ class EmployeeOnboardSerializer(Serializer):
             {"email": user.email, "password": user.email},
             "emails/onboard/employee_email_and_password.html",
             user.email,
-            "Your Balanzify email and password",
+            "Your Pilucent email and password",
         )
         return validate_data

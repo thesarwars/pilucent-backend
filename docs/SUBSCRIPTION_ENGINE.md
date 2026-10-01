@@ -1,6 +1,6 @@
 # Subscription Engine — Implementation Guide
 
-Balanzify Advanced Subscription Management (Phases 1–6).  
+Pilucent Advanced Subscription Management (Phases 1–6).  
 Legacy flows remain on **`/api/v1/`**; the new subscription engine lives under **`/api/v2/`** (no `/v2` segment in the resource path).
 
 **Base URLs**

@@ -1,9 +1,9 @@
 
 
-| BALANZIFY   ·   PRODUCT DOCUMENTATION A/P Aging Detail Report Logic · Calculations · Filtering · Columns · Data Representation · Use Cases |
+| PILUCENT   ·   PRODUCT DOCUMENTATION A/P Aging Detail Report Logic · Calculations · Filtering · Columns · Data Representation · Use Cases |
 | :---- |
 
-This guide explains exactly how Balanzify builds the Accounts Payable (A/P) Aging Detail Report. It walks through every column, the formulas behind each figure, how transactions are sorted into aging buckets, the filtering and customization options available to you, and the day-to-day decisions the report is designed to support. It is written for business owners, bookkeepers, accountants, and anyone on the finance team who needs a clear picture of what the company owes and when it is due.
+This guide explains exactly how Pilucent builds the Accounts Payable (A/P) Aging Detail Report. It walks through every column, the formulas behind each figure, how transactions are sorted into aging buckets, the filtering and customization options available to you, and the day-to-day decisions the report is designed to support. It is written for business owners, bookkeepers, accountants, and anyone on the finance team who needs a clear picture of what the company owes and when it is due.
 
 **Module:**  Accounts Payable · Reporting        **Report type:**  Detail        **Version:**  1.0
 
@@ -75,13 +75,13 @@ Last updated: June 2026
 
 ## **1.1  About this guide**
 
-Balanzify reports are most useful when you know precisely what each number means and where it comes from. This document removes the guesswork from the A/P Aging Detail Report. By the end of it you should be able to read any line on the report with confidence, reproduce every total by hand, and adjust the report so it answers the specific question in front of you — whether that is “who do we owe right now?”, “what is dangerously overdue?”, or “does this balance tie out at month-end?”
+Pilucent reports are most useful when you know precisely what each number means and where it comes from. This document removes the guesswork from the A/P Aging Detail Report. By the end of it you should be able to read any line on the report with confidence, reproduce every total by hand, and adjust the report so it answers the specific question in front of you — whether that is “who do we owe right now?”, “what is dangerously overdue?”, or “does this balance tie out at month-end?”
 
 ## **1.2  What the A/P Aging Detail Report is**
 
 **Accounts Payable (A/P)** is the money your business owes to vendors and suppliers for goods or services you have received but have not yet paid for. The A/P Aging Detail Report takes every **open** (unpaid) payable in your books and lists it transaction by transaction, organized by how overdue it is. Instead of a single lump sum, you see each individual bill and vendor credit: who it is owed to, when it was due, how many days it has been outstanding, and how much is still open.
 
-The word **Detail** is the important part. Balanzify offers two closely related reports built from the same data:
+The word **Detail** is the important part. Pilucent offers two closely related reports built from the same data:
 
 * **A/P Aging Summary —** collapses everything into one row per vendor, spread across a set of aging columns. It answers “how much, and how old, per vendor.”
 
@@ -170,7 +170,7 @@ The report ages each open item by comparing a reference date — the **as-of dat
 
 ## **5.2  The default buckets**
 
-Balanzify files items into these standard bands. Reading them as a ladder, “Current” sits at the top (nothing overdue) and each step down is another period of lateness.
+Pilucent files items into these standard bands. Reading them as a ladder, “Current” sits at the top (nothing overdue) and each step down is another period of lateness.
 
 * **Current** — due today or in the future (0 days past due).
 
@@ -193,7 +193,7 @@ In plain terms, the report walks the days-past-due value through a simple ladder
 
 ## **5.4  Credits and items without a due date**
 
-Vendor credits reduce what you owe and normally carry no payment due date. When a transaction has no due date, Balanzify ages it by its transaction date instead. That is why, in the sample report, the vendor credits dated in 2025 appear inside the “91 or more days past due” band even though their Due date and Past due columns are blank — measured from their own date, they are well over 91 days old.
+Vendor credits reduce what you owe and normally carry no payment due date. When a transaction has no due date, Pilucent ages it by its transaction date instead. That is why, in the sample report, the vendor credits dated in 2025 appear inside the “91 or more days past due” band even though their Due date and Past due columns are blank — measured from their own date, they are well over 91 days old.
 
 # **6  Calculations**
 
@@ -398,4 +398,4 @@ The report earns its keep in everyday finance work. A few of the most common way
 | Reading the bands Current — due today or later (0 days past due) 1 – 30 / 31 – 60 / 61 – 90 — increasing degrees of lateness, 30 days apart 91 or more — the most overdue — watch this band closely Empty bands — are hidden; only bands with transactions appear |
 | :---- |
 
-Balanzify · Accounts Payable Reporting · A/P Aging Detail Report
+Pilucent · Accounts Payable Reporting · A/P Aging Detail Report

@@ -46,7 +46,7 @@ class SalesTaxPaymentTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.company = Company.objects.create(name="Balanzify INC")
+        cls.company = Company.objects.create(name="Pilucent INC")
 
     def account(self, title, kind):
         return ChartOfAccount.objects.create(

@@ -399,7 +399,7 @@ class UserOnboardResendInviteView(APIView):
             },
             "emails/onboard/user_invitation.html",
             user.email,
-            "Invitation to join Balanzify",
+            "Invitation to join Pilucent",
         )
 
         crud_log(

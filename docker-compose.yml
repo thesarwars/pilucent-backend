@@ -1,126 +1,137 @@
-name: balanzify-backend
+# Pilucent -- local development stack. Self-contained: Postgres, Redis, the
+# app, a Celery worker and beat. Production is docker-compose.prod.yml.
+#
+#   docker compose up --build        # first run: builds, migrates, starts
+#   docker compose run --rm app python manage.py seed_bd_rule_book
+#   docker compose run --rm app python manage.py createsuperuser
+#
+# Database settings come from .env (DB_NAME, DB_USER, DB_PASSWORD, DB_PORT),
+# which compose reads for the ${...} below. The same .env, with
+# DB_HOST=localhost, lets `manage.py` run on the host against this database:
+# Postgres is published on DB_PORT. Without a .env the defaults apply.
+#
+# Ports on the host: API 8000, Postgres ${DB_PORT} (5432), Redis 6381.
 
-# Bounded container-log rotation. The default json-file driver grows without
-# limit; cap each container to 50MB x 3 files so logs can never fill the disk.
+name: pilucent
+
 x-logging: &default-logging
   driver: json-file
   options:
-    max-size: "50m"
+    max-size: "20m"
     max-file: "3"
 
+# Settings every Django container shares. The database HOST and port are pinned
+# to the `db` service here -- `environment` overrides .env, so .env can never
+# point the containers at a remote database -- while its name, role and
+# password follow .env.
+x-django-env: &django-env
+  DEBUG: "True"
+  # Plain HTTP locally: no HTTPS redirect, no secure-only cookies.
+  HTTPS_ONLY: "False"
+  SECRET_KEY: ${SECRET_KEY:-django-insecure-pilucent-local-dev-only}
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_NAME: ${DB_NAME:-pilucent_dev}
+  DB_SSLMODE: disable
+  # Runtime role: restricted, so Row-Level Security is enforced locally too.
+  DB_USER: ${DB_USER:-pilucent_app}
+  DB_PASSWORD: ${DB_PASSWORD:-pilucent_app_dev}
+  CELERY_BROKER_URL: redis://redis:6379/0
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  LOG_DIR: /app/logs
+  APP_URL: ${APP_URL:-http://localhost:3000}
+  PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+  # No AWS_STORAGE_BUCKET_NAME: files are stored locally under media/.
+
+x-django: &django
+  build: .
+  image: pilucent-backend:dev
+  logging: *default-logging
+  # Optional: put third-party keys (email, Moov, ...) in .env.
+  env_file:
+    - path: .env
+      required: false
+  environment: *django-env
+  volumes:
+    - .:/app
+
 services:
-  app:
-    build: .
+  db:
+    image: postgres:16-alpine
     restart: unless-stopped
     logging: *default-logging
-    volumes:
-      - .:/app
-      - /var/log/balanzify:/var/log/balanzify
-      # AWS credentials for S3 Read Only, local development only
-      # - ~/.aws:/root/.aws:ro
-    ports:
-      - 5000:5000
-    depends_on:
-      - redis
     environment:
-      - AWS_STORAGE_BUCKET_NAME=balanzify-s3-511590151275-us-east-2-an
-      - AWS_S3_REGION_NAME=us-east-2
-      - AWS_EC2_METADATA_DISABLED=false
-      # Bound the ASGI sync thread pool so the app cannot open an unbounded
-      # number of DB connections under load (RDS max_connections is only 79).
-      - ASGI_THREADS=8
-    # image: balanzify:balanzify
-    container_name: balanzify_backend
-    # Gunicorn manages uvicorn ASGI workers (keeps chatio websockets working)
-    # and RECYCLES each worker after ~max-requests, which reclaims any DB
-    # connections / memory it accumulated -- this is what breaks the ~24h
-    # connection-exhaustion cycle. Worker count x ASGI_THREADS bounds total DB
-    # connections (3 x 8 = 24, well under RDS max_connections).
-    # Old single-process server (no recycling): daphne -b 0.0.0.0 -p 5000 master.asgi:application
-    command: >
-      gunicorn master.asgi:application
-      -k uvicorn_worker.UvicornWorker
-      -b 0.0.0.0:5000
-      --workers 3
-      --max-requests 800
-      --max-requests-jitter 200
-      --timeout 120
-      --graceful-timeout 30
-      --access-logfile -
-      --error-logfile -
-    env_file: .env
-
-  celery:
-    build: .
-    restart: unless-stopped
-    logging: *default-logging
-    container_name: balanzify_celery
-    # --max-tasks-per-child recycles each worker process after N tasks so it
-    # cannot accumulate leaked memory or DB connections over time.
-    command: celery -A master worker --loglevel=info --max-tasks-per-child=200
+      POSTGRES_DB: ${DB_NAME:-pilucent_dev}
+      # Owner: runs migrations, owns the tables. Not used by the app.
+      POSTGRES_USER: pilucent
+      POSTGRES_PASSWORD: ${PILUCENT_DB_PASSWORD:-pilucent_dev}
+      # The app's restricted role, created by docker/postgres/init.
+      PILUCENT_APP_DB_USER: ${DB_USER:-pilucent_app}
+      PILUCENT_APP_DB_PASSWORD: ${DB_PASSWORD:-pilucent_app_dev}
     volumes:
-      - .:/app
-      # The whole directory, not just celery/. Django's `app_out` and
-      # `app_error` handlers write to /var/log/balanzify/out.log and
-      # error.log, and the loggers that matter for background work --
-      # recurringio and journalio -- route there rather than to the celery
-      # handlers. With only the celery/ subdirectory mounted, those lines
-      # went to a path inside the container and vanished on restart.
-      #
-      # That is why the nightly recurring job's balance check produced
-      # nothing visible: it was running and logging into the void.
-      - /var/log/balanzify:/var/log/balanzify
-    depends_on:
-      - redis
-    env_file: .env
-
-  # The scheduler. Separate from the worker so a beat crash cannot take task
-  # execution down with it, and so its logs are readable on their own. Beat only
-  # ENQUEUES work -- the celery worker above still runs it.
-  celery_beat:
-    build: .
-    restart: unless-stopped
-    logging: *default-logging
-    container_name: balanzify_celery_beat
-    # --schedule writes the last-run state to a file so a restart does not
-    # re-fire what already ran today.
-    command: celery -A master beat --loglevel=info --schedule=/tmp/celerybeat-schedule
-    volumes:
-      - .:/app
-      # The whole directory, not just celery/. Django's `app_out` and
-      # `app_error` handlers write to /var/log/balanzify/out.log and
-      # error.log, and the loggers that matter for background work --
-      # recurringio and journalio -- route there rather than to the celery
-      # handlers. With only the celery/ subdirectory mounted, those lines
-      # went to a path inside the container and vanished on restart.
-      #
-      # That is why the nightly recurring job's balance check produced
-      # nothing visible: it was running and logging into the void.
-      - /var/log/balanzify:/var/log/balanzify
-    depends_on:
-      - redis
-    env_file: .env
+      - pilucent_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pilucent -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     logging: *default-logging
-    container_name: balanzify_redis
     ports:
-      - "6380:6379"
-  
-  # db: 
-  #   image: postgres:bullseye
-  #   container_name: balanzify_db
-  #   restart : always
-  #   environment:
-  #     POSTGRES_USER : postgres
-  #     POSTGRES_PASSWORD : password
-  #     POSTGRES_DB : balanzify
-  #   ports:
-  #     - "6543:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
+      - "${PILUCENT_REDIS_PORT:-6381}:6379"
 
-# volumes:
-#   postgres_data:
+  # One-off: applies migrations as the OWNER role (the app role has DML only
+  # and cannot run DDL), then exits. Everything else waits for it.
+  migrate:
+    <<: *django
+    environment:
+      <<: *django-env
+      DB_USER: pilucent
+      DB_PASSWORD: ${PILUCENT_DB_PASSWORD:-pilucent_dev}
+    command: python manage.py migrate --noinput
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    <<: *django
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "${PILUCENT_APP_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  celery:
+    <<: *django
+    restart: unless-stopped
+    command: celery -A master worker --loglevel=info --max-tasks-per-child=200
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  celery_beat:
+    <<: *django
+    restart: unless-stopped
+    command: celery -A master beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+volumes:
+  pilucent_pgdata:

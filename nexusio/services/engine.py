@@ -53,7 +53,7 @@ def resolve_windows(period_type, today):
 def basis_amount(agg, basis):
     """The sales figure that counts toward the dollar threshold for a basis.
 
-    ``agg`` carries ``gross`` and ``taxable``. Balanzify has no for-resale flag,
+    ``agg`` carries ``gross`` and ``taxable``. Pilucent has no for-resale flag,
     so RETAIL (which only excludes resale) is treated as GROSS — documented; the
     only true distinction available is TAXABLE (``SaleItem.is_tax``).
     """

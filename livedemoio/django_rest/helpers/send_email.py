@@ -10,9 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 def send_demo_email(to_email, subject, email_body):
-    # subject = "Blanzify forget password link"
     context = {
-        "url": f"https://balanzify-seven.vercel.app/meet/123456asdwers/"
+        "url": f"{settings.APP_URL}/meet/123456asdwers/"
     }
     html_body = render_to_string(
         "emails/forget_password/reset_password_email.html", context

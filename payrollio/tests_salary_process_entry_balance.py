@@ -115,7 +115,7 @@ MAPPED_MN_RUN = [
 class PayrollPostingHarness(TestCase):
     """Build a company that can actually run payroll, and post through it."""
 
-    COMPANY_NAME = "Balanzify LTD"
+    COMPANY_NAME = "Pilucent LTD"
     STATE = "MN"
 
     @classmethod

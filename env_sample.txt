@@ -1,45 +1,67 @@
-#Sample .env file. It will be updated alongside the original .env file's content.
-#Create a .env file in the project root (On the same level as manage.py).
-
+# Pilucent -- sample .env. Copy to .env next to manage.py and fill in.
+# Local development: docker-compose.yml takes DB_NAME / DB_USER / DB_PASSWORD /
+# DB_PORT from here (the containers always use the `db` service as host), and
+# DB_HOST=localhost lets manage.py on the host reach the same database.
 
 DEBUG=True
-ALLOWED_HOSTS = 'localhost,127.0.0.1'
-BASE_FRONTEND_URL = 'http://localhost:3000'
+SECRET_KEY=
+
+# Brand and public endpoints (master/settings.py, "Brand and public endpoints").
+PRODUCT_NAME=Pilucent
+PUBLIC_API_URL=https://api.pilucent.com
+APP_URL=https://app.pilucent.com
+SELF_SERVICE_URL=https://me.pilucent.com
+SUPPORT_EMAIL=support@pilucent.com
+DEFAULT_FROM_EMAIL=no-reply@pilucent.com
+BRAND_LOGO_URL=https://app.pilucent.com/images/logo_blue.png
+BRAND_ICON_URL=https://app.pilucent.com/icons/logo.svg
+# Comma-separated; default is localhost:3000 plus APP_URL and PUBLIC_API_URL.
+# CORS_ALLOWED_ORIGINS=
+# CSRF_TRUSTED_ORIGINS=
+DJANGO_BASE_FRONTEND_URL=http://localhost:3000
+
+# PostgreSQL. The app connects as the restricted, DML-only role `pilucent_app`;
+# migrations run as the owner role (scripts/deploy.sh, docker-compose.yml).
+DB_NAME=pilucent_dev
+DB_USER=pilucent_app
+DB_PASSWORD=
+DB_HOST=localhost
+DB_PORT=5432
+# Default: disable for localhost/db, require for any other host.
+# DB_SSLMODE=require
+
+# Redis (Celery broker + Channels layer)
+CELERY_BROKER_URL=redis://redis:6379/0
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# File storage: S3 when a bucket is set, local media/ otherwise.
+AWS_STORAGE_BUCKET_NAME=
+AWS_S3_REGION_NAME=ap-southeast-1
+
+# Logs (falls back to ./logs when the directory is not writable).
+LOG_DIR=/var/log/pilucent
 
 # Google Auth
 GOOGLE_OAUTH2_CLIENT_ID=
 GOOGLE_OAUTH2_CLIENT_SECRET=
 
-# Postgreesql
-DB_ENGINE=django.db.backends.postgresql
-DB_NAME=balanzify
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=db
-DB_PORT=5432
-
-
-#DB_ENGINE=django.db.backends.postgresql
-#DB_NAME=balanzify
-#DB_USER=postgres
-#DB_PASSWORD=   
-#DB_HOST=db
-#DB_PORT=5432
-
-# Email Configuration
+# Email
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_HOST_USER=your-email@gmail.com # Replace with your email
-EMAIL_HOST_PASSWORD=your-email-password # Your password. Use an app-specific password if 2FA is enabled
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
 EMAIL_USE_TLS=True
 
-DJANGO_ENV = "test"
+# Moov (origin registered with Moov; defaults to APP_URL)
+# MOOV_ORIGIN=
 
-# TaxBandits Settings
-TAXBANDITS_DOMAIN_REFERENCE_ID = "your-domain-reference-id"
-SECRET_KEY=
+# TaxBandits
+TAXBANDITS_DOMAIN_REFERENCE_ID=
 TAXBANDITS_CLIENT_ID=
 TAXBANDITS_CLIENT_SECRET=
 TAXBANDITS_USER_TOKEN=
+
+# AI
 GEMINI_API_KEY=
 OPENAI_API_KEY=

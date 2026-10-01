@@ -210,7 +210,7 @@ class TransactionInformationViewSet(viewsets.ModelViewSet):
     def create_link_token(self, request):
         try:
             request_data = LinkTokenCreateRequest(
-                client_name="Balanzify",
+                client_name="Pilucent",
                 user=LinkTokenCreateRequestUser(
                     client_user_id=str(request.user.id)),
                 products=[Products('transactions')],

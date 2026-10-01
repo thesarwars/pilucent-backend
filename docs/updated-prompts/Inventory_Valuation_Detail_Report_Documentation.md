@@ -1,9 +1,9 @@
 
 
-| BALANZIFY   ·   PRODUCT DOCUMENTATION Inventory Valuation Detail Report Logic · Calculations · Filtering · Columns · Data Representation · Use Cases |
+| PILUCENT   ·   PRODUCT DOCUMENTATION Inventory Valuation Detail Report Logic · Calculations · Filtering · Columns · Data Representation · Use Cases |
 | :---- |
 
-This guide explains exactly how Balanzify builds the Inventory Valuation Detail Report. It walks through every column, the formulas behind each figure, how each transaction moves quantity and value in and out of inventory, the costing method that values it, the filtering and customization options available to you, and the day-to-day decisions the report is designed to support. It is written for business owners, bookkeepers, accountants, and anyone on the finance team who needs to understand what the company holds in stock and what it is worth.
+This guide explains exactly how Pilucent builds the Inventory Valuation Detail Report. It walks through every column, the formulas behind each figure, how each transaction moves quantity and value in and out of inventory, the costing method that values it, the filtering and customization options available to you, and the day-to-day decisions the report is designed to support. It is written for business owners, bookkeepers, accountants, and anyone on the finance team who needs to understand what the company holds in stock and what it is worth.
 
 **Module:**  Inventory · Reporting        **Report type:**  Detail        **Version:**  1.0
 
@@ -75,13 +75,13 @@ Last updated: June 2026
 
 ## **1.1  About this guide**
 
-Balanzify reports are most useful when you know precisely what each number means and where it comes from. This document removes the guesswork from the Inventory Valuation Detail Report. By the end of it you should be able to read any line on the report with confidence, reproduce every total by hand, and adjust the report so it answers the specific question in front of you — whether that is “how did this item’s value change over time?”, “why is my stock worth this much?”, or “does my inventory tie out to the Balance Sheet?”
+Pilucent reports are most useful when you know precisely what each number means and where it comes from. This document removes the guesswork from the Inventory Valuation Detail Report. By the end of it you should be able to read any line on the report with confidence, reproduce every total by hand, and adjust the report so it answers the specific question in front of you — whether that is “how did this item’s value change over time?”, “why is my stock worth this much?”, or “does my inventory tie out to the Balance Sheet?”
 
 ## **1.2  What the Inventory Valuation Detail Report is**
 
 The Inventory Valuation Detail Report is a transaction-by-transaction ledger of every movement in and out of each **inventory item** you track. For each product it lists, in date order, every purchase, sale, return, and adjustment — showing how many units moved, at what cost, and how the running **quantity on hand** and **asset value** changed after each one. Instead of a single stock figure, you see the full history behind it.
 
-The word **Detail** is the important part. Balanzify offers two closely related reports built from the same data:
+The word **Detail** is the important part. Pilucent offers two closely related reports built from the same data:
 
 * **Inventory Valuation Summary —** collapses everything into one row per item — ending quantity on hand, asset value, and average cost. It answers “what do I hold, and what is it worth?”
 
@@ -110,7 +110,7 @@ A handful of terms appear throughout the report and this guide. Skim these once 
 
 | Term | What it means |
 | :---- | :---- |
-| **Inventory item** | A product you buy and sell and whose quantity and value Balanzify tracks (a “Product/Service” of type Inventory). |
+| **Inventory item** | A product you buy and sell and whose quantity and value Pilucent tracks (a “Product/Service” of type Inventory). |
 | **Quantity on hand** | The running number of units in stock after a transaction — a cumulative balance, not a single line’s amount. |
 | **Rate** | The per-unit cost applied on a line. On purchases it is what you paid; on sales it is the cost of the units being relieved. |
 | **Inventory cost** | The value a single transaction adds to or removes from inventory — positive when stock comes in, negative when it goes out. |
@@ -163,7 +163,7 @@ Below is every default column on the report, what it shows, and where its value 
 
 ## **5.1  The costing method (FIFO)**
 
-Balanzify values inventory using **FIFO — First In, First Out**. The idea is simple: when you sell or remove stock, you relieve the **oldest** units first. Each item keeps an ordered set of cost “layers” as you buy stock; an outbound transaction consumes those layers from the oldest forward, and the Rate shown on the line is the cost of the layer being used. That is why the same product can leave inventory at different rates on different days — in the sample, Air Pod units go out at 400, then later at 410 and 450 as the early, cheaper layers run out.
+Pilucent values inventory using **FIFO — First In, First Out**. The idea is simple: when you sell or remove stock, you relieve the **oldest** units first. Each item keeps an ordered set of cost “layers” as you buy stock; an outbound transaction consumes those layers from the oldest forward, and the Rate shown on the line is the cost of the layer being used. That is why the same product can leave inventory at different rates on different days — in the sample, Air Pod units go out at 400, then later at 410 and 450 as the early, cheaper layers run out.
 
 | Buy 10 @ 400, then 10 @ 450    →  layers: \[10 @ 400\] \[10 @ 450\]   Sell 12 units under FIFO:    • 10 relieved from the 400 layer   →  4,000    •  2 relieved from the 450 layer   →    900    layers left: \[8 @ 450\] |
 | :---- |
@@ -460,4 +460,4 @@ The report earns its keep in everyday finance and operations work. A few of the 
 | Reading a movement Stock in — Bill / Check / Expense, Credit Memo, Refund, positive adjustment — Qty \+, Asset value rises Stock out — Invoice / Sales Receipt, most Vendor Credits, negative adjustment — Qty −, Asset value falls Costing — FIFO — outbound Rate is the oldest layer’s cost, not the sale price Negative on hand — a flag: stock left before it was recorded as received |
 | :---- |
 
-Balanzify · Inventory Reporting · Inventory Valuation Detail Report
+Pilucent · Inventory Reporting · Inventory Valuation Detail Report

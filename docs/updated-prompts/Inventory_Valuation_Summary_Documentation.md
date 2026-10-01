@@ -1,5 +1,5 @@
   
-**BALANZIFY**
+**PILUCENT**
 
 Accounting & Bookkeeping Platform
 
@@ -100,7 +100,7 @@ Product & Reporting Documentation
 
 # **1\. Introduction & Overview**
 
-The Inventory Valuation Summary Report in Balanzify gives you a clear, single-screen picture of how much your on-hand inventory is worth at cost. It shows one consolidated line per inventory item — the quantity you currently hold, the total value tied up in it, and the average cost of a single unit. Instead of adding up purchase costs by hand, you see the current book value of your stock at a glance.
+The Inventory Valuation Summary Report in Pilucent gives you a clear, single-screen picture of how much your on-hand inventory is worth at cost. It shows one consolidated line per inventory item — the quantity you currently hold, the total value tied up in it, and the average cost of a single unit. Instead of adding up purchase costs by hand, you see the current book value of your stock at a glance.
 
 The report connects your books and your shelves at the same time. The total it produces is the figure that backs the Inventory Asset line on your Balance Sheet, and the per-item breakdown tells you exactly where your money is sitting across products. It values inventory at cost — what you paid for the goods — not at the price you sell them for.
 
@@ -127,18 +127,18 @@ A single Inventory Valuation Summary is designed to answer three questions at a 
 
 ## **1.3 Where it sits in the inventory workflow**
 
-Every time you purchase or receive stock, sell it, or adjust a quantity, Balanzify updates two things behind the scenes: the quantity on hand for the item, and the cost value held in the Inventory Asset account. The Inventory Valuation Summary is the reporting lens placed over that activity. It does not create or change any data — it reads the current on-hand quantities and their cost, and re-presents them per item. Because of this, the report is always only as accurate as the purchases, sales, and adjustments behind it.
+Every time you purchase or receive stock, sell it, or adjust a quantity, Pilucent updates two things behind the scenes: the quantity on hand for the item, and the cost value held in the Inventory Asset account. The Inventory Valuation Summary is the reporting lens placed over that activity. It does not create or change any data — it reads the current on-hand quantities and their cost, and re-presents them per item. Because of this, the report is always only as accurate as the purchases, sales, and adjustments behind it.
 
-| Summary vs. Detail Balanzify offers two related reports. The Inventory Valuation Summary (this document) shows one rolled-up line per item. The Inventory Valuation Detail report breaks the same figures down into the individual transactions — each purchase, sale, and adjustment — with a running quantity and value after every one. Whenever you need to see what makes up a number on the Summary, drill into the Detail. |
+| Summary vs. Detail Pilucent offers two related reports. The Inventory Valuation Summary (this document) shows one rolled-up line per item. The Inventory Valuation Detail report breaks the same figures down into the individual transactions — each purchase, sale, and adjustment — with a running quantity and value after every one. Whenever you need to see what makes up a number on the Summary, drill into the Detail. |
 | :---- |
 
 # **2\. Key Concepts & Terminology**
 
 A few core ideas drive everything in this report. Getting comfortable with them makes the calculations and settings that follow easy to read.
 
-| Term | Meaning in Balanzify |
+| Term | Meaning in Pilucent |
 | :---- | :---- |
-| **Inventory item** | A product you buy and resell, for which Balanzify tracks quantity on hand and cost value. Only these items appear on the report. |
+| **Inventory item** | A product you buy and resell, for which Pilucent tracks quantity on hand and cost value. Only these items appear on the report. |
 | **Quantity on hand (Qty)** | The number of units currently in stock as of the report’s as-of date. It can include decimals for items sold in fractional units. |
 | **Cost vs. sales price** | The report values stock at cost — what you paid suppliers — not at the retail price you charge customers. |
 | **Asset Value** | The total cost value of the on-hand units for an item. This is the amount sitting in the Inventory Asset account for that product. |
@@ -184,7 +184,7 @@ The body is a simple matrix. Each row is an inventory item; the columns are SKU,
 
 ## **3.4 The footer**
 
-Below the grid, Balanzify stamps the exact date and time the report was generated, along with the time zone (for example, Wednesday, June 24, 2026 02:55 PM GMT+06:00). Because inventory value is a snapshot at a point in time, this timestamp matters — the same report run later can show different numbers if stock has moved. There is also an option to attach a note for context.
+Below the grid, Pilucent stamps the exact date and time the report was generated, along with the time zone (for example, Wednesday, June 24, 2026 02:55 PM GMT+06:00). Because inventory value is a snapshot at a point in time, this timestamp matters — the same report run later can show different numbers if stock has moved. There is also an option to attach a note for context.
 
 # **4\. Columns Explained**
 
@@ -212,7 +212,7 @@ Inventory value is always measured at a single point in time, called the as-of d
 
 ## **5.2 Step two — determine the quantity on hand**
 
-For each item, Balanzify nets every movement up to the as-of date — units brought in by purchases and positive adjustments, less units removed by sales and negative adjustments:
+For each item, Pilucent nets every movement up to the as-of date — units brought in by purchases and positive adjustments, less units removed by sales and negative adjustments:
 
 | Quantity on Hand  \=  Units In  −  Units Out |
 | :---: |
@@ -269,7 +269,7 @@ The report reads only inventory items and only their on-hand cost. Understanding
 
 ## **7.1 Only inventory items appear**
 
-Service items, non-inventory items, and bundles do not appear, because Balanzify does not track a quantity or a cost value for them. Only products set up as inventory — with a tracked quantity on hand and an inventory asset account — show on this report.
+Service items, non-inventory items, and bundles do not appear, because Pilucent does not track a quantity or a cost value for them. Only products set up as inventory — with a tracked quantity on hand and an inventory asset account — show on this report.
 
 ## **7.2 Transactions that change quantity and value**
 
@@ -367,7 +367,7 @@ The bottom row can be reproduced exactly using the two-pass method:
 
 # **11\. Reconciliation & Validation**
 
-Because the report is just the inventory asset re-presented item by item, its total Asset Value should tie back to the Inventory Asset account reported elsewhere in Balanzify.
+Because the report is just the inventory asset re-presented item by item, its total Asset Value should tie back to the Inventory Asset account reported elsewhere in Pilucent.
 
 ## **11.1 The key relationship**
 
@@ -477,4 +477,4 @@ The same report supports several day-to-day and periodic decisions:
 | **Unit cost** | What a single unit of an item cost to buy. |
 | **Inventory valuation** | The process of placing a cost value on the stock a business holds. |
 
-*End of document  ·  Balanzify — Inventory Valuation Summary Report Documentation  ·  v1.0*
+*End of document  ·  Pilucent — Inventory Valuation Summary Report Documentation  ·  v1.0*

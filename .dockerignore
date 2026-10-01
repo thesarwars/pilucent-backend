@@ -1,0 +1,21 @@
+# Never baked into an image: secrets and local state.
+.env
+.env.*
+!.env.example
+*.sqlite3
+media/
+staticfiles/
+logs/
+
+# VCS, editors, caches, virtualenvs
+.git
+.github
+.idea
+.vscode
+.claude
+.venv
+venv/
+benv/
+__pycache__/
+*.py[cod]
+.DS_Store
