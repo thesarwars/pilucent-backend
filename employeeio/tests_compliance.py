@@ -157,7 +157,8 @@ class ComplianceTests(FrozenClockMixin, TestCase):
             with self.subTest(key=finding.key):
                 self.assertIn(finding.tab, TABS)
                 if finding.field is None:
-                    self.assertIn(finding.key, {"salary.none", "salary.settlementOutstanding", "employment.serviceBook"})
+                    self.assertIn(finding.key, {"salary.none", "salary.settlementOutstanding", "employment.serviceBook",
+                                                "salary.belowBasicFloor", "salary.belowTotalFloor"})
                 else:
                     self.assertIn(finding.field, UI_FIELDS)
                 self.assertTrue(finding.label and finding.fix)

@@ -21,6 +21,19 @@ from the source, all deliberate:
 * A labour value the source tags neither per-value nor in its catalogue takes
   its set's confidence: DRAFTED for the 2015 set (`verified: false`, no state),
   CORROBORATED for the 2026 amendment (the set's own `confidence`).
+
+Added beyond `rules.js`, because the backend may not inline a statutory
+constant (doc §1.1) where the front end did:
+
+* `withholding` (tax sets from 2026-27): the deposit, late-charge and return
+  deadlines of doc §7.6, which `rules.js` carries only as catalogue strings.
+* `dayWageDivisor` (labour): a day's wage is the monthly wage ÷ 30 -- inlined
+  in `calc.js` for gratuity and compensation, and the encashment divisor of
+  doc §7.4.
+* `rmgAllowances` (labour): the gazetted allowances the RMG template puts on
+  top of basic (doc §5.1). The profile screen used medical 750, conveyance 350
+  and food 1,250 -- the 2018 conveyance beside the 2023 medical and food.
+  The 2023 gazette's transport is 450, which is what makes its 12,500 total.
 """
 
 from copy import deepcopy
@@ -39,6 +52,24 @@ def r(value, confidence, citation=None, note=None):
 
 def slabs(*rows):
     return [{"width": width, "rate": rate} for width, rate in rows]
+
+
+def withholding(confidence):
+    """Doc §7.6. Deadlines are statute, not a Finance Act figure, so every tax
+    set from 2026-27 carries them; later sets at their own confidence."""
+    tds = "Income Tax (Tax Deduction at Source) Rules 2026"
+    return {
+        "depositDaysAfterMonthEnd": r(14, confidence, tds, "Within 2 weeks of month end, July to May."),
+        "juneDepositSameDay": r(True, confidence, tds, "Tax deducted on 30 June is deposited the same day — the hardest deadline in the payroll year."),
+        "lateDepositMonthlyRate": r("0.02", confidence, f"{ITA}, s.143", "The defaulter is an assessee-in-default, personally liable for the tax itself."),
+        "lateDepositCapMonths": r(24, confidence, f"{ITA}, s.143"),
+        "quarterlyReturnDates": r(
+            [{"quarterEnds": "09-30", "due": "10-25"}, {"quarterEnds": "12-31", "due": "01-25"},
+             {"quarterEnds": "03-31", "due": "04-25"}, {"quarterEnds": "06-30", "due": "07-25"}],
+            confidence, f"{ITA}, s.177",
+        ),
+        "underDeductionDisallowanceRate": r("0.5", confidence, f"{ITA}, s.55", "Under-deduction disallows the salary expense plus 50%."),
+    }
 
 
 ESTABLISHMENTS = [
@@ -99,6 +130,7 @@ TAX_2026_27 = {
     # (NONE / UPTO_2500 / ABOVE_2500), carrying the corrected figures.
     "perquisiteVehicleUpTo2500cc": r(30000, VERIFIED, ITA, "Superseded shape: use perquisiteVehicleBands."),
     "perquisiteVehicleAbove2500cc": r(50000, VERIFIED, ITA, "Superseded shape: use perquisiteVehicleBands."),
+    "withholding": withholding(VERIFIED),
 }
 
 # The Finance Act 2026 legislated a multi-year card through AY 2030-31.
@@ -127,6 +159,7 @@ TAX_2028_29 = {
     "minimumTaxNewTaxpayer": r(1000, DRAFTED, "Income Tax Act 2023, s.163"),
     "perquisiteVehicleUpTo2500cc": r(30000, DRAFTED),
     "perquisiteVehicleAbove2500cc": r(50000, DRAFTED),
+    "withholding": withholding(DRAFTED),
 }
 
 TAX_2030_31 = {
@@ -154,6 +187,7 @@ TAX_2030_31 = {
     "minimumTaxNewTaxpayer": r(1000, DRAFTED),
     "perquisiteVehicleUpTo2500cc": r(30000, DRAFTED),
     "perquisiteVehicleAbove2500cc": r(50000, DRAFTED),
+    "withholding": withholding(DRAFTED),
 }
 
 # Retained for historic recomputation — a payslip from 2025-26 must reproduce to the paisa.
@@ -208,6 +242,9 @@ LABOUR_2015_CITATIONS = {
     "festivalBonus": "Bangladesh Labour Rules 2015, Rule 111(5)",
     "wagePayment": f"{BLA}, s.123",
     "certificateOfService": f"{BLA} · Form-13",
+    "appointmentLetter": f"{BLA}, s.5",
+    "idCard": f"{BLA}, s.5",
+    "serviceBook": f"{BLA}, s.6, s.7",
     "minimumWage": "Minimum Wages Board gazette",
     "proration": "Bangladesh Labour Rules 2015, Rule 111 · company service rules",
 }
@@ -235,6 +272,10 @@ def _labour_2015():
         "encashmentMaxPercent": r(50, D, c["encashment"]),
         "encashmentPerYear": r(1, D, c["encashment"]),
         "encashmentFraction": r("0.5", D, c["encashment"]),
+        "dayWageDivisor": r(
+            30, D, c["gratuity"],
+            "A day's wage is the monthly wage ÷ 30: gratuity and compensation (calc.js inlined it), and leave encashment.",
+        ),
         "gradeWageFloors": r(
             grades([8200, 7700, 7400, 7100, 6950, 6700, 6700]), D, "Minimum Wages Board, RMG sector gazette, December 2023",
             "The MONTHLY BASIC component by grade, not the total wage. The 2023 restructure also reduced the grade count; "
@@ -246,6 +287,12 @@ def _labour_2015():
             "The total monthly wage floor, for the gross-level check. Grade 6 is the entry grade under the 2023 structure.",
         ),
         "gradeTotalWageFloorDefault": r(12500, D, c["minimumWage"]),
+        "rmgAllowances": r(
+            {"houseRentRateOfBasic": "0.5", "medical": 750, "transport": 450, "food": 1250},
+            D, "Minimum Wages Board, RMG sector gazette, December 2023",
+            "On top of basic: 6,700 + 3,350 + 750 + 450 + 1,250 = 12,500 at the entry grade. "
+            "The profile screen's conveyance of 350 is the 2018 figure.",
+        ),
         "overtimeMultiplier": r(2, D, c["overtime"]),
         "standardMonthHours": r(208, D, c["overtime"]),
         "standardHoursPerDay": r(8, D, c["dailyLimit"]),
@@ -331,6 +378,7 @@ def _labour_2026():
         "accumulationCapByEstablishment": dict(base["accumulationCapByEstablishment"], confidence=D),
         "gradeWageFloors": dict(base["gradeWageFloors"], confidence=D),
         "gradeTotalWageFloors": dict(base["gradeTotalWageFloors"], confidence=D),
+        "rmgAllowances": dict(base["rmgAllowances"], confidence=D),
         "overtimeMultiplier": r(2, V, c["overtime"]),
         "festivalBonusServiceMonths": r(12, C, c["festivalBonus"]),
         "festivalBonusesPerYear": r(2, C, c["festivalBonus"]),

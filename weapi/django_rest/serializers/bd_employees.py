@@ -22,7 +22,16 @@ from rest_framework import serializers
 from common import clock
 from common.money import money_str
 from companyio.models import CompanyDepartment, CompanyDesignation, CompanySection, CompanyShift
-from employeeio.choices import ClassificationChoices, PaymentMethodChoices, TrackedFieldChoices
+from employeeio.choices import (
+    ArrearsRunChoices,
+    ClassificationChoices,
+    PaymentMethodChoices,
+    RevisionMethodChoices,
+    RevisionTypeChoices,
+    SalaryTemplateChoices,
+    SeparationTypeChoices,
+    TrackedFieldChoices,
+)
 from employeeio.models import (
     CompanyStatutoryProfile,
     Employee,
@@ -30,11 +39,11 @@ from employeeio.models import (
     EmployeeInvestment,
     EmployeeNominee,
     EmployeePaymentProfile,
-    EmployeeSalaryStructure,
     EmployeeStatutory,
     EmployeeTaxProfile,
 )
 from employeeio.services import validation
+from employeeio.services.salary import structure_out
 from employeeio.ui import FIELD_IDS
 from rulebookio.book import rule_book
 
@@ -243,13 +252,13 @@ class EmploymentSerializer(CamelModelSerializer):
     def validate(self, attrs):
         instance = self.instance
         # §6.1: changing an existing classification is a gated operation
-        # (reason + effective date + audit). That endpoint is Phase 2; until it
-        # exists, the first assignment is allowed and a change is refused.
+        # (reason + effective date + audit), so it has its own endpoint. The
+        # first assignment is an ordinary edit.
         new = attrs.get("classification")
         if instance and new is not None and instance.classification and new != instance.classification:
             raise serializers.ValidationError({
-                "classification": "Changing a classification is a gated operation (reason and effective "
-                "date required, doc §6.1) and is not available yet."
+                "classification": "Changing a classification is a gated operation: use "
+                f"POST /employees/{instance.code}/classification with an effective date and a reason (doc §6.1)."
             })
         if "manager" in attrs and instance and attrs["manager"] and attrs["manager"].pk == instance.pk:
             raise serializers.ValidationError({"manager": "An employee cannot manage themself."})
@@ -494,19 +503,83 @@ def history_out(h):
     }
 
 
-def structure_out(structure):
-    if structure is None:
-        return None
-    return {
-        "uid": str(structure.uid),
-        "effectiveFrom": structure.effective_from.isoformat(),
-        "effectiveTo": structure.effective_to.isoformat() if structure.effective_to else None,
-        "template": structure.template,
-        "gross": money_str(structure.gross),
-        "components": [
-            {"code": c.code, "amount": money_str(c.amount)} for c in structure.components.all()
-        ],
-    }
+# ------------------------------------------------- gated operations (§5, §6)
+
+
+class StrictSerializer(serializers.Serializer):
+    """Refuses keys it does not know, so a field the client thinks it sent
+    can never be silently dropped. Decimal values may not arrive as floats."""
+
+    decimal_keys = ()
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict):
+            raise serializers.ValidationError({"body": ["Send a JSON object."]})
+        unknown = [k for k in data if k not in self.fields]
+        floats = [k for k in self.decimal_keys if isinstance(data.get(k), float)]
+        if unknown or floats:
+            errors = {k: ["Not a field here."] for k in unknown}
+            errors.update({k: ["Send amounts as decimal strings, not numbers with a fraction."] for k in floats})
+            raise serializers.ValidationError(errors)
+        return super().to_internal_value(data)
+
+
+class SalaryAssignSerializer(StrictSerializer):
+    decimal_keys = ("amount",)
+
+    template = serializers.ChoiceField(SalaryTemplateChoices.choices)
+    # Gross for a gross-down template, basic for RMG (optional there: the
+    # grade's gazetted basic).
+    amount = MoneyField(required=False, allow_null=True)
+    effectiveFrom = serializers.DateField(required=False, allow_null=True)
+    arrearsRun = serializers.ChoiceField(ArrearsRunChoices.choices, required=False)
+    preview = serializers.BooleanField(required=False, default=False)
+
+
+class SalaryReviseSerializer(StrictSerializer):
+    decimal_keys = ("value",)
+
+    method = serializers.ChoiceField(RevisionMethodChoices.choices)
+    # A percentage, an amount, or (CHANGE_TEMPLATE) a template id.
+    value = serializers.CharField(required=False, allow_null=True, allow_blank=False)
+    effectiveFrom = serializers.DateField(required=False, allow_null=True)
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+    template = serializers.ChoiceField(SalaryTemplateChoices.choices, required=False)
+    rounding = serializers.IntegerField(required=False, default=0)
+    type = serializers.ChoiceField(RevisionTypeChoices.choices, required=False)
+    arrearsRun = serializers.ChoiceField(ArrearsRunChoices.choices, required=False)
+    preview = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        # A template id is a value only for CHANGE_TEMPLATE; everything else
+        # must be a finite decimal (the service bounds its size).
+        value = attrs.get("value")
+        if value is None or (attrs["method"] == RevisionMethodChoices.CHANGE_TEMPLATE
+                             and value in SalaryTemplateChoices.values):
+            return attrs
+        try:
+            finite = Decimal(str(value)).is_finite()
+        except Exception:
+            finite = False
+        if not finite:
+            raise serializers.ValidationError({"value": ["Send the value as a decimal string."]})
+        return attrs
+
+
+class ClassificationChangeSerializer(StrictSerializer):
+    to = serializers.ChoiceField(ClassificationChoices.choices)
+    effective = serializers.DateField()
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class SeparationSerializer(StrictSerializer):
+    type = serializers.ChoiceField(SeparationTypeChoices.choices)
+    date = serializers.DateField()
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+    # DISMISSAL only: theft, fraud, dishonesty, rioting, arson or wilful
+    # breach of discipline -- the entitlement is nil (s.23).
+    grossMisconduct = serializers.BooleanField(required=False, default=False)
+    preview = serializers.BooleanField(required=False, default=False)
 
 
 # ------------------------------------------------------------------ profile
@@ -581,6 +654,7 @@ class EmployeeRosterSerializer(serializers.Serializer):
 
 
 __all__ = [
+    "ClassificationChangeSerializer", "SalaryAssignSerializer", "SalaryReviseSerializer", "SeparationSerializer",
     "EmployeeCreateSerializer", "EmployeeProfileSerializer", "EmployeeRosterSerializer",
     "EmploymentSerializer", "InvestmentListSerializer", "access_out", "NomineeListSerializer", "PaymentSerializer",
     "PersonalSerializer", "StatutorySerializer", "TaxProfileSerializer", "history_out",

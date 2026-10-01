@@ -76,6 +76,25 @@ class RuleBookWindowTests(TestCase):
         widths = [band["width"] for band in book.tax.value("slabs")[:-1]]
         self.assertEqual(sum(widths) + book.tax.value("taxFreeThresholds.GENERAL"), 30_000_000)
 
+    def test_the_rmg_allowances_bring_the_gazetted_basic_to_the_total_floor(self):
+        """The 2023 gazette's arithmetic: 6,700 + 3,350 + 750 + 450 + 1,250 =
+        12,500. The profile screen's conveyance of 350 (the 2018 figure) did not add up."""
+        labour = rule_book(date(2027, 3, 8)).labour
+        allowances = labour.value("rmgAllowances")
+        for grade in ("G6", "G7"):
+            basic = Decimal(labour.value("gradeWageFloors")[grade])
+            total = (basic + basic * Decimal(allowances["houseRentRateOfBasic"]) + allowances["medical"]
+                     + allowances["transport"] + allowances["food"])
+            self.assertEqual(total, labour.value("gradeTotalWageFloors")[grade])
+
+    def test_withholding_deadlines_are_rules_not_literals(self):
+        tax = rule_book(date(2027, 3, 8)).tax
+        self.assertEqual(tax.value("withholding.depositDaysAfterMonthEnd"), 14)
+        self.assertEqual(tax.get("withholding.lateDepositMonthlyRate").citation, "Income Tax Act 2023, s.143")
+        # Not carried back to a year the source gives no deadlines for.
+        with self.assertRaises(UnknownRule):
+            rule_book(date(2026, 3, 8)).tax.get("withholding.depositDaysAfterMonthEnd")
+
 
 class ReleaseGateTests(TestCase):
     """Acceptance test 12."""

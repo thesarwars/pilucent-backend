@@ -211,6 +211,9 @@ class TrackedFieldChoices(models.TextChoices):
     SHIFT = "shift", "Shift"
     SECTION = "section", "Section"
     SALARY = "salary", "Salary"
+    # Not in the §8 list of effective-dated fields, but a gated operation, and
+    # every gated operation writes an entry with its reason (§8).
+    SEPARATION = "separation", "Separation"
 
 
 # ------------------------------------------------------ salary structure (§5)
@@ -222,3 +225,54 @@ class SalaryComponentChoices(models.TextChoices):
     MED = "MED", "Medical allowance"
     CONV = "CONV", "Conveyance allowance"
     DA = "DA", "Dearness allowance"
+    # Beyond the contract's list: the RMG gazette's food allowance, without
+    # which an RMG structure cannot reach its own total-wage floor.
+    FOOD = "FOOD", "Food allowance"
+
+
+class SalaryTemplateChoices(models.TextChoices):
+    STD = "std", "Standard 60/50"
+    CLASSIC = "classic", "Classic 1.5 divisor"
+    RMG = "rmg", "RMG grade-based"
+
+
+class RevisionMethodChoices(models.TextChoices):
+    PERCENTAGE_INCREASE = "PERCENTAGE_INCREASE", "Percentage increase"
+    FIXED_INCREASE = "FIXED_INCREASE", "Fixed increase"
+    NEW_GROSS = "NEW_GROSS", "New gross"
+    # The RMG template is built up from basic: its revisions name a basic.
+    NEW_BASIC = "NEW_BASIC", "New basic"
+    CHANGE_TEMPLATE = "CHANGE_TEMPLATE", "Change template"
+
+
+class RevisionTypeChoices(models.TextChoices):
+    INCREMENT = "INCREMENT", "Increment"
+    PROMOTION = "PROMOTION", "Promotion"
+    STRUCTURE_CHANGE = "STRUCTURE_CHANGE", "Structure change"
+    CORRECTION = "CORRECTION", "Correction"
+    GRADE_REVISION = "GRADE_REVISION", "Grade revision"
+    MINIMUM_WAGE_ADJUSTMENT = "MINIMUM_WAGE_ADJUSTMENT", "Minimum wage adjustment"
+
+
+class ArrearsRunChoices(models.TextChoices):
+    NEXT_RUN = "NEXT_RUN", "Next payroll run"
+    SEPARATE_RUN = "SEPARATE_RUN", "Separate arrears run"
+
+
+class ProrationDivisorChoices(models.TextChoices):
+    """A policy election (payroll-calc.js 05.3). All four are lawful; they pay
+    differently, and the difference is largest in February."""
+
+    CALENDAR_ACTUAL = "CALENDAR_ACTUAL", "Calendar actual"
+    FIXED_30 = "FIXED_30", "Fixed 30"
+    WORKING_26 = "WORKING_26", "Working 26"
+    HOURS_208 = "HOURS_208", "Hours 208"
+
+
+# ----------------------------------------------------------- documents (§9)
+
+
+class DocumentKindChoices(models.TextChoices):
+    SERVICE_BOOK = "SERVICE_BOOK", "Service book"
+    APPOINTMENT_LETTER = "APPOINTMENT_LETTER", "Appointment letter"
+    ID_CARD = "ID_CARD", "ID card"

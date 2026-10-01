@@ -31,6 +31,17 @@ def make_user(company, email):
     return user
 
 
+def make_company_admin(user, company):
+    """Give `user` the company's seeded system admin role."""
+    from adminio.models import CompanyRole
+
+    role, _ = CompanyRole.objects.get_or_create(company=company, name="admin", defaults={"is_system": True})
+    if not role.is_system:
+        role.is_system = True
+        role.save()
+    CompanyUser.objects.get(user=user, company=company).roles.add(role)
+
+
 def make_employee(company, code, name_en="Test Employee", **fields):
     return Employee.objects.create(company=company, code=code, name_en=name_en, **fields)
 

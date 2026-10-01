@@ -17,11 +17,17 @@ from django.test import TestCase
 
 from accounts.django_rest.helpers.login_access import has_login_access
 from accounts.models import User
-from adminio.models import CompanyRole
-from companyio.models import CompanyUser
 from employeeio.models import Employee
 from employeeio.services import access
-from employeeio.test_support import ApiMixin, make_company, make_employee, make_user, seed_rules, url
+from employeeio.test_support import (
+    ApiMixin,
+    make_company,
+    make_company_admin,
+    make_employee,
+    make_user,
+    seed_rules,
+    url,
+)
 
 
 class LoginGateTests(TestCase):
@@ -47,15 +53,6 @@ class LoginGateTests(TestCase):
         self.assertEqual(employee.company.name, "Ops-organization")
         self.assertEqual((employee.code, employee.name_en, employee.email), ("EMP-0001", "Ops", "ops@example.com"))
         self.assertFalse(employee.is_access_enabled)
-
-
-def make_company_admin(user, company):
-    """Give `user` the company's seeded system admin role."""
-    role, _ = CompanyRole.objects.get_or_create(company=company, name="admin", defaults={"is_system": True})
-    if not role.is_system:
-        role.is_system = True
-        role.save()
-    CompanyUser.objects.get(user=user, company=company).roles.add(role)
 
 
 class AccessEndpointTests(ApiMixin, TestCase):

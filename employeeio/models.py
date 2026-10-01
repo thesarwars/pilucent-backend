@@ -13,9 +13,11 @@ from common.models import BaseModelWithUID
 from common.money import MONEY_FIELD, ZERO
 
 from .choices import (
+    ArrearsRunChoices,
     BloodGroupChoices,
     ClassificationChoices,
     DivisionChoices,
+    DocumentKindChoices,
     EmployeeStatusChoices,
     EmploymentTypeChoices,
     EstablishmentChoices,
@@ -27,8 +29,11 @@ from .choices import (
     MaritalChoices,
     MfsProviderChoices,
     PaymentMethodChoices,
+    ProrationDivisorChoices,
     RelationChoices,
     ReligionChoices,
+    RevisionMethodChoices,
+    RevisionTypeChoices,
     SalaryComponentChoices,
     SeparationTypeChoices,
     TaxpayerCategoryChoices,
@@ -151,11 +156,11 @@ class Employee(BaseModelWithUID):
 
     @property
     def completed_payroll_runs(self):
-        """Payroll runs completed for this employee. Derived, read-only.
+        """Processed payroll periods this employee was paid in. Derived,
+        read-only; drives the retroactive-change warning (§2.2, §6.1)."""
+        from .services.periods import completed_runs
 
-        0 until the BD payroll phase records runs -- there are none to count.
-        """
-        return 0
+        return completed_runs(self)
 
     @property
     def settlement_outstanding(self):
@@ -170,6 +175,48 @@ class CompanyStatutoryProfile(BaseModelWithUID):
     )
     # When false, provident-fund membership cannot be switched on for anyone.
     pf_constituted = models.BooleanField(default=False)
+    # How a part month is paid (and how backdated arrears prorate a part
+    # period). Calendar actual is the most defensible of the four.
+    proration_divisor = models.CharField(
+        max_length=20,
+        choices=ProrationDivisorChoices.choices,
+        default=ProrationDivisorChoices.CALENDAR_ACTUAL,
+    )
+
+
+class ProcessedPayrollPeriod(BaseModelWithUID):
+    """A payroll period the company has processed: the source of "periods a
+    backdated change reopens" and of the next unprocessed period (§5.2).
+
+    The BD payroll run writes one row when it completes a period. `period` is
+    the first day of the month.
+    """
+
+    company = models.ForeignKey(
+        "companyio.Company", on_delete=models.CASCADE, related_name="processed_payroll_periods"
+    )
+    period = models.DateField()
+    processed_on = models.DateField()
+    processed_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ("period",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "period"], name="employeeio_processed_period_once_per_company"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.company_id} {self.period:%Y-%m}"
+
+    def clean(self):
+        if self.period and self.period.day != 1:
+            raise ValidationError({"period": "A payroll period is a month: give its first day."})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class EmployeeNominee(BaseModelWithUID):
@@ -317,7 +364,7 @@ class EmployeeSalaryStructure(BaseModelWithUID):
 
     A revision closes the previous structure (`effective_to`, `superseded_by`);
     it never overwrites it, so any period already paid on it stays reproducible.
-    Phase 1 reads structures; assignment and revision land with Phase 2.
+    Assignment and revision: services.salary.
     """
 
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="salary_structures")
@@ -329,9 +376,19 @@ class EmployeeSalaryStructure(BaseModelWithUID):
     superseded_by = models.OneToOneField(
         "self", on_delete=models.RESTRICT, null=True, blank=True, related_name="supersedes"
     )
+    # A SalaryTemplateChoices id. Anything else is a structure the templates
+    # did not build, which a revision has to be told how to rebuild.
     template = _text(40)
     reason = models.TextField(blank=True, default="")
     created_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True)
+    # How this structure came about. Blank on a first assignment.
+    revision_type = _text(30, choices=RevisionTypeChoices.choices)
+    method = _text(30, choices=RevisionMethodChoices.choices)
+    # The consequence recorded when it was saved (§6.2): processed periods it
+    # reopened ("YYYY-MM") and the arrears queued for them.
+    reopened_periods = models.JSONField(default=list, blank=True)
+    arrears = models.DecimalField(**MONEY_FIELD, default=ZERO)
+    arrears_run = _text(20, choices=ArrearsRunChoices.choices)
 
     objects = SalaryStructureQuerySet.as_manager()
 
@@ -371,3 +428,39 @@ class EmployeeSalaryComponent(BaseModelWithUID):
                 fields=["structure", "code"], name="employeeio_salarycomponent_one_per_code"
             ),
         ]
+
+
+class EmployeeDocument(BaseModelWithUID):
+    """A generated employee document (§9): the content as issued, frozen.
+
+    Templates are data, never markup (`docs.js`): `content` is the filled
+    template the client renders, so a reissue is a new row and the copy the
+    employee holds can always be shown again. Append-only.
+    """
+
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="documents")
+    kind = models.CharField(max_length=30, choices=DocumentKindChoices.choices)
+    # 1 for the first issue of this kind to this employee, then 2, 3, ...
+    version = models.PositiveIntegerField()
+    issued_on = models.DateField()
+    issued_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True)
+    issued_by_name = _text()
+    content = models.JSONField(default=dict)
+
+    objects = AppendOnlyQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("kind", "-version")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["employee", "kind", "version"], name="employeeio_document_version_unique"
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("An issued document is never edited. Reissue it.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("An issued document is never deleted. Reissue it.")
