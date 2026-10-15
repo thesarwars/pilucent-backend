@@ -553,9 +553,14 @@ def _credit(company, employee, d, kind, decision, rules):
     else:
         rows = [(CreditKindChoices.COMPENSATORY, rules.compensatory_festival, rules.citations["compensatory"]),
                 (CreditKindChoices.SUBSTITUTE, rules.substitute_festival, rules.citations["compensatory"])]
-    CompensatoryCredit.objects.bulk_create([
-        CompensatoryCredit(company=company, employee=employee, business_date=d, kind=k, days=Decimal(days),
-                           decision=decision, citation=cite or "") for k, days, cite in rows if days])
+    from leaveledgerio.services.core import post_credit
+
+    for k, days, cite in rows:
+        if days:
+            credit = CompensatoryCredit.objects.create(company=company, employee=employee, business_date=d, kind=k,
+                                                       days=Decimal(days), decision=decision, citation=cite or "")
+            # The leave ledger's CREDIT_EARNED, in the same transaction.
+            post_credit(credit)
 
 
 def resolve(company, employee, d, kind, action, *, reason="", in_time_min=None, out_time_min=None, user=None):
