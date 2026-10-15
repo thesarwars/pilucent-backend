@@ -27,16 +27,22 @@ def is_company_admin(user, company):
     ).exists()
 
 
-def has_salary_permission(user, company, codename):
+def has_company_permission(user, company, codename, app_label):
+    """The active company's admin, or a role / overlay in THIS company holding
+    `app_label.codename`. Global Django groups are not consulted."""
     from companyio.models import CompanyUser
 
     if not (user and user.is_authenticated) or company is None:
         return False
     if user.is_superuser or is_company_admin(user, company):
         return True
-    held = (Q(roles__permission__codename=codename, roles__permission__content_type__app_label=APP_LABEL)
-            | Q(permission__codename=codename, permission__content_type__app_label=APP_LABEL))
+    held = (Q(roles__permission__codename=codename, roles__permission__content_type__app_label=app_label)
+            | Q(permission__codename=codename, permission__content_type__app_label=app_label))
     return CompanyUser.objects.filter(user=user, company=company).filter(held).exists()
+
+
+def has_salary_permission(user, company, codename):
+    return has_company_permission(user, company, codename, APP_LABEL)
 
 
 def can_view_figures(user, company):

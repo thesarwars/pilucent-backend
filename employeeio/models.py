@@ -55,10 +55,38 @@ def _text(max_length=255, **kwargs):
     return models.CharField(max_length=max_length, blank=True, default="", **kwargs)
 
 
+class Site(BaseModelWithUID):
+    """An establishment: one place of work (a factory, a head office).
+    Shifts, the holiday calendar and the attendance month belong to a site,
+    not to the company -- a factory closing its month has no bearing on the
+    head office (attendance §1.5). Every company has one default site; an
+    employee with no site of their own is on it."""
+
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="sites")
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=120)
+    name_bn = _text(120)
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("-is_default", "name")
+        constraints = [
+            models.UniqueConstraint(fields=["company", "code"], name="employeeio_site_code_per_company"),
+            models.UniqueConstraint(fields=["company"], condition=Q(is_default=True),
+                                    name="employeeio_site_one_default_per_company"),
+        ]
+
+    def __str__(self):
+        return f"{self.code} {self.name}"
+
+
 class Employee(BaseModelWithUID):
     company = models.ForeignKey(
         "companyio.Company", on_delete=models.CASCADE, related_name="employees"
     )
+    # Null means the company's default site (services.sites.site_of).
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, null=True, blank=True, related_name="employees")
     # Optional login for self-service. `User.get_employee()` reads this relation.
     user = models.ForeignKey(
         "accounts.User", on_delete=models.SET_NULL, null=True, blank=True
@@ -192,6 +220,16 @@ class CompanyStatutoryProfile(BaseModelWithUID):
     # group-insurance premium for a covered employee.
     pf_employer_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("8.00"))
     insurance_premium_monthly = models.DecimalField(**MONEY_FIELD, default=Decimal("148"))
+    # Attendance elections (attendance §6.2, §6.3). The overtime base changes
+    # the hourly rate by about 40%; the three days-worked booleans decide what
+    # counts toward earned-leave accrual, and are independent.
+    overtime_base = models.CharField(
+        max_length=20, choices=[("BASIC_PLUS_DA", "Basic + dearness allowance"), ("GROSS", "Gross")],
+        default="BASIC_PLUS_DA",
+    )
+    days_worked_paid_leave = models.BooleanField(default=False)
+    days_worked_festival = models.BooleanField(default=False)
+    days_worked_weekly = models.BooleanField(default=False)
 
 
 class ProcessedPayrollPeriod(BaseModelWithUID):
