@@ -17,9 +17,9 @@ from decimal import Decimal
 from common import clock
 from rulebookio.book import rule_book
 
-from ..choices import PaymentMethodChoices
+from ..choices import DocumentKindChoices, PaymentMethodChoices
 from .predicates import LiabilityUndetermined, has_tax_liability
-from .salary import structure_in_force
+from .salary import floor_checks, structure_in_force
 from .tax import income_year_start
 from .validation import mobile_valid, nid_valid
 
@@ -88,11 +88,20 @@ def evaluate(employee, as_of=None, book=None):
     if structure is None:
         block("salary.none", "No salary structure assigned",
               "Payroll cannot run until a structure is assigned.", "salary", None)
+    else:
+        # Both gazetted floors, on the structure's full monthly rate (§5.3).
+        for check in floor_checks(employee.grade, structure.basic, structure.gross, book):
+            if not check["passed"]:
+                what = "Basic" if check["kind"] == "basic" else "Total wage"
+                block(f"salary.below{check['kind'].capitalize()}Floor",
+                      f"{what} below the gazetted minimum",
+                      check["message"], "salary", None)
     if employee.confirmation and employee.confirmation > as_of:
         block("employment.confirmationFuture", "Confirmation date is in the future",
               "A record confirmed ahead of time cannot be paid as permanent. Correct the date on the Employment tab.",
               "employment", "f-confirmation")
-    if employee.settlement_outstanding:
+    # From the separation date: someone working out their notice is still paid.
+    if employee.settlement_outstanding and employee.separated_on <= as_of:
         kind = (employee.separation_type or "separation type not recorded").lower()
         block("salary.settlementOutstanding",
               f"Separated {employee.separated_on.isoformat()} ({kind}) — final settlement outstanding",
@@ -158,18 +167,19 @@ def evaluate(employee, as_of=None, book=None):
     if not employee.photo:
         risk("personal.photo", "Photograph missing",
              "Used on the ID card and the service book.", "personal", "f-photo")
-    # Document generation is not built yet, so no service book has been generated.
-    risk("employment.serviceBook", "Service book not generated",
-         "Generate it from the Actions menu.", "employment", None)
+    issued = set(employee.documents.values_list("kind", flat=True))
+    if DocumentKindChoices.SERVICE_BOOK not in issued:
+        risk("employment.serviceBook", "Service book not generated",
+             "Generate it from the Actions menu.", "employment", None)
 
     return ComplianceResult(
         blocks=blocks,
         risks=risks,
-        tab_states=tab_states(employee, blocks, structure),
+        tab_states=tab_states(employee, blocks, structure, issued),
     )
 
 
-def tab_states(employee, blocks, structure):
+def tab_states(employee, blocks, structure, issued=()):
     """§3.4: complete | partial | empty | blocked. `blocked` wins."""
     blocked_tabs = {f.tab for f in blocks}
     base = {
@@ -180,6 +190,6 @@ def tab_states(employee, blocks, structure):
         "tax": "partial",
         "payment": "complete",
         "history": "complete",
-        "documents": "partial",
+        "documents": "complete" if set(DocumentKindChoices.values) <= set(issued) else "partial",
     }
     return {tab: "blocked" if tab in blocked_tabs else state for tab, state in base.items()}

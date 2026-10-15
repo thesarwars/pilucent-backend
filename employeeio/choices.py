@@ -211,6 +211,9 @@ class TrackedFieldChoices(models.TextChoices):
     SHIFT = "shift", "Shift"
     SECTION = "section", "Section"
     SALARY = "salary", "Salary"
+    # Not in the §8 list of effective-dated fields, but a gated operation, and
+    # every gated operation writes an entry with its reason (§8).
+    SEPARATION = "separation", "Separation"
 
 
 # ------------------------------------------------------ salary structure (§5)
@@ -222,3 +225,98 @@ class SalaryComponentChoices(models.TextChoices):
     MED = "MED", "Medical allowance"
     CONV = "CONV", "Conveyance allowance"
     DA = "DA", "Dearness allowance"
+    # Beyond the contract's list: the RMG gazette's food allowance, without
+    # which an RMG structure cannot reach its own total-wage floor.
+    FOOD = "FOOD", "Food allowance"
+    # The balancing line of a template that allocates less than all of gross
+    # (worker 95.5%, staff 99%), and of an override that keeps gross fixed.
+    OTHER = "OTHER", "Other allowance"
+
+
+class SalaryTemplateChoices(models.TextChoices):
+    """Template codes. Officer, worker and staff are rows of `SalaryTemplate`
+    (per company, versioned); RMG is built from the gazette in the rule book.
+    std and classic are retired: structures on them still read, and their next
+    revision moves them to a current template."""
+
+    OFFICER = "officer", "Officer grade template"
+    WORKER = "worker", "Worker grade template"
+    STAFF = "staff", "Staff grade template"
+    RMG = "rmg", "RMG gazette grade template"
+    STD = "std", "Standard 60/50 (retired)"
+    CLASSIC = "classic", "Classic 1.5 divisor (retired)"
+
+
+class RevisionMethodChoices(models.TextChoices):
+    PERCENTAGE_INCREASE = "PERCENTAGE_INCREASE", "Percentage increase"
+    FIXED_INCREASE = "FIXED_INCREASE", "Fixed increase"
+    NEW_GROSS = "NEW_GROSS", "New gross"
+    # The RMG template is built up from basic: its revisions name a basic.
+    NEW_BASIC = "NEW_BASIC", "New basic"
+    CHANGE_TEMPLATE = "CHANGE_TEMPLATE", "Change template"
+    # Components set one by one against the template (salary profile §11.2).
+    OVERRIDE = "OVERRIDE", "Component override"
+
+
+class RevisionTypeChoices(models.TextChoices):
+    FIRST_ASSIGNMENT = "FIRST_ASSIGNMENT", "First assignment"
+    # Brought forward at migration -- NOT a first assignment: the employee's
+    # first structure may predate this system by years.
+    OPENING_BALANCE = "OPENING_BALANCE", "Opening balance"
+    INCREMENT = "INCREMENT", "Increment"
+    PROMOTION = "PROMOTION", "Promotion"
+    STRUCTURE_CHANGE = "STRUCTURE_CHANGE", "Structure change"
+    CORRECTION = "CORRECTION", "Correction"
+    GRADE_REVISION = "GRADE_REVISION", "Grade revision"
+    MINIMUM_WAGE_ADJUSTMENT = "MINIMUM_WAGE_ADJUSTMENT", "Minimum wage adjustment"
+
+
+class ArrearsRunChoices(models.TextChoices):
+    NEXT_RUN = "NEXT_RUN", "Next payroll run"
+    SEPARATE_RUN = "SEPARATE_RUN", "Separate arrears run"
+
+
+class ProrationDivisorChoices(models.TextChoices):
+    """A policy election (payroll-calc.js 05.3). All four are lawful; they pay
+    differently, and the difference is largest in February."""
+
+    CALENDAR_ACTUAL = "CALENDAR_ACTUAL", "Calendar actual"
+    FIXED_30 = "FIXED_30", "Fixed 30"
+    WORKING_26 = "WORKING_26", "Working 26"
+    HOURS_208 = "HOURS_208", "Hours 208"
+
+
+# ----------------------------------------------------------- documents (§9)
+
+
+class DocumentKindChoices(models.TextChoices):
+    SERVICE_BOOK = "SERVICE_BOOK", "Service book"
+    APPOINTMENT_LETTER = "APPOINTMENT_LETTER", "Appointment letter"
+    ID_CARD = "ID_CARD", "ID card"
+
+
+class SalaryStatusChoices(models.TextChoices):
+    """Derived from the dates and the cancellation, never stored: a stored
+    SCHEDULED would go stale the morning it took effect."""
+
+    ACTIVE = "ACTIVE", "In force"
+    SCHEDULED = "SCHEDULED", "Scheduled"
+    SUPERSEDED = "SUPERSEDED", "Superseded"
+    CANCELLED = "CANCELLED", "Cancelled"
+
+
+class OverrideBasisChoices(models.TextChoices):
+    PCT_GROSS = "PCT_GROSS", "% of gross"
+    PCT_BASIC = "PCT_BASIC", "% of basic"
+    FIXED = "FIXED", "Fixed amount"
+
+
+class SalaryAuditActionChoices(models.TextChoices):
+    ASSIGNED = "ASSIGNED", "Assigned"
+    REVISED = "REVISED", "Revised"
+    OVERRIDDEN = "OVERRIDDEN", "Overridden"
+    SCHEDULED = "SCHEDULED", "Scheduled"
+    CANCELLED = "CANCELLED", "Cancelled"
+    SUPERSEDED = "SUPERSEDED", "Superseded"
+    VIEWED_MASKED = "VIEWED_MASKED", "Viewed masked"
+    VIEWED_FULL = "VIEWED_FULL", "Viewed in full"

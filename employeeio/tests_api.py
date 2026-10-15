@@ -15,7 +15,16 @@ from django.test import TestCase
 from common import clock
 from employeeio.models import Employee, EmployeeFieldHistory, EmployeeInvestment, EmployeeNominee
 from employeeio.services.compliance import evaluate
-from employeeio.test_support import ApiMixin, give_structure, make_company, make_employee, make_user, seed_rules, url
+from employeeio.test_support import (
+    ApiMixin,
+    give_salary_permissions,
+    give_structure,
+    make_company,
+    make_employee,
+    make_user,
+    seed_rules,
+    url,
+)
 from companyio.models import CompanyDesignation
 
 
@@ -25,6 +34,8 @@ class ApiTestCase(ApiMixin, TestCase):
         seed_rules()
         cls.company = make_company("Rahman Garments")
         cls.user = make_user(cls.company, "hr@rahman.example")
+        # HR here reads figures; the masked view is tested in tests_salary.
+        give_salary_permissions(cls.user, cls.company, "view_salary_figures")
 
     def setUp(self):
         super().setUp()

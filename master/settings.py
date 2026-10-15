@@ -314,6 +314,11 @@ CORS_ALLOWED_ORIGINS = [
     if o.strip()
 ]
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "contenttype"]
+# django-cors-headers' defaults, plus Idempotency-Key: a retried salary save
+# names its key so the server returns the first result, not a second structure.
+from corsheaders.defaults import default_headers  # noqa: E402
+
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
     for o in os.environ.get("CSRF_TRUSTED_ORIGINS", f"{_LOCAL_ORIGINS},{APP_URL},{PUBLIC_API_URL}").split(",")

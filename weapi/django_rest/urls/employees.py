@@ -2,8 +2,11 @@ from django.urls import path
 
 from ..views.bd_employees import (
     BDEmployeeAccess,
+    BDEmployeeClassification,
     BDEmployeeCompliance,
     BDEmployeeDetail,
+    BDEmployeeDocumentIssue,
+    BDEmployeeDocuments,
     BDEmployeeEmployment,
     BDEmployeeHistory,
     BDEmployeeInvestments,
@@ -12,10 +15,13 @@ from ..views.bd_employees import (
     BDEmployeePayment,
     BDEmployeePersonal,
     BDEmployeeSalary,
+    BDEmployeeSalaryHistory,
+    BDEmployeeSeparation,
     BDEmployeeStatutory,
     BDEmployeeTaxProfile,
     BDEmployeeTaxProjection,
 )
+from ..views.bd_salary import EmployeeSalaryHistory, EmployeeSalaryStructures
 from ..views.employee_roles import (
     EmployeeRoleAssignView,
     EmployeeRoleUnassignView,
@@ -55,4 +61,14 @@ urlpatterns = [
     path(r"/<str:code>/investments", BDEmployeeInvestments.as_view(), name="weapi.bd-employee-investments"),
     path(r"/<str:code>/history", BDEmployeeHistory.as_view(), name="weapi.bd-employee-history"),
     path(r"/<str:code>/salary", BDEmployeeSalary.as_view(), name="weapi.bd-employee-salary"),
+    path(r"/<str:code>/salary/history", BDEmployeeSalaryHistory.as_view(), name="weapi.bd-employee-salary-history"),
+    # The salary profile (docs/backend/salary-profile.md §6): the one place a salary is written.
+    path(r"/<str:code>/salary-structures", EmployeeSalaryStructures.as_view(),
+         name="weapi.bd-employee-salary-structures"),
+    path(r"/<str:code>/salary-history", EmployeeSalaryHistory.as_view(), name="weapi.bd-employee-salary-profile-history"),
+    path(r"/<str:code>/classification", BDEmployeeClassification.as_view(), name="weapi.bd-employee-classification"),
+    path(r"/<str:code>/separation", BDEmployeeSeparation.as_view(), name="weapi.bd-employee-separation"),
+    path(r"/<str:code>/documents", BDEmployeeDocuments.as_view(), name="weapi.bd-employee-documents"),
+    path(r"/<str:code>/documents/<str:kind>", BDEmployeeDocumentIssue.as_view(),
+         name="weapi.bd-employee-document-issue"),
 ]
