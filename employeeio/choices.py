@@ -228,12 +228,23 @@ class SalaryComponentChoices(models.TextChoices):
     # Beyond the contract's list: the RMG gazette's food allowance, without
     # which an RMG structure cannot reach its own total-wage floor.
     FOOD = "FOOD", "Food allowance"
+    # The balancing line of a template that allocates less than all of gross
+    # (worker 95.5%, staff 99%), and of an override that keeps gross fixed.
+    OTHER = "OTHER", "Other allowance"
 
 
 class SalaryTemplateChoices(models.TextChoices):
-    STD = "std", "Standard 60/50"
-    CLASSIC = "classic", "Classic 1.5 divisor"
-    RMG = "rmg", "RMG grade-based"
+    """Template codes. Officer, worker and staff are rows of `SalaryTemplate`
+    (per company, versioned); RMG is built from the gazette in the rule book.
+    std and classic are retired: structures on them still read, and their next
+    revision moves them to a current template."""
+
+    OFFICER = "officer", "Officer grade template"
+    WORKER = "worker", "Worker grade template"
+    STAFF = "staff", "Staff grade template"
+    RMG = "rmg", "RMG gazette grade template"
+    STD = "std", "Standard 60/50 (retired)"
+    CLASSIC = "classic", "Classic 1.5 divisor (retired)"
 
 
 class RevisionMethodChoices(models.TextChoices):
@@ -243,9 +254,15 @@ class RevisionMethodChoices(models.TextChoices):
     # The RMG template is built up from basic: its revisions name a basic.
     NEW_BASIC = "NEW_BASIC", "New basic"
     CHANGE_TEMPLATE = "CHANGE_TEMPLATE", "Change template"
+    # Components set one by one against the template (salary profile §11.2).
+    OVERRIDE = "OVERRIDE", "Component override"
 
 
 class RevisionTypeChoices(models.TextChoices):
+    FIRST_ASSIGNMENT = "FIRST_ASSIGNMENT", "First assignment"
+    # Brought forward at migration -- NOT a first assignment: the employee's
+    # first structure may predate this system by years.
+    OPENING_BALANCE = "OPENING_BALANCE", "Opening balance"
     INCREMENT = "INCREMENT", "Increment"
     PROMOTION = "PROMOTION", "Promotion"
     STRUCTURE_CHANGE = "STRUCTURE_CHANGE", "Structure change"
@@ -276,3 +293,30 @@ class DocumentKindChoices(models.TextChoices):
     SERVICE_BOOK = "SERVICE_BOOK", "Service book"
     APPOINTMENT_LETTER = "APPOINTMENT_LETTER", "Appointment letter"
     ID_CARD = "ID_CARD", "ID card"
+
+
+class SalaryStatusChoices(models.TextChoices):
+    """Derived from the dates and the cancellation, never stored: a stored
+    SCHEDULED would go stale the morning it took effect."""
+
+    ACTIVE = "ACTIVE", "In force"
+    SCHEDULED = "SCHEDULED", "Scheduled"
+    SUPERSEDED = "SUPERSEDED", "Superseded"
+    CANCELLED = "CANCELLED", "Cancelled"
+
+
+class OverrideBasisChoices(models.TextChoices):
+    PCT_GROSS = "PCT_GROSS", "% of gross"
+    PCT_BASIC = "PCT_BASIC", "% of basic"
+    FIXED = "FIXED", "Fixed amount"
+
+
+class SalaryAuditActionChoices(models.TextChoices):
+    ASSIGNED = "ASSIGNED", "Assigned"
+    REVISED = "REVISED", "Revised"
+    OVERRIDDEN = "OVERRIDDEN", "Overridden"
+    SCHEDULED = "SCHEDULED", "Scheduled"
+    CANCELLED = "CANCELLED", "Cancelled"
+    SUPERSEDED = "SUPERSEDED", "Superseded"
+    VIEWED_MASKED = "VIEWED_MASKED", "Viewed masked"
+    VIEWED_FULL = "VIEWED_FULL", "Viewed in full"

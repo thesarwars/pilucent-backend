@@ -59,7 +59,7 @@ def completed_runs(employee):
     """Processed periods the employee was in: within their service, and with
     a salary structure in force for some part of the period -- without one a
     record is blocked from the run (§3.1)."""
-    windows = list(employee.salary_structures.values_list("effective_from", "effective_to"))
+    windows = list(employee.salary_structures.live().values_list("effective_from", "effective_to"))
     if not windows:
         return 0
     count = 0

@@ -22,6 +22,7 @@ from employeeio.test_support import (
     give_structure,
     make_company,
     make_employee,
+    give_salary_permissions,
     make_user,
     seed_rules,
     url,
@@ -35,6 +36,7 @@ class DocumentTests(ApiMixin, TestCase):
         seed_rules()
         cls.company = make_company("Rahman Garments")
         cls.user = make_user(cls.company, "hr@rahman.example")
+        give_salary_permissions(cls.user, cls.company, "view_salary_figures")
         cls.designation = CompanyDesignation.objects.create(company=cls.company, title="Sewing Operator")
 
     def setUp(self):
@@ -74,7 +76,7 @@ class DocumentTests(ApiMixin, TestCase):
                          {"en": "Twenty two thousand taka only", "bn": "বাইশ হাজার টাকা মাত্র"})
         self.assertEqual(content["wage"]["gross"]["display"]["bn"], "৳ ২২,০০০")
         basic = content["wage"]["components"][0]
-        self.assertEqual((basic["code"], basic["basis"]), ("BASIC", "60.0% of gross"))
+        self.assertEqual((basic["code"], basic["basis"]), ("BASIC", "60% of gross"))
         self.assertEqual(content["employee"]["fatherName"], "Abdul Karim")
         self.assertEqual(content["citation"], "Bangladesh Labour Act 2006, s.6, s.7")
         self.assertNotIn("employment.serviceBook", [f.key for f in evaluate(self.employee).risks])
@@ -143,6 +145,7 @@ class ProjectionDeadlineTests(ApiMixin, TestCase):
         seed_rules()
         cls.company = make_company("Rahman Garments")
         cls.user = make_user(cls.company, "hr@rahman.example")
+        give_salary_permissions(cls.user, cls.company, "view_salary_figures")
 
     def test_the_projection_says_when_the_deduction_is_due(self):
         give_structure(make_employee(self.company, "EMP-0102", classification="NON_WORKER"), 100000)

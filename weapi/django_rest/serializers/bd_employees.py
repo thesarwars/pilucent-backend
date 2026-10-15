@@ -23,12 +23,8 @@ from common import clock
 from common.money import money_str
 from companyio.models import CompanyDepartment, CompanyDesignation, CompanySection, CompanyShift
 from employeeio.choices import (
-    ArrearsRunChoices,
     ClassificationChoices,
     PaymentMethodChoices,
-    RevisionMethodChoices,
-    RevisionTypeChoices,
-    SalaryTemplateChoices,
     SeparationTypeChoices,
     TrackedFieldChoices,
 )
@@ -43,7 +39,7 @@ from employeeio.models import (
     EmployeeTaxProfile,
 )
 from employeeio.services import validation
-from employeeio.services.salary import structure_out
+from employeeio.services.salary import masked_structure_out, structure_out
 from employeeio.ui import FIELD_IDS
 from rulebookio.book import rule_book
 
@@ -524,48 +520,6 @@ class StrictSerializer(serializers.Serializer):
         return super().to_internal_value(data)
 
 
-class SalaryAssignSerializer(StrictSerializer):
-    decimal_keys = ("amount",)
-
-    template = serializers.ChoiceField(SalaryTemplateChoices.choices)
-    # Gross for a gross-down template, basic for RMG (optional there: the
-    # grade's gazetted basic).
-    amount = MoneyField(required=False, allow_null=True)
-    effectiveFrom = serializers.DateField(required=False, allow_null=True)
-    arrearsRun = serializers.ChoiceField(ArrearsRunChoices.choices, required=False)
-    preview = serializers.BooleanField(required=False, default=False)
-
-
-class SalaryReviseSerializer(StrictSerializer):
-    decimal_keys = ("value",)
-
-    method = serializers.ChoiceField(RevisionMethodChoices.choices)
-    # A percentage, an amount, or (CHANGE_TEMPLATE) a template id.
-    value = serializers.CharField(required=False, allow_null=True, allow_blank=False)
-    effectiveFrom = serializers.DateField(required=False, allow_null=True)
-    reason = serializers.CharField(required=False, allow_blank=True, default="")
-    template = serializers.ChoiceField(SalaryTemplateChoices.choices, required=False)
-    rounding = serializers.IntegerField(required=False, default=0)
-    type = serializers.ChoiceField(RevisionTypeChoices.choices, required=False)
-    arrearsRun = serializers.ChoiceField(ArrearsRunChoices.choices, required=False)
-    preview = serializers.BooleanField(required=False, default=False)
-
-    def validate(self, attrs):
-        # A template id is a value only for CHANGE_TEMPLATE; everything else
-        # must be a finite decimal (the service bounds its size).
-        value = attrs.get("value")
-        if value is None or (attrs["method"] == RevisionMethodChoices.CHANGE_TEMPLATE
-                             and value in SalaryTemplateChoices.values):
-            return attrs
-        try:
-            finite = Decimal(str(value)).is_finite()
-        except Exception:
-            finite = False
-        if not finite:
-            raise serializers.ValidationError({"value": ["Send the value as a decimal string."]})
-        return attrs
-
-
 class ClassificationChangeSerializer(StrictSerializer):
     to = serializers.ChoiceField(ClassificationChoices.choices)
     effective = serializers.DateField()
@@ -583,6 +537,14 @@ class SeparationSerializer(StrictSerializer):
 
 
 # ------------------------------------------------------------------ profile
+
+
+def masked_history(row, context):
+    """A salary history entry states the amounts; without salary figures it
+    says only that the salary changed."""
+    if row.get("field") == "salary" and not context.get("salary_figures"):
+        return {**row, "from": "Masked", "to": "Masked"}
+    return row
 
 
 class EmployeeProfileSerializer(serializers.Serializer):
@@ -622,8 +584,9 @@ class EmployeeProfileSerializer(serializers.Serializer):
             },
             "investments": [investment_out(i) for i in employee.investments.all()],
             "payment": PaymentSerializer(employee.payment, context=context).data,
-            "salary": structure_out(structure_in_force(employee, today)),
-            "history": [history_out(h) for h in employee.field_history.all()],
+            "salary": (structure_out(structure_in_force(employee, today)) if context.get("salary_figures")
+                       else masked_structure_out(structure_in_force(employee, today))),
+            "history": [masked_history(history_out(h), context) for h in employee.field_history.all()],
         }
 
 
@@ -647,14 +610,19 @@ class EmployeeRosterSerializer(serializers.Serializer):
             "workerCategory": employee.worker_category,
             "classification": employee.classification,
             "dateOfJoining": employee.doj.isoformat() if employee.doj else None,
-            "grossMonthly": money_str(structure.gross) if structure else None,
+            # Null both when there is no structure and when the caller may not
+            # see figures; `salaryMasked` says which.
+            "grossMonthly": money_str(structure.gross) if structure and self.context.get("salary_figures") else None,
+            "salaryMasked": not self.context.get("salary_figures"),
+            # That a structure exists is not confidential; its amount is.
+            "hasSalary": structure is not None,
             "blockerCount": len(result.blocks),
             "fresh": employee.created_at.date() == today,
         }
 
 
 __all__ = [
-    "ClassificationChangeSerializer", "SalaryAssignSerializer", "SalaryReviseSerializer", "SeparationSerializer",
+    "ClassificationChangeSerializer", "SeparationSerializer",
     "EmployeeCreateSerializer", "EmployeeProfileSerializer", "EmployeeRosterSerializer",
     "EmploymentSerializer", "InvestmentListSerializer", "access_out", "NomineeListSerializer", "PaymentSerializer",
     "PersonalSerializer", "StatutorySerializer", "TaxProfileSerializer", "history_out",

@@ -40,7 +40,8 @@ from employeeio.models import (
 from employeeio.services import documents, gated, salary
 from employeeio.services.access import NoLinkedLogin, set_login_access
 from employeeio.services.compliance import evaluate
-from employeeio.services.salary import structure_in_force
+from employeeio.services.salary import masked_structure_out, structure_in_force
+from employeeio.services.salary_access import can_view_figures
 from employeeio.services.statutory import derived
 from employeeio.services.tax import project
 from employeeio.services.withholding import deadlines
@@ -56,8 +57,6 @@ from ..serializers.bd_employees import (
     NomineeListSerializer,
     PaymentSerializer,
     PersonalSerializer,
-    SalaryAssignSerializer,
-    SalaryReviseSerializer,
     SeparationSerializer,
     access_out,
     StatutorySerializer,
@@ -79,8 +78,16 @@ class BDEmployeeView(APIView):
     def company(self):
         return self.request.user.get_active_company()
 
+    def salary_figures(self):
+        """Whether this caller may see salary amounts (salary profile §7).
+        Without it, every response omits them -- masked by the server."""
+        if not hasattr(self, "_salary_figures"):
+            self._salary_figures = can_view_figures(self.request.user, self.company())
+        return self._salary_figures
+
     def context(self):
-        return {"request": self.request, "company": self.company(), "view": self}
+        return {"request": self.request, "company": self.company(), "view": self,
+                "salary_figures": self.salary_figures()}
 
     def get_employee(self):
         return get_object_or_404(
@@ -262,13 +269,30 @@ class BDEmployeeAccess(BDEmployeeView):
 # --------------------------------------------------------------- computed
 
 
+MASKED_FLOOR_FIX = "Below the gazetted floor for this grade. Someone who may see salary figures has to correct it."
+
+
+def mask_findings(body):
+    """A floor finding states the amounts; a caller who may not see them gets
+    the finding without them."""
+    for finding in body.get("blocks", []) + body.get("risks", []):
+        if str(finding.get("key", "")).startswith("salary.below"):
+            finding["fix"] = MASKED_FLOOR_FIX
+    return body
+
+
 class BDEmployeeCompliance(BDEmployeeView):
     def get(self, request, code):
-        return Response(evaluate(self.get_employee()).as_dict())
+        body = evaluate(self.get_employee()).as_dict()
+        return Response(body if self.salary_figures() else mask_findings(body))
 
 
 class BDEmployeeTaxProjection(BDEmployeeView):
     def get(self, request, code):
+        if not self.salary_figures():
+            self.get_employee()
+            return Response({"available": False, "masked": True,
+                             "reason": "The tax projection is computed from the salary, which is masked for you."})
         today = clock.today()
         book = rule_book(today)
         body = project(self.get_employee(), as_of=today, book=book).as_dict()
@@ -348,6 +372,10 @@ class BDEmployeeHistory(BDEmployeeView):
                 )
             entries = entries.filter(field=field)
         rows = [history_out(h) for h in entries]
+        if not self.salary_figures():
+            for row in rows:
+                if row.get("field") == TrackedFieldChoices.SALARY:
+                    row["from"] = row["to"] = "Masked"
         # A field with no entries is an explicit empty result, not a silent blank (§8).
         return Response({
             "field": field,
@@ -378,7 +406,12 @@ def _date_param(request, name):
     return date.fromisoformat(raw)
 
 
-class BDEmployeeSalary(GatedWriteMixin, BDEmployeeView):
+class BDEmployeeSalary(BDEmployeeView):
+    """The structure in force, as the employee profile's read-only salary tab
+    shows it. Every write goes through the salary profile
+    (/employees/{code}/salary-structures) -- one place, so two screens cannot
+    disagree about a salary."""
+
     def get(self, request, code):
         employee = self.get_employee()
         try:
@@ -389,17 +422,19 @@ class BDEmployeeSalary(GatedWriteMixin, BDEmployeeView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         structure = structure_in_force(employee, on)
+        figures = self.salary_figures()
         body = {
             "on": on.isoformat(),
-            "structure": structure_out(structure),
+            "masked": not figures,
+            "structure": (structure_out(structure) if figures else masked_structure_out(structure)),
             "message": None if structure else f"No salary structure is in force on {on.isoformat()}.",
-            "templates": salary.templates_out(),
+            "templates": salary.templates_out(employee.company),
             "revisionDefault": salary.revision_default(
                 employee, salary.latest_structure(employee)).isoformat(),
             "derived": None,
             "floors": None,
         }
-        if structure is not None:
+        if structure is not None and figures:
             # The structure on file reads whatever the rule book holds; the
             # figures it drives say so when the rules for `on` are missing.
             book = rule_book(on)
@@ -413,52 +448,17 @@ class BDEmployeeSalary(GatedWriteMixin, BDEmployeeView):
                     body[key] = {"available": False, "reason": str(exc)}
         return Response(body)
 
-    def post(self, request, code):
-        """Assign the first structure (§5.2). `preview: true` computes it --
-        floors, warnings, periods and arrears -- without saving."""
-        employee = self.get_employee()
-        serializer = SalaryAssignSerializer(data=request.data)
-        if not serializer.is_valid():
-            return self.invalid(serializer)
-        data = serializer.validated_data
-        try:
-            outcome = salary.assign(
-                employee, template=data["template"], amount=data.get("amount"),
-                effective_from=data.get("effectiveFrom"), arrears_run=data.get("arrearsRun"),
-                user=request.user, preview=data["preview"],
-            )
-        except salary.SalaryRefused as exc:
-            return self.refused(exc)
-        return Response(outcome, status=status.HTTP_200_OK if data["preview"] else status.HTTP_201_CREATED)
-
-
-class BDEmployeeSalaryRevise(GatedWriteMixin, BDEmployeeView):
-    def post(self, request, code):
-        """§5.2 / §6.2. The effective date defaults to the start of the next
-        unprocessed period; a backdated revision needs a reason, and a refusal
-        still states the periods it would reopen and the arrears."""
-        employee = self.get_employee()
-        serializer = SalaryReviseSerializer(data=request.data)
-        if not serializer.is_valid():
-            return self.invalid(serializer)
-        data = serializer.validated_data
-        try:
-            outcome = salary.revise(
-                employee, method=data["method"], value=data.get("value"),
-                effective_from=data.get("effectiveFrom"), reason=data["reason"], template=data.get("template"),
-                rounding=data["rounding"], revision_type=data.get("type"), arrears_run=data.get("arrearsRun"),
-                user=request.user, preview=data["preview"],
-            )
-        except salary.SalaryRefused as exc:
-            return self.refused(exc)
-        return Response(outcome, status=status.HTTP_200_OK if data["preview"] else status.HTTP_201_CREATED)
-
 
 class BDEmployeeSalaryHistory(BDEmployeeView):
     def get(self, request, code):
-        structures = salary.history(self.get_employee())
+        employee = self.get_employee()
+        if self.salary_figures():
+            structures = salary.history(employee)
+        else:
+            structures = [masked_structure_out(s) for s in employee.salary_structures.order_by("-effective_from")]
         return Response({
             "structures": structures,
+            "masked": not self.salary_figures(),
             "empty": not structures,
             "message": None if structures else "No salary structure has been assigned.",
         })
@@ -512,9 +512,24 @@ DOCUMENT_KINDS = {
 }
 
 
+def mask_wage(document):
+    """An issued document states the wage; without salary figures it goes
+    out without that block."""
+    content = document.get("content")
+    if isinstance(content, dict) and content.get("wage") is not None:
+        document["content"] = {**content, "wage": None, "wageMasked": True}
+    return document
+
+
 class BDEmployeeDocuments(BDEmployeeView):
     def get(self, request, code):
-        return Response(documents.documents_out(self.get_employee()))
+        body = documents.documents_out(self.get_employee())
+        if not self.salary_figures():
+            body["documents"] = [mask_wage(d) for d in body.get("documents", [])]
+            for kind in body.get("kinds", []):
+                if kind.get("latest"):
+                    mask_wage(kind["latest"])
+        return Response(body)
 
 
 class BDEmployeeDocumentIssue(BDEmployeeView):
@@ -527,4 +542,5 @@ class BDEmployeeDocumentIssue(BDEmployeeView):
             document = documents.issue(employee, DOCUMENT_KINDS[kind], user=request.user)
         except documents.DocumentRefused as exc:
             return Response(exc.as_errors(), status=status.HTTP_400_BAD_REQUEST)
-        return Response(documents.document_out(document), status=status.HTTP_201_CREATED)
+        body = documents.document_out(document)
+        return Response(body if self.salary_figures() else mask_wage(body), status=status.HTTP_201_CREATED)

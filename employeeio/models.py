@@ -5,9 +5,12 @@ application -- directly on `Employee`, and through `employee__company` on
 every sub-record, none of which carries a company of its own.
 """
 
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q, Sum
+from django.db.models.lookups import LessThanOrEqual
 
 from common.models import BaseModelWithUID
 from common.money import MONEY_FIELD, ZERO
@@ -34,7 +37,9 @@ from .choices import (
     ReligionChoices,
     RevisionMethodChoices,
     RevisionTypeChoices,
+    SalaryAuditActionChoices,
     SalaryComponentChoices,
+    SalaryStatusChoices,
     SeparationTypeChoices,
     TaxpayerCategoryChoices,
     TrackedFieldChoices,
@@ -182,6 +187,11 @@ class CompanyStatutoryProfile(BaseModelWithUID):
         choices=ProrationDivisorChoices.choices,
         default=ProrationDivisorChoices.CALENDAR_ACTUAL,
     )
+    # Policy elections, not law (salary profile §6): the employer's provident
+    # fund rate for a member with no rate of their own, and the flat monthly
+    # group-insurance premium for a covered employee.
+    pf_employer_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("8.00"))
+    insurance_premium_monthly = models.DecimalField(**MONEY_FIELD, default=Decimal("148"))
 
 
 class ProcessedPayrollPeriod(BaseModelWithUID):
@@ -352,9 +362,70 @@ class EmployeeFieldHistory(BaseModelWithUID):
         raise ValidationError("Change history is append-only. Record a correction as a new entry.")
 
 
+class SalaryTemplate(BaseModelWithUID):
+    """A named split of gross (salary profile §7, backend §3.1). Per company
+    and versioned: a change is a new row from a later date, so a structure
+    built on the old split still says what it was built on.
+
+    `hr_pct_of_basic` is a percentage of BASIC; every other one is of gross.
+    Whatever the four leave of gross goes to `balancing_component`.
+    """
+
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="salary_templates")
+    code = models.CharField(max_length=20)
+    label = models.CharField(max_length=120)
+    label_bn = _text(120)
+    # States the CONSEQUENCE of choosing it, not its audience.
+    note = models.TextField()
+    note_bn = models.TextField(blank=True, default="")
+    basic_pct = models.DecimalField(max_digits=6, decimal_places=3)
+    hr_pct_of_basic = models.DecimalField(max_digits=6, decimal_places=3)
+    med_pct = models.DecimalField(max_digits=6, decimal_places=3)
+    conv_pct = models.DecimalField(max_digits=6, decimal_places=3)
+    balancing_component = models.CharField(
+        max_length=10, choices=SalaryComponentChoices.choices, default=SalaryComponentChoices.BASIC
+    )
+    display_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    effective_from = models.DateField()
+    superseded_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    # Null for the seeded rows.
+    created_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ("display_order", "code", "-effective_from")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "code", "effective_from"], name="employeeio_salarytemplate_code_per_company"
+            ),
+            models.CheckConstraint(
+                condition=Q(basic_pct__gt=0, basic_pct__lte=100, hr_pct_of_basic__gte=0, hr_pct_of_basic__lte=100,
+                            med_pct__gte=0, med_pct__lte=100, conv_pct__gte=0, conv_pct__lte=100),
+                name="employeeio_salarytemplate_pct_in_range",
+            ),
+            # 100.001, not 100: the four are decimals, and an exact-100 split
+            # must not fail on a representation boundary.
+            models.CheckConstraint(
+                condition=LessThanOrEqual(
+                    F("basic_pct") + F("med_pct") + F("conv_pct") + F("basic_pct") * F("hr_pct_of_basic") / 100,
+                    Decimal("100.001"),
+                ),
+                name="employeeio_salarytemplate_pct_sum_under_100",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.code} from {self.effective_from}"
+
+
 class SalaryStructureQuerySet(models.QuerySet):
+    def live(self):
+        """Everything but cancelled structures: a cancelled scheduled change
+        stays on file but was never in force."""
+        return self.filter(cancelled_at__isnull=True)
+
     def in_force_on(self, on):
-        return self.filter(effective_from__lte=on).filter(
+        return self.live().filter(effective_from__lte=on).filter(
             Q(effective_to__isnull=True) | Q(effective_to__gte=on)
         )
 
@@ -389,6 +460,34 @@ class EmployeeSalaryStructure(BaseModelWithUID):
     reopened_periods = models.JSONField(default=list, blank=True)
     arrears = models.DecimalField(**MONEY_FIELD, default=ZERO)
     arrears_run = _text(20, choices=ArrearsRunChoices.choices)
+    # The template row it was built on (null for RMG, which the gazette builds,
+    # and for structures from before templates were rows). PROTECT: a template
+    # that has been used is never deleted.
+    template_version = models.ForeignKey(
+        SalaryTemplate, on_delete=models.PROTECT, null=True, blank=True, related_name="structures"
+    )
+    # The labour rule set its floor and figures were checked against, so a
+    # 2025 structure still reproduces after the 2026 rules change (§5.5).
+    rule_set = models.ForeignKey(
+        "rulebookio.RuleSet", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    # The basic floor applied when it was written, and whether basic cleared
+    # it. Null on structures from before this was recorded.
+    grade_floor_applied = models.DecimalField(**MONEY_FIELD, null=True, blank=True)
+    clears_floor = models.BooleanField(null=True, blank=True)
+    # Recorded, not gated (yet): whoever saved it.
+    approved_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    # A scheduled structure cancelled before it took effect. Kept, never deleted.
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    cancel_reason = models.TextField(blank=True, default="")
+    # A retried request with the same key returns this structure, not a second one.
+    idempotency_key = _text(80)
 
     objects = SalaryStructureQuerySet.as_manager()
 
@@ -399,7 +498,21 @@ class EmployeeSalaryStructure(BaseModelWithUID):
                 condition=Q(effective_to__isnull=True) | Q(effective_to__gte=F("effective_from")),
                 name="employeeio_salarystructure_window_not_inverted",
             ),
+            models.UniqueConstraint(
+                fields=["employee", "idempotency_key"], condition=~Q(idempotency_key=""),
+                name="employeeio_salarystructure_idempotency_once",
+            ),
         ]
+
+    def status_on(self, today):
+        """Derived from the dates and the cancellation (never stored)."""
+        if self.cancelled_at is not None:
+            return SalaryStatusChoices.CANCELLED
+        if self.effective_from > today:
+            return SalaryStatusChoices.SCHEDULED
+        if self.effective_to is not None and self.effective_to < today:
+            return SalaryStatusChoices.SUPERSEDED
+        return SalaryStatusChoices.ACTIVE
 
     def component_amount(self, code):
         return self.components.filter(code=code).aggregate(total=Sum("amount"))["total"] or ZERO
@@ -420,6 +533,24 @@ class EmployeeSalaryComponent(BaseModelWithUID):
     code = models.CharField(max_length=10, choices=SalaryComponentChoices.choices)
     amount = models.DecimalField(**MONEY_FIELD)
     position = models.PositiveSmallIntegerField(default=0)
+    # The basis as it reads: "60% of gross", "50% of basic", "Balance of gross".
+    basis_text = _text(120)
+    # What the template said for this line, for diffing (null when no template
+    # built it: RMG, or a structure from before templates were rows). HRA's
+    # is a percentage of basic; every other one is of gross.
+    template_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    # Back-solved from the amounts on file (one decimal), on the same base.
+    effective_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    # MEASURED on write: |effective - template| >= 0.5pp. Never a flag someone sets.
+    is_overridden = models.BooleanField(default=False)
+    is_balancing = models.BooleanField(default=False)
+    # Five independent bases (payroll engine §4.2). House rent is in the wages
+    # base and the perquisite ceiling, not the provident-fund base.
+    in_ot_base = models.BooleanField(default=False)
+    in_pf_base = models.BooleanField(default=False)
+    in_gratuity_base = models.BooleanField(default=False)
+    in_wages_base = models.BooleanField(default=True)
+    in_perquisite_ceiling = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("position", "id")
@@ -427,7 +558,83 @@ class EmployeeSalaryComponent(BaseModelWithUID):
             models.UniqueConstraint(
                 fields=["structure", "code"], name="employeeio_salarycomponent_one_per_code"
             ),
+            # A negative line is a deduction, which does not belong in a structure.
+            models.CheckConstraint(condition=Q(amount__gte=0), name="employeeio_salarycomponent_not_negative"),
         ]
+
+
+class SalaryOverride(BaseModelWithUID):
+    """A deliberate deviation from the template: the recorded intent beside
+    the component's measured `is_overridden` (§3.6). Carried forward to the
+    next structure on a revision, so an override survives one."""
+
+    structure = models.ForeignKey(EmployeeSalaryStructure, on_delete=models.CASCADE, related_name="overrides")
+    component_code = models.CharField(max_length=10, choices=SalaryComponentChoices.choices)
+    template_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    override_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    # The base of `override_pct`: of gross, or (house rent) of basic.
+    of_basic = models.BooleanField(default=False)
+    override_amount = models.DecimalField(**MONEY_FIELD, null=True, blank=True)
+    reason = models.TextField()
+    approved_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True)
+    approved_at = models.DateTimeField()
+    excluded_from_template_revision = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("id",)
+        constraints = [
+            models.CheckConstraint(
+                condition=(Q(override_pct__isnull=False, override_amount__isnull=True)
+                           | Q(override_pct__isnull=True, override_amount__isnull=False)),
+                name="employeeio_salaryoverride_pct_or_amount",
+            ),
+            models.CheckConstraint(condition=~Q(reason=""), name="employeeio_salaryoverride_reason_present"),
+        ]
+
+
+class SalaryAudit(BaseModelWithUID):
+    """Who did what to a salary, and who looked at one (§3.8). Viewing the
+    figures is itself an audited event; so is the masked view, so an access
+    review can tell "opened the screen" from "unmasked the figures".
+    Append-only."""
+
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="+")
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="salary_audit")
+    structure = models.ForeignKey(
+        EmployeeSalaryStructure, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    action = models.CharField(max_length=20, choices=SalaryAuditActionChoices.choices)
+    actor = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    actor_name = _text()
+    actor_role = _text(120)
+    before_json = models.JSONField(null=True, blank=True)
+    after_json = models.JSONField(null=True, blank=True)
+    reason = models.TextField(blank=True, default="")
+    rule_set = models.ForeignKey(
+        "rulebookio.RuleSet", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    engine_version = models.CharField(max_length=40)
+
+    objects = AppendOnlyQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        indexes = [models.Index(fields=["employee", "-created_at"], name="employeeio_salaryaudit_emp_at")]
+        # Role permissions (salary profile §7). The active company's admin
+        # holds all three; anyone else needs them through a role.
+        permissions = [
+            ("view_salary_figures", "Can view salary figures"),
+            ("write_salary", "Can assign, revise and override salary structures"),
+            ("approve_salary", "Can approve a salary revision someone else raised"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("The salary audit is append-only.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("The salary audit is append-only.")
 
 
 class EmployeeDocument(BaseModelWithUID):

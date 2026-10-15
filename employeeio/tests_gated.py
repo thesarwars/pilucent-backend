@@ -103,7 +103,7 @@ class ClassificationTests(GatedTestCase):
     def test_completed_runs_count_only_periods_with_pay(self):
         new = make_employee(self.company, "EMP-0150", doj=date(2027, 1, 20))
         self.assertEqual(new.completed_payroll_runs, 0)  # no structure: blocked from every run
-        salary.assign(new, template="std", amount=20000)
+        salary.assign(new, template="officer", amount=20000)
         self.assertEqual(new.completed_payroll_runs, 2)  # January and February
 
 

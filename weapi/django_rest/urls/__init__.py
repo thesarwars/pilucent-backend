@@ -24,6 +24,7 @@ urlpatterns = [
 
     path("/expenses", include("weapi.django_rest.urls.expenses")),
     path("/employees", include("weapi.django_rest.urls.employees")),
+    path("", include("weapi.django_rest.urls.bd_salary")),
 
     path("/journals", include("weapi.django_rest.urls.journals")),
 

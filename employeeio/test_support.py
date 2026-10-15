@@ -42,6 +42,19 @@ def make_company_admin(user, company):
     CompanyUser.objects.get(user=user, company=company).roles.add(role)
 
 
+def give_salary_permissions(user, company, *codenames):
+    """Give `user` a non-admin role in `company` holding the named salary
+    permissions (view_salary_figures, write_salary, approve_salary)."""
+    from django.contrib.auth.models import Permission
+
+    from adminio.models import CompanyRole
+
+    role, _ = CompanyRole.objects.get_or_create(company=company, name="Payroll officer")
+    role.permission.add(*Permission.objects.filter(content_type__app_label="employeeio", codename__in=codenames))
+    CompanyUser.objects.get(user=user, company=company).roles.add(role)
+    return role
+
+
 def make_employee(company, code, name_en="Test Employee", **fields):
     return Employee.objects.create(company=company, code=code, name_en=name_en, **fields)
 
