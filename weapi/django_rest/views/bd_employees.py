@@ -13,7 +13,7 @@ from datetime import date
 
 from django.db import transaction
 from django.db.models import Q
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -187,7 +187,10 @@ class BDEmployeeSection(BDEmployeeView):
         serializer = self.serializer_class(instance, data=request.data, partial=True, context=self.context())
         if not serializer.is_valid():
             return self.invalid(serializer)
-        serializer.save()
+        try:
+            serializer.save()
+        except serializers.ValidationError as exc:  # refused while saving, e.g. a shift on a locked month
+            return Response(ui_errors(exc.detail), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.serializer_class(instance, context=self.context()).data)
 
 

@@ -234,6 +234,7 @@ LABOUR_2015_CITATIONS = {
     "sickLeave": f"{BLA}, s.116",
     "festivalHoliday": f"{BLA}, s.118",
     "compensatory": f"{BLA}, s.103",
+    "nightWork": f"{BLA}, s.109",
     "gratuity": f"{BLA}, s.2(10)",
     "compensation": f"{BLA}, s.20, s.22, s.23, s.26",
     "pf": f"{BLA}, s.264",
@@ -303,6 +304,11 @@ def _labour_2015():
         "annualAverageWeeklyHours": r(56, D, c["weeklyLimit"]),
         "restIntervalMinutesOver6h": r(60, D, c["dailyLimit"]),
         "restIntervalMinutesOver5h": r(30, D, c["dailyLimit"]),
+        # Attendance (docs/backend/attendance.md §7): what holiday working earns.
+        "compensatoryDaysWeeklyHoliday": r(1, D, c["compensatory"]),
+        "compensatoryDaysFestivalHoliday": r(2, D, c["festivalHoliday"]),
+        "substituteHolidaysFestival": r(1, D, c["festivalHoliday"]),
+        "nightWorkWindowMinutes": r({"start": 1320, "end": 360}, D, c["nightWork"], "22:00 to 06:00."),
         "maternityTotalWeeks": r(16, D, c["maternity"]),
         "maternityWeeksBefore": r(8, D, c["maternity"]),
         "maternityWeeksAfter": r(8, D, c["maternity"]),
@@ -405,6 +411,11 @@ def _labour_2026():
         "paternityLeaveDays": r(0, V, None, "No statutory paternity leave exists. A two-week recommendation in April 2025 was not enacted."),
         # RB-LEAVE
         "festivalHolidayDays": r(13, V, c["festivalHoliday"], "Raised from 11 by the 2026 amendment."),
+        # Not re-examined against the amendment: drafted, whatever the set.
+        "compensatoryDaysWeeklyHoliday": dict(base["compensatoryDaysWeeklyHoliday"], confidence=D),
+        "compensatoryDaysFestivalHoliday": dict(base["compensatoryDaysFestivalHoliday"], confidence=D),
+        "substituteHolidaysFestival": dict(base["substituteHolidaysFestival"], confidence=D),
+        "nightWorkWindowMinutes": dict(base["nightWorkWindowMinutes"], confidence=D),
         # RB-SEP — resignation, dismissal, retirement and death all now carry entitlements.
         "compensationDaysPerYearBySeparationType": {
             "TERMINATION": r({"days": 30, "higherOfGratuity": True}, V, f"{BLA}, s.26(4)"),

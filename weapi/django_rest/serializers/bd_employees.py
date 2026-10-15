@@ -21,7 +21,7 @@ from rest_framework import serializers
 
 from common import clock
 from common.money import money_str
-from companyio.models import CompanyDepartment, CompanyDesignation, CompanySection, CompanyShift
+from companyio.models import CompanyDepartment, CompanyDesignation, CompanySection
 from employeeio.choices import (
     ClassificationChoices,
     PaymentMethodChoices,
@@ -153,6 +153,41 @@ class CompanyScopedUidField(serializers.Field):
         return found
 
 
+class BDShiftField(serializers.Field):
+    """The employee's shift: the attendance shift assignment in force today
+    (attendance §3.2). Output `{uid, title, code, start, end}`; input a
+    shift uid at the employee's site. Setting it writes an effective-dated
+    assignment, never an edit of the one in force."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("allow_null", True)
+        kwargs["source"] = "*"
+        super().__init__(**kwargs)
+
+    def to_representation(self, employee):
+        from timekeepingio.services.base import current_assignment
+        from timekeepingio.services.engine import hhmm
+
+        found = current_assignment(employee)
+        if found is None:
+            return None
+        s = found.shift
+        return {"uid": str(s.uid), "title": s.label, "code": s.code, "start": hhmm(s.start_min),
+                "end": hhmm(s.end_min), "effectiveFrom": found.effective_from.isoformat()}
+
+    def to_internal_value(self, data):
+        from timekeepingio.models import Shift
+
+        if not data:
+            raise serializers.ValidationError(
+                "Choose a shift. A shift is changed, not removed: a day with no shift cannot be computed.")
+        found = Shift.objects.filter(company=self.context["company"], uid=data, is_active=True).first()
+        if found is None:
+            raise serializers.ValidationError("Not found in this company.")
+        return {"bd_shift": found}
+
+
 class ManagerField(serializers.Field):
     def __init__(self, **kwargs):
         kwargs.setdefault("required", False)
@@ -188,7 +223,6 @@ TRACKED = {
     "designation": lambda v: v.title if v else "",
     "grade": lambda v: v or "",
     "department": lambda v: v.title if v else "",
-    "shift": lambda v: (v.code or v.title) if v else "",
     "section": lambda v: v.title if v else "",
 }
 
@@ -238,7 +272,7 @@ class EmploymentSerializer(CamelModelSerializer):
     department = CompanyScopedUidField(CompanyDepartment)
     section = CompanyScopedUidField(CompanySection)
     designation = CompanyScopedUidField(CompanyDesignation)
-    shift = CompanyScopedUidField(CompanyShift)
+    shift = BDShiftField()
     manager = ManagerField()
 
     class Meta:
@@ -267,8 +301,11 @@ class EmploymentSerializer(CamelModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         request = self.context["request"]
+        bd_shift = validated_data.pop("bd_shift", None)
         before = {f: getattr(instance, f) for f in TRACKED if f in validated_data}
         instance = super().update(instance, validated_data)
+        if bd_shift is not None:
+            self._assign_shift(instance, bd_shift, request)
         for field_name, old in before.items():
             new = getattr(instance, field_name)
             if new != old:
@@ -283,6 +320,23 @@ class EmploymentSerializer(CamelModelSerializer):
                     by_name=getattr(request.user, "name", "") or getattr(request.user, "email", ""),
                 )
         return instance
+
+
+    def _assign_shift(self, instance, shift, request):
+        from timekeepingio.services.base import AttendanceRefused
+        from timekeepingio.services.ops import set_profile_shift
+
+        try:
+            changed = set_profile_shift(self.context["company"], instance, shift, user=request.user)
+        except AttendanceRefused as exc:
+            raise serializers.ValidationError({"shift": [m for ms in exc.errors.values() for m in ms]}) from None
+        if changed is not None:
+            effective, previous = changed
+            EmployeeFieldHistory.objects.create(
+                employee=instance, field=TrackedFieldChoices.SHIFT, date=effective,
+                from_value=previous.code if previous else "", to_value=shift.code, by=request.user,
+                by_name=getattr(request.user, "name", "") or getattr(request.user, "email", ""),
+            )
 
 
 class EmployeeCreateSerializer(serializers.Serializer):
