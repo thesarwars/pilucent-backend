@@ -98,6 +98,7 @@ PILUCENT_APPS = [
     "timekeepingio",
     "leaveledgerio",
     "idcardio",
+    "intakeio",
     "stockio",
     "nexusio",
     "salesio",

@@ -94,6 +94,12 @@ def period_out(period, today=None):
         "lockedBy": actor_name(period.locked_by) or None,
         "reopenedAt": period.reopened_at.isoformat() if period.reopened_at else None,
         "reopenReason": period.reopen_reason or None,
+        "stage": period.stage,
+        "acknowledgeReason": period.acknowledge_reason or None,
+        "exceptionsAcknowledged": period.exceptions_acknowledged,
+        "payrollRun": period.payroll_run_ref or None,
+        "payrollProcessedOn": period.payroll_processed_on.isoformat() if period.payroll_processed_on else None,
+        "payrollInvalidated": period.payroll_invalidated_ref or None,
     }
 
 
@@ -207,7 +213,7 @@ def day_detail(company, employee, d, *, figures):
     punches = [{
         "at": p.punched_at.astimezone(DHAKA).strftime("%Y-%m-%d %H:%M"), "direction": p.direction,
         "source": p.source, "device": p.device_id if p.source == "DEVICE" else None,
-    } for p in Punch.objects.filter(employee=employee, business_date=d).order_by("punched_at")]
+    } for p in Punch.objects.filter(employee=employee, business_date=d, void__isnull=True).order_by("punched_at")]
     adjustments = [{
         "uid": str(a.uid), "live": a.is_live, "removed": a.removed, "newStatus": a.new_status or None,
         "inTime": hhmm(a.in_time_min) if a.in_time_min is not None else None,
@@ -631,17 +637,31 @@ def confirm_holiday_work(company, site, month, *, reason="", user=None):
 # ============================================================= lock / reopen
 
 
-def lock(company, site, month, *, user=None):
+def lock(company, site, month, *, user=None, acknowledge_reason=None):
     """§9.4: refuses while a blocking gate is open; on success writes the
-    snapshots, locks, and audits."""
+    snapshots, locks, and audits.
+
+    Attendance intake §6.1: unresolved exceptions may be locked over with an
+    acknowledgement -- a reason, stored on the period with the count, so
+    "why was March locked with 7 open exceptions" has an answer. Every other
+    gate still blocks."""
     period = ensure_period(company, site, month)
     if period.status == PeriodStatusChoices.LOCKED:
         raise AttendanceRefused({"period": ["Already locked."]}, status=409)
     summary = close_summary(company, site, month)
+    acknowledged = 0
     if not summary["canLock"]:
-        open_gates = [g["label"] for g in summary["gates"] if g["blocks"] and g["count"]]
-        raise AttendanceRefused({"period": [f"Cannot lock: {'; '.join(open_gates)}."]}, status=422,
-                                detail={"gates": summary["gates"]})
+        open_gates = [g for g in summary["gates"] if g["blocks"] and g["count"]]
+        others = [g for g in open_gates if g["key"] != "high"]
+        high = next((g for g in open_gates if g["key"] == "high"), None)
+        if others or acknowledge_reason is None:
+            detail = {"gates": summary["gates"]}
+            if high and not others:
+                detail.update(needsAcknowledgement=True, count=high["count"])
+            raise AttendanceRefused({"period": [f"Cannot lock: {'; '.join(g['label'] for g in open_gates)}."]},
+                                    status=422, detail=detail)
+        acknowledge_reason = _reason(acknowledge_reason, "the reason for locking over open exceptions")
+        acknowledged = high["count"]
     rules = rules_of(period)
     employees = list(site_employees(company, site))
     w = Window(company, site, employees, month, month_end(month), rules)
@@ -661,26 +681,47 @@ def lock(company, site, month, *, user=None):
         period.status = PeriodStatusChoices.LOCKED
         period.locked_at = timezone.now()
         period.locked_by = user
-        period.save(update_fields=["status", "locked_at", "locked_by", "updated_at"])
-        audit(company, A.PERIOD_LOCKED, user, period=period, after={"month": month.isoformat()})
+        period.acknowledge_reason = acknowledge_reason or ""
+        period.exceptions_acknowledged = acknowledged
+        period.save(update_fields=["status", "locked_at", "locked_by", "acknowledge_reason",
+                                   "exceptions_acknowledged", "updated_at"])
+        audit(company, A.PERIOD_LOCKED, user, period=period, reason=acknowledge_reason or "",
+              after={"month": month.isoformat(), "exceptionsAcknowledged": acknowledged})
     return period
 
 
-def reopen(company, site, month, *, reason="", user=None):
+def reopen(company, site, month, *, reason="", user=None, confirmed_invalidates_payroll=False):
     """§9.5: needs a reason, and the reopen permission (not the lock one).
-    The snapshots go stale so payroll reassesses anything it computed."""
+    The snapshots go stale so payroll reassesses anything it computed.
+
+    Attendance intake §6.2, three gates in order: a reason; then, when a
+    payroll run consumed the month, an explicit confirmation -- and the run
+    it invalidates is stored on the period."""
     period = ensure_period(company, site, month)
     if period.status != PeriodStatusChoices.LOCKED:
         raise AttendanceRefused({"period": ["Only a locked period is reopened."]}, status=409)
     reason = _reason(reason, "the reason for reopening")
+    run = period.payroll_run_ref
+    if run and not confirmed_invalidates_payroll:
+        when = period.payroll_processed_on.isoformat() if period.payroll_processed_on else "an earlier date"
+        raise AttendanceRefused(
+            {"period": [f"Payroll for {period.period_month:%B %Y} was processed on {when}. Unlocking marks that "
+                        "run invalid and it must be re-run."]}, status=409,
+            detail={"needsConfirmation": True, "impact": {"runRef": run, "processedOn": when,
+                                                          "label": f"{period.period_month:%B %Y}"}})
     with transaction.atomic():
         period.status = PeriodStatusChoices.OPEN
+        period.stage = "OPEN"
         period.reopened_at = timezone.now()
         period.reopened_by = user
         period.reopen_reason = reason
-        period.save(update_fields=["status", "reopened_at", "reopened_by", "reopen_reason", "updated_at"])
+        if run:
+            period.payroll_invalidated_ref, period.payroll_run_ref = run, ""
+        period.save(update_fields=["status", "stage", "reopened_at", "reopened_by", "reopen_reason",
+                                   "payroll_invalidated_ref", "payroll_run_ref", "updated_at"])
         DaySnapshot.objects.filter(period=period).update(stale=True)
-        audit(company, A.PERIOD_REOPENED, user, period=period, reason=reason)
+        audit(company, A.PERIOD_REOPENED, user, period=period, reason=reason,
+              after={"payrollInvalidated": run or None})
     return period
 
 

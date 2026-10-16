@@ -30,7 +30,9 @@ class Window:
         ids = [e.pk for e in self.employees]
 
         self.punches = {}
-        for p in Punch.objects.filter(employee_id__in=ids, business_date__gte=first, business_date__lte=last):
+        # A voided punch (its import was reversed) no longer counts.
+        for p in Punch.objects.filter(employee_id__in=ids, business_date__gte=first, business_date__lte=last,
+                                      void__isnull=True):
             local = p.punched_at.astimezone(DHAKA)
             minute = (local.date() - p.business_date).days * 1440 + local.hour * 60 + local.minute
             self.punches.setdefault((p.employee_id, p.business_date), []).append((minute, p.direction))
