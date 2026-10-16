@@ -25,13 +25,14 @@ from ..choices import (
     LedgerReasonChoices as R,
     RequestStatusChoices as S,
 )
-from ..models import Encashment, LeaveCycle, LeaveHold, LeaveRequest, LedgerEntry, MaternityCase
+from ..choices import LeaveEventChoices as E
+from ..models import Encashment, LeaveCycle, LeaveHold, LeaveRequest, LedgerEntry
+from .events import emit
 from .core import (
     ZERO,
     Book,
     LeaveRefused,
     actor_name,
-    add_months,
     audit,
     cycle_bounds,
     cycle_for,
@@ -206,6 +207,10 @@ def submit_request(company, employee, code, from_date, to_date, *, start_half="F
               after={"type": ltype.code, "from": from_date.isoformat(), "to": to_date.isoformat(),
                      "days": days_str(days), "position": p.out()},
               rule_set=cycle.rule_set)
+        emit(company, E.LEAVE_REQUESTED, employee=employee, entity_ref=req.reference, actor=user,
+             payload={"type": ltype.code, "from": from_date.isoformat(), "to": to_date.isoformat(),
+                      "days": days_str(days)},
+             message=f"{req.reference}: {employee.name_en} asks {days_str(days)} days {ltype.name.lower()}")
     return req
 
 
@@ -259,6 +264,12 @@ def approve_request(company, reference, *, user=None):
         audit(company, req, A.REQUEST_APPROVED, user, on_behalf_of=employee,
               after={"entry": entry.reference, "days": days_str(req.days_consumed), "position": p.out()},
               rule_set=req.cycle.rule_set)
+        emit(company, E.LEAVE_APPROVED, employee=employee, entity_ref=req.reference, actor=user,
+             requester=req.created_by,
+             payload={"type": ltype.code, "from": req.from_date.isoformat(), "to": req.to_date.isoformat(),
+                      "days": days_str(req.days_consumed), "payRate": ltype.pay_rate, "entry": entry.reference},
+             message=f"{req.reference} approved: {ltype.name.lower()} {fmt(req.from_date)}, "
+                     f"{days_str(req.days_consumed)} days")
     return req
 
 
@@ -280,6 +291,9 @@ def decline_request(company, reference, *, reason="", user=None):
         req.save(update_fields=["status", "decline_reason", "decided_by", "decided_by_name", "decided_at",
                                 "updated_at"])
         audit(company, req, A.REQUEST_DECLINED, user, on_behalf_of=req.employee, reason=reason)
+        emit(company, E.LEAVE_DECLINED, employee=req.employee, entity_ref=req.reference, actor=user,
+             requester=req.created_by, payload={"reason": reason},
+             message=f"{req.reference} declined: {reason}")
     return req
 
 
@@ -370,6 +384,9 @@ def grant(company, employee, code, days, *, reason="", effective=None, user=None
         audit(company, entry, A.GRANTED, user, on_behalf_of=employee, reason=reason,
               before={"position": p.out()}, after={"entry": entry.reference, "days": days_str(days)},
               rule_set=cycle.rule_set)
+        emit(company, E.BALANCE_GRANTED, employee=employee, entity_ref=entry.reference, actor=user,
+             payload={"type": ltype.code, "days": days_str(days), "reason": reason},
+             message=f"{verb} {days_str(abs(days))} days {ltype.name.lower()}: {reason}")
     return entry
 
 
@@ -538,6 +555,9 @@ def _accrue_one(company, e, ltype, as_of, entered, commit, user, book):
                              reason=R.ACCRUAL if granted else R.ACCRUAL_CAPPED, effective=target.starts_on,
                              basis=basis, user=user, rule_set=rules.rule_set)
                 audit(company, entry, A.ACCRUAL_POSTED, user, on_behalf_of=e, after=out, rule_set=rules.rule_set)
+                emit(company, E.ACCRUAL_POSTED, employee=e, entity_ref=entry.reference, actor=user,
+                     payload={"days": out["granted"], "capped": capped},
+                     message=f"Earned leave: {out['granted']} days for the service year to {fmt(end)}")
             out["entry"] = entry.reference
         except IntegrityError:
             out.update(outcome="ALREADY_POSTED", why="Posted meanwhile by another run.")
@@ -589,6 +609,9 @@ def year_end_close(company, employees, as_of, *, commit=False, confirm=False, us
                              user=user, basis=f"{plural(forfeit, 'day')} above the {days_str(cap)}-day cap "
                                               f"forfeited at the end of the service year ({ltype.statutory_basis})")
                     row["forfeitEntry"] = f.reference
+                    emit(company, E.FORFEITED, employee=e, entity_ref=f.reference, actor=user,
+                         payload={"days": days_str(forfeit), "cap": days_str(cap)},
+                         message=f"{days_str(forfeit)} days of earned leave forfeited above the {days_str(cap)}-day cap")
                 if carried:
                     o = post(employee=e, ltype=ltype, cycle=nxt, days=carried, reason=R.OPENING, effective=nxt.starts_on,
                              user=user, basis=f"Carried from the service year to {fmt(c.ends_on)}: "
@@ -698,6 +721,9 @@ def approve_encashment(company, reference, *, user=None):
         enc.save(update_fields=["status", "approved_by", "approved_by_name", "approved_at", "ledger_entry", "updated_at"])
         audit(company, enc, A.ENCASHMENT_APPROVED, user, on_behalf_of=enc.employee, after={"entry": entry.reference},
               rule_set=enc.rule_set)
+        emit(company, E.ENCASHMENT_APPROVED, employee=enc.employee, entity_ref=enc.reference, actor=user,
+             payload={"days": days_str(enc.days), "amount": str(enc.amount), "divisor": enc.divisor},
+             message=f"{enc.reference} approved: {days_str(enc.days)} days of earned leave encashed")
     return enc
 
 
@@ -741,163 +767,8 @@ def mark_encashment_paid(company, reference, *, payment_month=None, user=None):
     return enc
 
 
-# ================================================================== maternity
-
-
-def open_maternity_case(company, employee, *, notice_date, notice_method, expected_delivery, surviving_children,
-                        leave_from=None, user=None):
-    """§3.10. Recording the notice grants the leave: statutory, approved,
-    not refusable. An oral notice on a past date is a valid notice. Whether
-    the BENEFIT is payable is a separate question, and a 'no' there never
-    takes the leave away."""
-    notice_date = _date(notice_date, "noticeDate")
-    expected = _date(expected_delivery, "expectedDelivery")
-    if notice_method not in ("WRITTEN", "ORAL"):
-        raise LeaveRefused({"noticeMethod": ["WRITTEN or ORAL."]}, status=400)
-    try:
-        children = int(surviving_children)
-        if children < 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        raise LeaveRefused({"survivingChildren": ["A count of surviving children, 0 or more."]}, status=400) from None
-    ltype = ensure_types(company)["MATERNITY"]
-    book = Book()
-    rules = book.rules(notice_date)
-    why = restriction(employee, ltype, notice_date, rules, service=False)
-    if why:
-        raise LeaveRefused({"employee": [why]})
-    if employee.doj is None:
-        raise LeaveRefused({"employee": ["No date of joining recorded: service cannot be counted."]})
-    before, after = rules.maternity_before, rules.maternity_after
-    total = before + after
-    start = _date(leave_from, "leaveFrom") if leave_from else expected - timedelta(days=before)
-    if start > expected:
-        raise LeaveRefused({"leaveFrom": ["The leave starts on or before the expected delivery."]})
-    if start < expected - timedelta(days=before):
-        raise LeaveRefused({"leaveFrom": [f"At most {before} days before the expected delivery."]})
-    end = start + timedelta(days=total - 1)
-    post_to = max(end, expected + timedelta(days=after - 1))
-    served = months_between(employee.doj, notice_date)
-    service_met = served >= rules.maternity_service_months
-    children_met = children <= rules.maternity_max_children
-    payable = service_met and children_met
-    reasons = []
-    if not service_met:
-        reasons.append(f"{served} months' service at notice; the benefit needs {rules.maternity_service_months} "
-                       f"({rules.citations['maternityMinimumServiceMonths']})")
-    if not children_met:
-        reasons.append(f"the surviving-children condition is not met ({rules.citations['maternityMaxSurvivingChildren']})")
-    reason = ("Benefit payable." if payable else "Benefit not payable: " + "; ".join(reasons) + ".") + \
-        f" The {total} days of leave stand either way."
-    protect = rules.maternity_protection
-    with transaction.atomic():
-        _lock(employee)
-        if MaternityCase.objects.filter(employee=employee, post_leave_to__gte=notice_date).exists():
-            raise LeaveRefused({"employee": [f"{employee.name_en} already has a maternity case open."]}, status=409)
-        cycle = LeaveCycle.objects.create(company=company, employee=employee, leave_type=ltype, kind=CK.EVENT,
-                                          starts_on=start, ends_on=post_to, rule_set=rules.rule_set)
-        grant_entry = post(employee=employee, ltype=ltype, cycle=cycle, days=(post_to - start).days + 1,
-                           reason=R.ACCRUAL, effective=start, user=user,
-                           basis=f"{plural((post_to - start).days + 1, 'day')} of maternity leave, {before} before and "
-                                 f"{after} after the delivery ({rules.citations['maternityDaysBefore']})")
-        breakdown = day_breakdown(employee, ltype, start, post_to)
-        req = _create_with_reference(
-            LeaveRequest, company, "LR", start.year, employee=employee, leave_type=ltype, cycle=cycle, from_date=start,
-            to_date=post_to, days_consumed=grant_entry.days, day_breakdown=breakdown, status=S.APPROVED,
-            non_refusable=True, note="Maternity leave, granted on the notice.", created_by=_who(user),
-            created_by_name=actor_name(user), decided_by=_who(user), decided_by_name=actor_name(user),
-            decided_at=timezone.now())
-        taken = post(employee=employee, ltype=ltype, cycle=cycle, days=-grant_entry.days, reason=R.TAKEN,
-                     effective=start, user=user, source_ref=req.reference,
-                     basis=f"Maternity leave {fmt(start)} – {fmt(post_to)}: {plural(grant_entry.days, 'day')} "
-                           f"({req.reference})")
-        req.ledger_entry = taken
-        req.save(update_fields=["ledger_entry", "updated_at"])
-        case = _create_with_reference(
-            MaternityCase, company, "MAT", notice_date.year, employee=employee, notice_date=notice_date,
-            notice_method=notice_method, notice_recorded_by=_who(user), notice_recorded_by_name=actor_name(user),
-            expected_delivery=expected, surviving_children=children, service_months=served,
-            service_months_met=service_met, children_met=children_met, benefit_payable=payable,
-            eligibility_reason=reason, pre_leave_from=start, pre_leave_to=expected - timedelta(days=1),
-            post_leave_from=expected, post_leave_to=post_to, total_days_granted=(post_to - start).days + 1,
-            protection_start=add_months(expected, -int(protect.get("beforeMonths", 6))),
-            protection_end=expected + timedelta(weeks=int(protect.get("afterWeeks", 8))),
-            employment_ban_end=expected + timedelta(weeks=rules.maternity_ban_weeks),
-            rule_set=rules.rule_set, request=req)
-        audit(company, case, A.MATERNITY_OPENED, user, on_behalf_of=employee,
-              after={"leave": [start.isoformat(), post_to.isoformat()], "benefitPayable": payable,
-                     "noticeMethod": notice_method}, rule_set=rules.rule_set)
-    return case
-
-
-def record_delivery(company, reference, *, actual_delivery, user=None):
-    """The post-delivery leave is protected (maternityVariancePolicy
-    PROTECT_POST): a late delivery extends the leave so the days after it
-    are never short, by an adjustment beside the original grant."""
-    actual = _date(actual_delivery, "actualDelivery")
-    with transaction.atomic():
-        case = (MaternityCase.objects.select_for_update().filter(company=company, reference=reference)
-                .select_related("employee", "request__cycle", "rule_set").first())
-        if case is None:
-            raise LeaveRefused({"case": [f"No maternity case {reference}."]}, status=404)
-        if actual > clock.today():
-            raise LeaveRefused({"actualDelivery": ["A delivery is recorded once it has happened."]}, status=400)
-        rules = Book().rules(case.notice_date)
-        req, cycle = case.request, case.request.cycle
-        needed_to = actual + timedelta(days=rules.maternity_after - 1)
-        extra = (needed_to - case.post_leave_to).days
-        ltype = req.leave_type
-        if extra > 0:
-            added_from = case.post_leave_to + timedelta(days=1)
-            LeaveCycle.objects.filter(pk=cycle.pk).update(ends_on=needed_to)
-            cycle.refresh_from_db()
-            post(employee=case.employee, ltype=ltype, cycle=cycle, days=extra, reason=R.ADJUSTMENT, effective=added_from,
-                 user=user, basis=f"Delivery on {fmt(actual)}: post-delivery leave protected at {rules.maternity_after} "
-                                  f"days, so {plural(extra, 'day')} added to {fmt(needed_to)}")
-            post(employee=case.employee, ltype=ltype, cycle=cycle, days=-extra, reason=R.TAKEN, effective=added_from,
-                 user=user, source_ref=req.reference,
-                 basis=f"Maternity leave extended to {fmt(needed_to)}: {plural(extra, 'day')} ({req.reference})")
-            req.to_date = needed_to
-            req.days_consumed = req.days_consumed + extra
-            req.save(update_fields=["to_date", "days_consumed", "updated_at"])
-            case.post_leave_to = needed_to
-            case.total_days_granted += extra
-        case.actual_delivery = actual
-        case.post_leave_from = actual
-        case.pre_leave_to = actual - timedelta(days=1)
-        case.status = "DELIVERED"
-        protect = rules.maternity_protection
-        case.protection_end = actual + timedelta(weeks=int(protect.get("afterWeeks", 8)))
-        case.employment_ban_end = actual + timedelta(weeks=rules.maternity_ban_weeks)
-        case.save()
-        audit(company, case, A.MATERNITY_DELIVERY, user, on_behalf_of=case.employee,
-              after={"extendedBy": max(extra, 0), "leaveTo": case.post_leave_to.isoformat()}, rule_set=case.rule_set)
-    return case
-
-
-def read_restricted(company, reference, *, user, allowed):
-    """Every read of a restricted field is logged -- a refused read too. A
-    line manager sees that the employee is on approved leave and the dates,
-    and nothing more."""
-    from ..models import RESTRICTED_MATERNITY_FIELDS
-
-    case = MaternityCase.objects.filter(company=company, reference=reference).select_related("employee").first()
-    if case is None:
-        raise LeaveRefused({"case": [f"No maternity case {reference}."]}, status=404)
-    for f in RESTRICTED_MATERNITY_FIELDS:
-        audit(company, case, A.RESTRICTED_READ if allowed else A.RESTRICTED_READ_REFUSED, user,
-              on_behalf_of=case.employee, reason=f)
-    if not allowed:
-        raise LeaveRefused({"permission": [
-            "These fields are restricted to HR. A line manager sees that the employee is on approved leave and the "
-            "dates, and nothing more. This attempt has been recorded."]}, status=403)
-    return {"expectedDelivery": case.expected_delivery.isoformat(),
-            "actualDelivery": case.actual_delivery.isoformat() if case.actual_delivery else None,
-            "survivingChildren": case.surviving_children}
-
-
 __all__ = [
     "accrual_run", "approve_encashment", "approve_request", "bulk_grant", "cancel_request", "decline_encashment",
-    "decline_request", "grant", "mark_encashment_paid", "open_maternity_case", "preview_request", "read_restricted",
-    "record_delivery", "request_encashment", "submit_request", "withdraw_request", "year_end_close",
+    "decline_request", "grant", "mark_encashment_paid", "preview_request", "request_encashment", "submit_request",
+    "withdraw_request", "year_end_close",
 ]

@@ -24,7 +24,7 @@ from common import clock
 from employeeio.models import Employee
 from employeeio.services.salary_access import has_company_permission
 from leaveledgerio.models import LedgerEntry
-from leaveledgerio.services import ops, reads
+from leaveledgerio.services import maternity, ops, reads, statements
 from leaveledgerio.services.core import LeaveRefused, days_str, position_sentence, reverse_entry
 
 from ..serializers.bd_employees import ui_errors
@@ -294,30 +294,123 @@ class LeaveEncashmentAction(LeaveView):
 
 class LeaveMaternity(LeaveView):
     def get(self, request):
-        return Response({**reads.maternity_cases(self.company()), "can": self.can()})
+        return Response({**maternity.cases(self.company(), figures=self.salary_figures()), "can": self.can()})
 
     def post(self, request):
         self.refuse_unless(APPLY)
         d = request.data
-        case = ops.open_maternity_case(
+        case = maternity.open_case(
             self.company(), self.employee(), notice_date=d.get("noticeDate"), notice_method=d.get("noticeMethod"),
             expected_delivery=d.get("expectedDelivery"), surviving_children=d.get("survivingChildren"),
-            leave_from=d.get("leaveFrom") or None, user=request.user)
-        return Response(reads.maternity_out(case), status=status.HTTP_201_CREATED)
+            basis=d.get("basis") or None, leave_from=d.get("leaveFrom") or None, user=request.user)
+        return Response(maternity.case_out(case, figures=self.salary_figures()), status=status.HTTP_201_CREATED)
+
+
+class LeaveMaternityBenefit(LeaveView):
+    """The wizard's basis step: the reference months and the benefit on
+    every basis, before one is elected."""
+
+    def get(self, request):
+        return Response(maternity.benefit_preview(self.company(), self.employee(request.query_params.get("employeeCode")),
+                                                  request.query_params.get("noticeDate"),
+                                                  figures=self.salary_figures()))
+
+
+class LeaveMaternityEvent(LeaveView):
+    def post(self, request, reference):
+        self.refuse_unless(APPLY)
+        d = request.data
+        event = str(d.get("event") or "").upper()
+        if event in ("PAY_FIRST", "PAY_SECOND"):
+            self.refuse_unless(ENCASH)
+        case = maternity.record_event(self.company(), reference, event, on=d.get("on") or None,
+                                      date_=d.get("date") or None, note=d.get("note") or "", user=request.user)
+        return Response(maternity.case_out(case, figures=self.salary_figures()))
 
 
 class LeaveMaternityDelivery(LeaveView):
     def post(self, request, reference):
         self.refuse_unless(APPLY)
-        case = ops.record_delivery(self.company(), reference, actual_delivery=request.data.get("actualDelivery"),
-                                   user=request.user)
-        return Response(reads.maternity_out(case))
+        case = maternity.record_delivery(self.company(), reference, actual_delivery=request.data.get("actualDelivery"),
+                                         user=request.user)
+        return Response(maternity.case_out(case, figures=self.salary_figures()))
 
 
 class LeaveMaternityRestricted(LeaveView):
     def get(self, request, reference):
-        return Response(ops.read_restricted(self.company(), reference, user=request.user,
-                                            allowed=self.may(MATERNITY)))
+        return Response(maternity.read_restricted(self.company(), reference, user=request.user,
+                                                  allowed=self.may(MATERNITY)))
+
+
+class LeaveStatements(LeaveView):
+    def get(self, request):
+        quarter = request.query_params.get("quarter") or statements.quarter_of(clock.today())
+        return Response({**statements.summary(self.company(), quarter), "quarters": statements.quarters_around(),
+                         "can": self.can()})
+
+    def post(self, request):
+        self.refuse_unless(CLOSE)
+        d = request.data
+        batch = statements.generate(self.company(), d.get("quarter"),
+                                    acknowledge_unlocked=bool(d.get("acknowledgeUnlocked")), user=request.user)
+        return Response(statements.summary(self.company(), batch.quarter), status=status.HTTP_201_CREATED)
+
+
+class LeaveStatementIssue(LeaveView):
+    def post(self, request):
+        self.refuse_unless(APPLY)
+        d = request.data
+        count = statements.record_issue(self.company(), d.get("quarter"), str(d.get("method") or "").upper(),
+                                        codes=d.get("employeeCodes") or None, on=d.get("on") or None,
+                                        detail=d.get("detail") or "", user=request.user)
+        return Response({"issued": count, **statements.summary(self.company(), d.get("quarter"))})
+
+
+class LeaveStatementAcknowledge(LeaveView):
+    def post(self, request, uid):
+        self.refuse_unless(APPLY)
+        s = statements.acknowledge(self.company(), uid, on=request.data.get("on") or None, user=request.user)
+        return Response(statements.statement_out(s))
+
+
+class LeaveStatementDetail(LeaveView):
+    """One worker's statement, for printing (Form-9)."""
+
+    def get(self, request, uid):
+        from leaveledgerio.models import Statement
+
+        s = get_object_or_404(Statement.objects.select_related("batch", "employee", "company"), uid=uid,
+                              company=self.company())
+        return Response({**statements.statement_out(s), "quarter": s.batch.quarter,
+                         "period": statements.quarter_label(s.batch.quarter), "version": s.batch.version,
+                         "employer": s.company.name})
+
+
+class LeaveEvents(LeaveView):
+    """The §9 outbox, for consumers such as payroll: unconsumed events by
+    name, and marking them consumed."""
+
+    def get(self, request):
+        from leaveledgerio.services.events import pending
+
+        qs = pending(self.company(), request.query_params.get("name") or None)[:500]
+        return Response({"rows": [{"uid": str(x.uid), "name": x.name, "employee": x.employee.code if x.employee else None,
+                                   "ref": x.entity_ref, "payload": x.payload, "at": x.created_at.isoformat()}
+                                  for x in qs.select_related("employee")]})
+
+    def post(self, request):
+        from django.utils import timezone
+
+        from leaveledgerio.models import LeaveEvent
+
+        self.refuse_unless(CLOSE)
+        consumer = str(request.data.get("consumer") or "").strip()[:60]
+        if not consumer:
+            raise LeaveRefused({"consumer": ["Name the consumer marking these events."]}, status=400)
+        n = (LeaveEvent.objects.filter(company=self.company(), uid__in=request.data.get("uids") or [],
+                                       consumed_at__isnull=True)
+             .update(consumed_at=timezone.now(), consumed_by=consumer))
+        return Response({"consumed": n})
 
 
 class LeavePolicy(LeaveView):

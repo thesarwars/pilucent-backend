@@ -26,7 +26,7 @@ from employeeio.test_support import (
 from timekeepingio.test_support import assign, day_shift, publish, worked_day
 
 from .models import Encashment, LeaveAudit, LedgerEntry, LeaveHold, LeaveRequest
-from .services import ops, reads
+from .services import maternity, ops, reads
 from .services.core import (
     Book,
     LeaveRefused,
@@ -321,7 +321,7 @@ class EncashmentTests(Base):
 
 class MaternityTests(Base):
     def open(self, children=1):
-        return ops.open_maternity_case(self.company, self.emp, notice_date="2027-02-01", notice_method="ORAL",
+        return maternity.open_case(self.company, self.emp, notice_date="2027-02-01", notice_method="ORAL",
                                        expected_delivery="2027-06-01", surviving_children=children)
 
     def test_l10_maternity_counts_every_calendar_day(self):
@@ -342,24 +342,24 @@ class MaternityTests(Base):
     def test_l13_a_restricted_read_without_the_permission_is_refused_and_logged(self):
         case = self.open()
         with self.assertRaises(LeaveRefused) as caught:
-            ops.read_restricted(self.company, case.reference, user=None, allowed=False)
+            maternity.read_restricted(self.company, case.reference, user=None, allowed=False)
         self.assertEqual(caught.exception.status, 403)
         self.assertEqual(LeaveAudit.objects.filter(action="RESTRICTED_READ_REFUSED").count(), 3)
-        out = ops.read_restricted(self.company, case.reference, user=None, allowed=True)
+        out = maternity.read_restricted(self.company, case.reference, user=None, allowed=True)
         self.assertEqual(out["survivingChildren"], 1)
         self.assertEqual(LeaveAudit.objects.filter(action="RESTRICTED_READ").count(), 3)
 
     def test_a_late_delivery_protects_the_post_delivery_leave(self):
         case = self.open()
         clock.freeze(date(2027, 6, 20))
-        case = ops.record_delivery(self.company, case.reference, actual_delivery="2027-06-15")
+        case = maternity.record_delivery(self.company, case.reference, actual_delivery="2027-06-15")
         self.assertEqual(case.post_leave_to, date(2027, 8, 13))
         self.assertEqual(case.request.days_consumed, Decimal("134"))
 
     def test_a_man_has_no_maternity_case(self):
         man = make_employee(self.company, "EMP-0005", "Rafiq", gender="MALE", doj=date(2024, 1, 1))
         with self.assertRaises(LeaveRefused):
-            ops.open_maternity_case(self.company, man, notice_date="2027-02-01", notice_method="WRITTEN",
+            maternity.open_case(self.company, man, notice_date="2027-02-01", notice_method="WRITTEN",
                                     expected_delivery="2027-06-01", surviving_children=0)
 
 
@@ -430,7 +430,7 @@ class ApiTests(ApiMixin, Base):
         self.assertEqual(self.client_for(self.admin).get(f"{API}/employees/EMP-7777").status_code, 404)
 
     def test_the_restricted_read_logs_a_refusal(self):
-        case = ops.open_maternity_case(self.company, self.emp, notice_date="2027-02-01", notice_method="WRITTEN",
+        case = maternity.open_case(self.company, self.emp, notice_date="2027-02-01", notice_method="WRITTEN",
                                        expected_delivery="2027-06-01", surviving_children=0)
         response = self.client_for(self.clerk).get(f"{API}/maternity/{case.reference}/restricted")
         self.assertEqual(response.status_code, 403)

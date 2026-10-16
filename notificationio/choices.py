@@ -17,6 +17,7 @@ class NotificationModelKindChoices(models.TextChoices):
     STOCK_ALERT = "STOCK_ALERT", "Stock Alert"
     DISPUT = "DISPUT", "Disput"
     NEXUS = "NEXUS", "Economic Nexus"  # no per-object FK; message-only
+    LEAVE = "LEAVE", "Leave"  # BD leave; message-only, the outbox carries the record
 
 
 class NotificationKindChoices(models.TextChoices):
@@ -60,3 +61,15 @@ class NotificationKindChoices(models.TextChoices):
         "Nexus Threshold Approaching",
     )
     NEXUS_THRESHOLD_CROSSED = "NEXUS_THRESHOLD_CROSSED", "Nexus Threshold Crossed"
+
+    # BD leave (leaveledgerio events, leave-backend.md §9)
+    LEAVE_REQUESTED = "LEAVE_REQUESTED", "Leave Requested"
+    LEAVE_APPROVED = "LEAVE_APPROVED", "Leave Approved"
+    LEAVE_DECLINED = "LEAVE_DECLINED", "Leave Declined"
+    LEAVE_BALANCE_GRANTED = "LEAVE_BALANCE_GRANTED", "Leave Balance Granted"
+    LEAVE_ACCRUAL_POSTED = "LEAVE_ACCRUAL_POSTED", "Leave Accrual Posted"
+    LEAVE_FORFEITED = "LEAVE_FORFEITED", "Leave Forfeited"
+    ENCASHMENT_APPROVED = "ENCASHMENT_APPROVED", "Encashment Approved"
+    MATERNITY_CASE_OPENED = "MATERNITY_CASE_OPENED", "Maternity Case Opened"
+    MATERNITY_PAYMENT_DUE = "MATERNITY_PAYMENT_DUE", "Maternity Payment Due"
+    COMPENSATORY_CREDIT_EARNED = "COMPENSATORY_CREDIT_EARNED", "Compensatory Credit Earned"

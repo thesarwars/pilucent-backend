@@ -148,6 +148,11 @@ class LeaveRules:
     maternity_max_children: int
     maternity_ban_weeks: int
     maternity_protection: dict
+    maternity_basis: str
+    maternity_basis_options: dict
+    maternity_pay_working_days: int
+    maternity_proof_months: int
+    maternity_reference_months: int
     citations: dict = field(default_factory=dict)
     rows: list = field(default_factory=list)
 
@@ -169,6 +174,11 @@ class LeaveRules:
         "maternityMaxSurvivingChildren": "Maternity benefit with at most this many surviving children",
         "maternityEmploymentBanWeeks": "No employment after the delivery for (weeks)",
         "maternityDismissalProtection": "Protection from dismissal",
+        "maternityBenefitBasis": "Maternity benefit basis (an election)",
+        "maternityBenefitBasisOptions": "Maternity benefit bases",
+        "maternityPaymentWorkingDays": "Each benefit instalment due within (working days)",
+        "maternityProofOfBirthMonths": "Proof of birth due within (months)",
+        "maternityReferencePeriodMonths": "Benefit reference period (months before the notice)",
     }
 
     @classmethod
@@ -192,6 +202,11 @@ class LeaveRules:
             maternity_max_children=int(v("maternityMaxSurvivingChildren")),
             maternity_ban_weeks=int(v("maternityEmploymentBanWeeks")),
             maternity_protection=dict(v("maternityDismissalProtection")),
+            maternity_basis=str(v("maternityBenefitBasis")),
+            maternity_basis_options=dict(v("maternityBenefitBasisOptions")),
+            maternity_pay_working_days=int(v("maternityPaymentWorkingDays")),
+            maternity_proof_months=int(v("maternityProofOfBirthMonths")),
+            maternity_reference_months=int(v("maternityReferencePeriodMonths")),
             citations={k: g.citation for k, g in got.items()},
             rows=[{"key": k, "label": label, "value": got[k].value, "confidence": got[k].confidence,
                    "citation": got[k].citation, "note": got[k].note} for k, label in cls.KEYS.items()],
@@ -463,13 +478,13 @@ def _scope(ltype):
     return "ALL" if ltype.cycle_kind == CK.ROLLING else "CYCLE"
 
 
-def position(employee, ltype, as_of, *, cycle=None, exclude_request=None, book=None):
+def position(employee, ltype, as_of, *, cycle=None, exclude_request=None, book=None, open_cycle=True):
     """spendable() (§5.1). The single availability function: everything that
     shows or tests what can be spent calls this or `Positions`, which is the
     same arithmetic for many employees at once."""
     book = book or Book()
     if _scope(ltype) == "CYCLE":
-        cycle = cycle or cycle_for(employee, ltype, as_of, book)
+        cycle = cycle or cycle_for(employee, ltype, as_of, book, create=open_cycle)
         if cycle is None:
             return Position(cycle=None)
         filt = {"cycle": cycle}
@@ -666,6 +681,13 @@ def post_credit(credit, *, book=None, types=None):
             audit(employee.company, entry, A.CREDIT_EARNED, None, on_behalf_of=employee,
                   after={"days": days_str(credit.days), "kind": credit.kind, "date": start.isoformat()},
                   rule_set=rules.rule_set)
+            from .events import emit
+            from ..choices import LeaveEventChoices
+
+            emit(employee.company, LeaveEventChoices.CREDIT_EARNED, employee=employee, entity_ref=entry.reference,
+                 payload={"days": days_str(credit.days), "kind": credit.kind, "date": start.isoformat(),
+                          "takeBy": cycle.ends_on.isoformat()},
+                 message=f"{days_str(credit.days)} compensatory days for {fmt(start)}, take by {fmt(cycle.ends_on)}")
             return entry
     except IntegrityError:
         return None

@@ -94,13 +94,15 @@ def separation_preview(employee, separation_type, on, gross_misconduct=False):
     """What the employee would be owed. Needs a salary structure (the wage)
     and a date of joining (the service)."""
     structure = structure_in_force(employee, on)
+    block = maternity_block(employee, on)
+    protection = [{"key": "maternity", "message": block["message"], "citation": block["citation"]}] if block else []
     if structure is None or employee.doj is None:
-        return {"available": False, "message": (
+        return {"available": False, "warnings": protection, "message": (
             "No salary structure in force on the separation date." if structure is None
             else "No date of joining on file: length of service cannot be computed.")}
     book = rule_book(on)
     out = separation_entitlement(employee, structure, separation_type, on, book, gross_misconduct)
-    warnings = []
+    warnings = list(protection)
     if separation_type == SeparationTypeChoices.RETIREMENT:
         warning = retirement_age_warning(employee, on, book)
         if warning:
@@ -108,9 +110,18 @@ def separation_preview(employee, separation_type, on, gross_misconduct=False):
     return {"available": True, **out, "warnings": warnings}
 
 
-def separate(employee, *, separation_type, on, reason, gross_misconduct=False, user=None):
+def maternity_block(employee, on):
+    """s.50 maternity protection, from the leave module (None when clear)."""
+    from leaveledgerio.services.maternity import separation_block
+
+    return separation_block(employee, on) if on else None
+
+
+def separate(employee, *, separation_type, on, reason, gross_misconduct=False, user=None, maternity_override=False):
     """Records `separatedOn` and `separationType`. Until the final settlement
-    runs the employee is a hard block on payroll (§3.1)."""
+    runs the employee is a hard block on payroll (§3.1). Inside maternity
+    protection (s.50) it is refused unless overridden, with the reason on
+    the record."""
     if separation_type not in SeparationTypeChoices.values:
         raise GatedRefused({"type": [f"type must be one of {', '.join(SeparationTypeChoices.values)}."]})
     if on is None:
@@ -125,7 +136,13 @@ def separate(employee, *, separation_type, on, reason, gross_misconduct=False, u
     if gross_misconduct and separation_type != SeparationTypeChoices.DISMISSAL:
         raise GatedRefused({"gross_misconduct": ["Gross misconduct applies to a dismissal only."]})
     entitlement = separation_preview(employee, separation_type, on, gross_misconduct)
+    block = maternity_block(employee, on)
+    if block and not maternity_override:
+        raise GatedRefused({"separation": [block["message"]]}, {"entitlement": entitlement, "maternity": block},
+                           status=409)
     reason = _reason(reason, {"entitlement": entitlement})
+    if block:
+        reason = f"Maternity protection ({block['case']}, {block['citation']}) overridden: {reason}"
     label = dict(SeparationTypeChoices.choices)[separation_type]
     with transaction.atomic():
         locked = _locked(employee)

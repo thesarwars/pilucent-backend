@@ -322,6 +322,13 @@ def _labour_2015():
         "maternityDaysAfter": r(56, D, c["maternity"], "8 weeks."),
         "maternityEmploymentBanWeeks": r(8, D, c["maternity"]),
         "maternityDismissalProtection": r({"beforeMonths": 6, "afterWeeks": 8}, D, f"{BLA}, s.50"),
+        # Leave: the benefit and its payment. The 2026 set restates these.
+        "maternityBenefitBasis": r("ACT_S48", D, c["maternityBenefit"]),
+        "maternityBenefitBasisOptions": r(
+            {"ACT_S48": {"label": "3 months' wages ÷ days actually worked", "citation": c["maternityBenefit"]}},
+            D, c["maternityBenefit"], "The 2022 Rules' alternative does not exist before 2022."),
+        "maternityPaymentWorkingDays": r(3, D, c["maternityBenefit"]),
+        "maternityProofOfBirthMonths": r(3, D, c["maternity"]),
         "maternityBenefitDays": r(112, D, c["maternityBenefit"]),
         "maternityMinimumServiceMonths": r(6, D, c["maternity"]),
         "maternityMaxSurvivingChildren": r(2, D, c["maternity"]),

@@ -18,6 +18,10 @@ from common.models import BaseModelWithUID
 
 from .choices import (
     AccrualKindChoices,
+    BenefitBasisChoices,
+    IssueMethodChoices,
+    LeaveEventChoices,
+    MaternityEventChoices,
     CycleKindChoices,
     EncashmentStatusChoices,
     GenderRestrictionChoices,
@@ -342,7 +346,7 @@ class MaternityCase(BaseModelWithUID):
     company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="+")
     reference = models.CharField(max_length=20)
     employee = models.ForeignKey("employeeio.Employee", on_delete=models.CASCADE, related_name="maternity_cases")
-    status = models.CharField(max_length=10, choices=MaternityStatusChoices.choices,
+    status = models.CharField(max_length=15, choices=MaternityStatusChoices.choices,
                               default=MaternityStatusChoices.NOTIFIED)
 
     notice_date = models.DateField()
@@ -372,11 +376,150 @@ class MaternityCase(BaseModelWithUID):
     rule_set = models.ForeignKey("rulebookio.RuleSet", on_delete=models.PROTECT, related_name="+")
     request = models.OneToOneField(LeaveRequest, on_delete=models.PROTECT, related_name="maternity_case")
 
+    # The benefit (s.48), computed at the notice and kept as computed: the
+    # basis is a disputed rule, elected on the record, and the reference wages
+    # are what it was worked out from.
+    benefit_basis = models.CharField(max_length=12, choices=BenefitBasisChoices.choices,
+                                     default=BenefitBasisChoices.ACT_S48)
+    basis_elected_by_name = _text()
+    reference_lines = models.JSONField(default=list)  # [{month, wage, days, daysSource}]
+    total_wage = models.DecimalField(**DAYS, default=0)
+    total_days = models.DecimalField(**DAYS, default=0)
+    average_daily_wage = models.DecimalField(**DAYS, default=0)
+    benefit_days = models.PositiveSmallIntegerField(default=0)
+    benefit_amount = models.DecimalField(**DAYS, default=0)
+    first_instalment_amount = models.DecimalField(**DAYS, default=0)
+    second_instalment_amount = models.DecimalField(**DAYS, default=0)
+    benefit_basis_text = models.TextField(blank=True, default="")
+
+    proof_of_pregnancy_on = models.DateField(null=True, blank=True)
+    first_instalment_paid_on = models.DateField(null=True, blank=True)
+    proof_of_birth_on = models.DateField(null=True, blank=True)
+    second_instalment_paid_on = models.DateField(null=True, blank=True)
+    returned_on = models.DateField(null=True, blank=True)
+    cancelled_on = models.DateField(null=True, blank=True)
+    cancel_reason = models.TextField(blank=True, default="")
+
     class Meta:
         ordering = ("-created_at",)
         constraints = [
             models.UniqueConstraint(fields=["company", "reference"], name="leaveledgerio_maternity_reference"),
         ]
+
+
+class AppendOnlyQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValidationError(APPEND_ONLY)
+
+    def delete(self):
+        raise ValidationError(APPEND_ONLY)
+
+
+class AppendOnlyModel(BaseModelWithUID):
+    objects = AppendOnlyQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError(APPEND_ONLY)
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(APPEND_ONLY)
+
+
+class MaternityEvent(AppendOnlyModel):
+    """The case's timeline, in the statute's order. Never edited."""
+
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="+")
+    case = models.ForeignKey(MaternityCase, on_delete=models.CASCADE, related_name="events")
+    event = models.CharField(max_length=20, choices=MaternityEventChoices.choices)
+    on = models.DateField()
+    note = models.TextField(blank=True, default="")
+    actor = _user()
+    actor_name = _text()
+
+    class Meta:
+        ordering = ("on", "id")
+
+
+# ----------------------------------------------------------------- statements
+
+
+class StatementBatch(BaseModelWithUID):
+    """A quarter's leave statements (Form-9), one per worker. Regenerating
+    makes a new version; an issued statement is never rewritten."""
+
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="+")
+    quarter = models.CharField(max_length=7)  # 2026-Q4
+    version = models.PositiveSmallIntegerField(default=1)
+    period_from = models.DateField()
+    period_to = models.DateField()
+    generated_by = _user()
+    generated_by_name = _text()
+    # Attendance months still open when it was generated, acknowledged on the record.
+    unlocked_months = models.JSONField(default=list)
+
+    class Meta:
+        ordering = ("-quarter", "-version")
+        constraints = [
+            models.UniqueConstraint(fields=["company", "quarter", "version"], name="leaveledgerio_statement_version"),
+        ]
+
+
+class Statement(BaseModelWithUID):
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="+")
+    batch = models.ForeignKey(StatementBatch, on_delete=models.CASCADE, related_name="statements")
+    employee = models.ForeignKey("employeeio.Employee", on_delete=models.CASCADE, related_name="leave_statements")
+    rows = models.JSONField()  # one per leave type: opening, earned, taken, refused, encashed, other, closing
+    acknowledged_at = models.DateField(null=True, blank=True)
+    acknowledged_by_name = _text()
+
+    class Meta:
+        ordering = ("employee__code",)
+        constraints = [
+            models.UniqueConstraint(fields=["batch", "employee"], name="leaveledgerio_statement_once"),
+        ]
+
+
+class StatementIssue(AppendOnlyModel):
+    """How a statement reached the worker. The statement is easy; evidencing
+    that the worker received it is what an inspection tests."""
+
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="+")
+    statement = models.ForeignKey(Statement, on_delete=models.CASCADE, related_name="issues")
+    method = models.CharField(max_length=10, choices=IssueMethodChoices.choices)
+    on = models.DateField()
+    detail = _text()
+    recorded_by = _user()
+    recorded_by_name = _text()
+
+    class Meta:
+        ordering = ("on", "id")
+
+
+# --------------------------------------------------------------------- events
+
+
+class LeaveEvent(BaseModelWithUID):
+    """§9's events, as an outbox: written in the same transaction as the
+    change, consumed later (payroll reads LeaveApproved and
+    EncashmentApproved). Notifications go out beside it."""
+
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="+")
+    name = models.CharField(max_length=40, choices=LeaveEventChoices.choices)
+    employee = models.ForeignKey("employeeio.Employee", on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="+")
+    entity_ref = models.CharField(max_length=60, blank=True, default="")
+    payload = models.JSONField(default=dict)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    consumed_by = _text(60)
+
+    class Meta:
+        ordering = ("created_at", "id")
+        indexes = [models.Index(fields=["company", "name", "consumed_at"], name="leaveledgerio_event_open")]
 
 
 # ---------------------------------------------------------------------- audit

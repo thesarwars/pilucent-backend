@@ -16,7 +16,7 @@ from employeeio.models import Employee
 
 from ..choices import LedgerReasonChoices as R
 from ..choices import RequestStatusChoices as S
-from ..models import Encashment, LeaveHold, LeaveRequest, LedgerEntry, MaternityCase
+from ..models import Encashment, LeaveHold, LeaveRequest, LedgerEntry
 from .core import (
     GRID,
     ZERO,
@@ -381,31 +381,6 @@ def encashments(company, figures):
     for r in rows:
         counts[r["status"]] = counts.get(r["status"], 0) + 1
     return {"rows": rows, "counts": counts, "masked": not figures}
-
-
-# ================================================================== maternity
-
-
-def maternity_out(case):
-    """No restricted field, ever: they are read one at a time, logged."""
-    return {
-        "reference": case.reference, "employee": employee_out(case.employee), "status": case.status,
-        "noticeDate": case.notice_date.isoformat(), "noticeMethod": case.notice_method,
-        "noticeRecordedBy": case.notice_recorded_by_name or None,
-        "leaveFrom": case.pre_leave_from.isoformat(), "leaveTo": case.post_leave_to.isoformat(),
-        "totalDays": case.total_days_granted, "benefitPayable": case.benefit_payable,
-        "eligibility": case.eligibility_reason, "serviceMonths": case.service_months,
-        "serviceMonthsMet": case.service_months_met,
-        "protectionStart": case.protection_start.isoformat(), "protectionEnd": case.protection_end.isoformat(),
-        "employmentBanEnd": case.employment_ban_end.isoformat(), "request": case.request.reference,
-        "deliveryRecorded": case.actual_delivery is not None,
-    }
-
-
-def maternity_cases(company):
-    qs = MaternityCase.objects.filter(company=company).select_related("employee__department",
-                                                                      "employee__designation", "request")
-    return {"rows": [maternity_out(c) for c in qs]}
 
 
 # ===================================================================== policy

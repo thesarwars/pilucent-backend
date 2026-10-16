@@ -82,8 +82,39 @@ class NoticeMethodChoices(models.TextChoices):
 
 
 class MaternityStatusChoices(models.TextChoices):
+    """The statute's order: notice, proof of pregnancy and the first
+    instalment, delivery, proof of birth and the second, the return."""
+
     NOTIFIED = "NOTIFIED", "Notice recorded"
+    ON_LEAVE_PRE = "ON_LEAVE_PRE", "First instalment paid"
     DELIVERED = "DELIVERED", "Delivery recorded"
+    ON_LEAVE_POST = "ON_LEAVE_POST", "Second instalment paid"
+    COMPLETED = "COMPLETED", "Returned to work"
+    CANCELLED = "CANCELLED", "Cancelled"
+
+
+class MaternityEventChoices(models.TextChoices):
+    NOTICE = "NOTICE", "Notice received"
+    PROOF_OF_PREGNANCY = "PROOF_OF_PREGNANCY", "Proof of pregnancy recorded"
+    PAY_FIRST = "PAY_FIRST", "First instalment paid"
+    DELIVERY = "DELIVERY", "Delivery recorded"
+    PROOF_OF_BIRTH = "PROOF_OF_BIRTH", "Proof of birth recorded"
+    PAY_SECOND = "PAY_SECOND", "Second instalment paid"
+    RETURN = "RETURN", "Returned to work"
+    CANCEL = "CANCEL", "Case cancelled"
+
+
+class BenefitBasisChoices(models.TextChoices):
+    # Disputed in the rule book: an election made on the record.
+    ACT_S48 = "ACT_S48", "3 months' wages ÷ days actually worked (s.48)"
+    RULES_2022 = "RULES_2022", "1 month's wages ÷ 26 (Rules 2022)"
+
+
+class IssueMethodChoices(models.TextChoices):
+    PRINTED = "PRINTED", "Printed pack"
+    EMAIL = "EMAIL", "Email"
+    PORTAL = "PORTAL", "Portal"
+    SMS = "SMS", "SMS"
 
 
 class LeaveAuditActionChoices(models.TextChoices):
@@ -107,3 +138,22 @@ class LeaveAuditActionChoices(models.TextChoices):
     MATERNITY_DELIVERY = "MATERNITY_DELIVERY", "Delivery recorded"
     RESTRICTED_READ = "RESTRICTED_READ", "Restricted maternity field read"
     RESTRICTED_READ_REFUSED = "RESTRICTED_READ_REFUSED", "Restricted maternity field refused"
+    MATERNITY_EVENT = "MATERNITY_EVENT", "Maternity event"
+    STATEMENTS_GENERATED = "STATEMENTS_GENERATED", "Quarterly statements generated"
+    STATEMENT_ISSUED = "STATEMENT_ISSUED", "Statement issued"
+    STATEMENT_ACKNOWLEDGED = "STATEMENT_ACKNOWLEDGED", "Statement receipt acknowledged"
+
+
+class LeaveEventChoices(models.TextChoices):
+    """§9. Written to the outbox for consumers (payroll) and as notifications."""
+
+    LEAVE_REQUESTED = "LeaveRequested", "Leave requested"
+    LEAVE_APPROVED = "LeaveApproved", "Leave approved"
+    LEAVE_DECLINED = "LeaveDeclined", "Leave declined"
+    BALANCE_GRANTED = "LeaveBalanceGranted", "Leave granted or debited"
+    ACCRUAL_POSTED = "LeaveAccrualPosted", "Earned leave accrued"
+    FORFEITED = "LeaveForfeited", "Leave forfeited"
+    ENCASHMENT_APPROVED = "EncashmentApproved", "Encashment approved"
+    MATERNITY_CASE_OPENED = "MaternityCaseOpened", "Maternity case opened"
+    MATERNITY_PAYMENT_DUE = "MaternityPaymentDue", "Maternity benefit instalment due"
+    CREDIT_EARNED = "CompensatoryCreditEarned", "Compensatory holiday earned"
