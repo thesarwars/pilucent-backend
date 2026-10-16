@@ -587,6 +587,8 @@ class SeparationSerializer(StrictSerializer):
     # DISMISSAL only: theft, fraud, dishonesty, rioting, arson or wilful
     # breach of discipline -- the entitlement is nil (s.23).
     grossMisconduct = serializers.BooleanField(required=False, default=False)
+    # s.50: separating a woman inside maternity protection needs this, and the reason.
+    maternityOverride = serializers.BooleanField(required=False, default=False)
     preview = serializers.BooleanField(required=False, default=False)
 
 

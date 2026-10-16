@@ -266,6 +266,10 @@ def _labour_2015():
             "DEF-04: the cap is not 40 for every type. Split seeded, unverified — confirm against the Bangla text of s.117. "
             "docs/employee-profile.md §7.4 states 40 for most and 60 for newspaper only; the two disagree.",
         ),
+        # Leave (docs/backend/leave-backend.md §4): an adolescent earns faster.
+        "earnedLeaveRatioAdolescentByEstablishment": r(
+            {"FACTORY": 15, "SHOP": 15, "COMMERCIAL_ESTABLISHMENT": 15, "INDUSTRIAL_ESTABLISHMENT": 15,
+             "ROAD_TRANSPORT": 15, "TEA_PLANTATION": 18, "NEWSPAPER": 11}, D, c["earnedLeave"]),
         "casualLeaveDays": r(10, D, c["casualLeave"]),
         "sickLeaveDays": r(14, D, c["sickLeave"]),
         "festivalHolidayDays": r(11, D, c["festivalHoliday"]),
@@ -309,9 +313,22 @@ def _labour_2015():
         "compensatoryDaysFestivalHoliday": r(2, D, c["festivalHoliday"]),
         "substituteHolidaysFestival": r(1, D, c["festivalHoliday"]),
         "nightWorkWindowMinutes": r({"start": 1320, "end": 360}, D, c["nightWork"], "22:00 to 06:00."),
+        # Leave: a compensatory holiday not taken by then lapses.
+        "compensatoryHolidayDueDays": r(30, D, c["compensatory"], "The leave spec's figure; not found in the Act."),
         "maternityTotalWeeks": r(16, D, c["maternity"]),
         "maternityWeeksBefore": r(8, D, c["maternity"]),
         "maternityWeeksAfter": r(8, D, c["maternity"]),
+        "maternityDaysBefore": r(56, D, c["maternity"], "8 weeks."),
+        "maternityDaysAfter": r(56, D, c["maternity"], "8 weeks."),
+        "maternityEmploymentBanWeeks": r(8, D, c["maternity"]),
+        "maternityDismissalProtection": r({"beforeMonths": 6, "afterWeeks": 8}, D, f"{BLA}, s.50"),
+        # Leave: the benefit and its payment. The 2026 set restates these.
+        "maternityBenefitBasis": r("ACT_S48", D, c["maternityBenefit"]),
+        "maternityBenefitBasisOptions": r(
+            {"ACT_S48": {"label": "3 months' wages ÷ days actually worked", "citation": c["maternityBenefit"]}},
+            D, c["maternityBenefit"], "The 2022 Rules' alternative does not exist before 2022."),
+        "maternityPaymentWorkingDays": r(3, D, c["maternityBenefit"]),
+        "maternityProofOfBirthMonths": r(3, D, c["maternity"]),
         "maternityBenefitDays": r(112, D, c["maternityBenefit"]),
         "maternityMinimumServiceMonths": r(6, D, c["maternity"]),
         "maternityMaxSurvivingChildren": r(2, D, c["maternity"]),
@@ -416,6 +433,9 @@ def _labour_2026():
         "compensatoryDaysFestivalHoliday": dict(base["compensatoryDaysFestivalHoliday"], confidence=D),
         "substituteHolidaysFestival": dict(base["substituteHolidaysFestival"], confidence=D),
         "nightWorkWindowMinutes": dict(base["nightWorkWindowMinutes"], confidence=D),
+        "earnedLeaveRatioAdolescentByEstablishment": dict(base["earnedLeaveRatioAdolescentByEstablishment"],
+                                                          confidence=D),
+        "compensatoryHolidayDueDays": dict(base["compensatoryHolidayDueDays"], confidence=D),
         # RB-SEP — resignation, dismissal, retirement and death all now carry entitlements.
         "compensationDaysPerYearBySeparationType": {
             "TERMINATION": r({"days": 30, "higherOfGratuity": True}, V, f"{BLA}, s.26(4)"),

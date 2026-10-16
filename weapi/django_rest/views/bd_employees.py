@@ -500,7 +500,8 @@ class BDEmployeeSeparation(GatedWriteMixin, BDEmployeeView):
         try:
             result = gated.separate(
                 employee, separation_type=data["type"], on=data["date"], reason=data["reason"],
-                gross_misconduct=data["grossMisconduct"], user=request.user)
+                gross_misconduct=data["grossMisconduct"], user=request.user,
+                maternity_override=data["maternityOverride"])
         except gated.GatedRefused as exc:
             return self.refused(exc)
         return Response({**result, "history": history_out(result["history"])}, status=status.HTTP_201_CREATED)

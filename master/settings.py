@@ -96,6 +96,7 @@ PILUCENT_APPS = [
     "payrollio",
     "rulebookio",
     "timekeepingio",
+    "leaveledgerio",
     "stockio",
     "nexusio",
     "salesio",
