@@ -18,6 +18,7 @@ class NotificationModelKindChoices(models.TextChoices):
     DISPUT = "DISPUT", "Disput"
     NEXUS = "NEXUS", "Economic Nexus"  # no per-object FK; message-only
     LEAVE = "LEAVE", "Leave"  # BD leave; message-only, the outbox carries the record
+    ID_CARD = "ID_CARD", "ID card"  # BD ID cards; message-only, the outbox carries the record
 
 
 class NotificationKindChoices(models.TextChoices):
@@ -73,3 +74,11 @@ class NotificationKindChoices(models.TextChoices):
     MATERNITY_CASE_OPENED = "MATERNITY_CASE_OPENED", "Maternity Case Opened"
     MATERNITY_PAYMENT_DUE = "MATERNITY_PAYMENT_DUE", "Maternity Payment Due"
     COMPENSATORY_CREDIT_EARNED = "COMPENSATORY_CREDIT_EARNED", "Compensatory Credit Earned"
+
+    # BD ID cards (idcardio events, id-cards.md §9)
+    ID_CARD_ISSUED = "ID_CARD_ISSUED", "ID Card Issued"
+    ID_CARD_REVOKED = "ID_CARD_REVOKED", "ID Card Revoked"
+    ID_CARD_EXPIRING = "ID_CARD_EXPIRING", "ID Card Expiring"
+    CARD_PRINT_READY = "CARD_PRINT_READY", "Card Print Job Ready"
+    CARD_PRINT_FAILED = "CARD_PRINT_FAILED", "Card Print Job Failed"
+    CARD_TEMPLATE_PUBLISHED = "CARD_TEMPLATE_PUBLISHED", "Card Template Published"
