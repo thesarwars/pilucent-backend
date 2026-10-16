@@ -14,10 +14,11 @@ from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 
+from common import clock
 from common.money import ZERO, round_to_paisa, round_to_taka, to_decimal
 from rulebookio.book import UnknownRule
 
-from ..choices import GratuityBasisChoices, ProrationDivisorChoices, SalaryComponentChoices, SeparationTypeChoices
+from ..choices import GratuityBasisChoices, ProrationDivisorChoices, SeparationTypeChoices
 from .periods import days_in_month, month_end, month_start
 from .profile import add_months, service_parts
 from .tax import Figure
@@ -76,11 +77,49 @@ def gratuity_days(years, book):
     return int(rules["after"].value if years > int(rules["breakpoint"].value) else rules["standard"].value)
 
 
+# The old fixed reading, for a structure with no company library in reach.
+_LEGACY_BASES = {"in_ot_base_s108": ("BASIC", "DA"), "in_gratuity_base": ("BASIC",), "in_pf_base": ("BASIC",),
+                 "in_festival_base": ("BASIC",)}
+
+
+def line_base(structure, field):
+    """(Σ amount, [codes]) of the lines whose pinned component version counts
+    toward `field` (components & structures §4.1). A saved structure reads
+    each line's own version; a structure being built reads the version in
+    force on its date. A later flag change never moves a saved figure."""
+    from paylibio.services.library import flags_of
+
+    if isinstance(getattr(structure, "components", None), list):  # a Built, before it is saved
+        from .salary import component_version
+
+        company = structure.company
+        lines = [(c, a, component_version(company, c, structure.on or clock.today()) if company else None)
+                 for c, a in structure.components]
+    else:
+        company = structure.employee.company
+        lines = [(c.code, c.amount, c.component_version) for c in structure.components.all()]
+    total, codes = ZERO, []
+    for code, amount, version in lines:
+        counts = flags_of(company, code, version).get(field) if company is not None else code in _LEGACY_BASES[field]
+        if counts:
+            total += to_decimal(amount)
+            codes.append(code)
+    return total, codes
+
+
+def base_label(codes):
+    names = {"BASIC": "Basic", "DA": "DA", "HRA": "House rent", "MED": "Medical", "CONV": "Conveyance",
+             "FOOD": "Food", "OTHER": "Other"}
+    return " + ".join(names.get(c, c) for c in codes) or "nothing"
+
+
 def wage_base(employee, structure):
-    """`gratuityBasis` = GROSS ? monthly gross : basic (§7.1)."""
+    """`gratuityBasis` = GROSS ? monthly gross : the gratuity base (§7.1) --
+    the lines whose component counts toward the gratuity wage."""
     if employee.statutory.gratuity_basis == GratuityBasisChoices.GROSS:
         return structure.gross, "monthly gross (gratuity basis GROSS)"
-    return structure.basic, "basic"
+    total, codes = line_base(structure, "in_gratuity_base")
+    return total, "basic" if codes == ["BASIC"] else f"gratuity base ({base_label(codes)})"
 
 
 def gratuity(employee, structure, until, book):
@@ -145,14 +184,15 @@ def gratuity_breakpoint(employee, structure, as_of, book):
 
 
 def overtime_hourly(structure, book):
-    """2 × the ordinary hourly rate, on basic + DA only (s.108) -- the FULL
-    monthly amount, not a prorated one."""
+    """2 × the ordinary hourly rate on the overtime base (s.108) -- the lines
+    whose component counts toward it, the FULL monthly amount, not a
+    prorated one."""
     multiplier = book.labour.get("overtimeMultiplier")
     hours = book.labour.get("standardMonthHours")
-    base = structure.basic + structure.component_amount(SalaryComponentChoices.DA)
+    base, codes = line_base(structure, "in_ot_base_s108")
     return Figure(
         round_to_paisa(base * multiplier.decimal / hours.decimal),
-        f"(Basic + DA) {base} ÷ {hours.value} hours × {multiplier.value}; shown to the paisa",
+        f"({base_label(codes)}) {base} ÷ {hours.value} hours × {multiplier.value}; shown to the paisa",
         [multiplier, hours],
     )
 
@@ -165,7 +205,8 @@ def festival_bonus(employee, structure, as_of, book):
     months = L.get("festivalBonusServiceMonths")
     per_year = L.get("festivalBonusesPerYear")
     cap = L.get("festivalBonusCapMultiple")
-    per_bonus = structure.basic * cap.decimal
+    festival_base, festival_codes = line_base(structure, "in_festival_base")
+    per_bonus = festival_base * cap.decimal
     eligible_from = add_months(employee.doj, int(months.value)) if employee.doj else None
     try:
         taxable = book.tax.get("festivalBonusTaxable")
@@ -174,7 +215,7 @@ def festival_bonus(employee, structure, as_of, book):
     return {
         "eligibleFrom": eligible_from.isoformat() if eligible_from else None,
         "eligible": bool(eligible_from and eligible_from <= as_of),
-        "perBonus": Figure(per_bonus, f"Basic × {cap.value}", [cap]).as_dict(),
+        "perBonus": Figure(per_bonus, f"{base_label(festival_codes)} × {cap.value}", [cap]).as_dict(),
         "annual": Figure(per_bonus * per_year.decimal, f"Per bonus × {per_year.value} festivals",
                          [cap, per_year]).as_dict(),
         "monthlyProvision": Figure(
@@ -408,11 +449,14 @@ def provident_fund(employee, structure, book):
         return None
     rule = book.labour.get("pfEmployeeRate")
 
+    pf_base, codes = line_base(structure, "in_pf_base")
+    label = "basic" if codes == ["BASIC"] else f"the PF base ({base_label(codes)})"
+
     def side(percent, who):
         if percent is None:
             return None
-        return Figure(round_to_paisa(structure.basic * to_decimal(percent) / 100),
-                      f"{who} {percent}% of basic {structure.basic}", [rule]).as_dict()
+        return Figure(round_to_paisa(pf_base * to_decimal(percent) / 100),
+                      f"{who} {percent}% of {label} {pf_base}", [rule]).as_dict()
 
     return {"employee": side(statutory.pf_employee, "Employee"), "employer": side(statutory.pf_employer, "Employer")}
 

@@ -35,6 +35,7 @@ urlpatterns = [
     path("/leave", include("weapi.django_rest.urls.bd_leave")),
 
     path("/pay-bills", include("weapi.django_rest.urls.pay_bills")),
+    path("/pay-library", include("weapi.django_rest.urls.bd_paylib")),
     path("/payment-methods", include("weapi.django_rest.urls.payment_methods")),
     path("/products", include("weapi.django_rest.urls.products")),
     path("/purchases", include("weapi.django_rest.urls.purchases")),
