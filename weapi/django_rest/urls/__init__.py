@@ -27,6 +27,8 @@ urlpatterns = [
     path("/employees", include("weapi.django_rest.urls.employees")),
     path("", include("weapi.django_rest.urls.bd_salary")),
 
+    path("/idcards", include("weapi.django_rest.urls.bd_idcards")),
+
     path("/journals", include("weapi.django_rest.urls.journals")),
 
     path("/leave", include("weapi.django_rest.urls.bd_leave")),

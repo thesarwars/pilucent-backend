@@ -97,6 +97,7 @@ PILUCENT_APPS = [
     "rulebookio",
     "timekeepingio",
     "leaveledgerio",
+    "idcardio",
     "stockio",
     "nexusio",
     "salesio",
@@ -461,6 +462,10 @@ CELERY_BEAT_SCHEDULE = {
     "run-recurring-templates": {
         "task": "recurringio.tasks.run_recurring_templates",
         "schedule": crontab(hour=2, minute=0),
+    },
+    "idcards-daily": {
+        "task": "idcardio.daily",
+        "schedule": crontab(hour=2, minute=30),
     },
 }
 
