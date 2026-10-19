@@ -24,7 +24,9 @@ from employeeio.services.statutory import (
     proration_factor,
     separation_entitlement,
 )
+from common.money import round_to_taka
 from employeeio.test_support import AS_OF, FrozenClockMixin, make_company, make_employee, seed_rules
+from paysetio.test_support import FakeCalendar, join, set_election
 from rulebookio.book import UnknownRule, rule_book
 
 
@@ -72,8 +74,7 @@ class GratuityTests(StatutoryTestCase):
 
     def test_the_basis_can_be_gross(self):
         employee = self.employee(doj=date(2020, 8, 16))
-        employee.statutory.gratuity_basis = "GROSS"
-        employee.statutory.save()
+        set_election(self.company, "gratuity_basis", "GROSS")
         g = gratuity(employee, structure(employee, 13200, hra=6600), AS_OF, self.book)
         self.assertEqual(g.amount.value, Decimal("138600"))  # 19,800 / 30 x 30 x 7
 
@@ -101,7 +102,7 @@ class GratuityTests(StatutoryTestCase):
 class OvertimeBonusLeaveTests(StatutoryTestCase):
     def test_overtime_is_on_basic_and_da_only(self):
         employee = self.employee()
-        hourly = overtime_hourly(structure(employee, 13200, hra=6600, da=1000), self.book)
+        hourly = overtime_hourly(employee, structure(employee, 13200, hra=6600, da=1000), self.book, AS_OF)
         self.assertEqual(hourly.value, Decimal("136.54"))  # (13,200 + 1,000) / 208 x 2
         self.assertEqual(hourly.citation, "Bangladesh Labour Act 2006, s.108")
         # The multiplier is VERIFIED; the 208-hour divisor only CORROBORATED.
@@ -127,35 +128,64 @@ class OvertimeBonusLeaveTests(StatutoryTestCase):
 
 
 class ProrationTests(StatutoryTestCase):
+    """Payroll settings §4.3 and golden vectors S1/S2."""
+
+    cal = FakeCalendar(off=(5,))  # a Friday weekly holiday
+
     def test_a_full_february_is_a_full_month(self):
-        """Acceptance test 13: 1.0, not 28/30 = 0.9333."""
+        """Salary profile acceptance test 13: 1.0, not 28/30 = 0.9333."""
         february = date(2027, 2, 1)
-        for divisor in (D.CALENDAR_ACTUAL, D.FIXED_30, D.WORKING_26):
-            with self.subTest(divisor=divisor):
-                self.assertEqual(proration_factor(february, divisor, self.book), 1)
-        self.assertEqual(proration_factor(february, D.HOURS_208, self.book, payable_hours=208), 1)
+        for method in D.values:
+            with self.subTest(method=method):
+                self.assertEqual(proration_factor(february, method, self.book, calendar=self.cal), 1)
 
-    def test_a_full_long_month_is_a_full_month_too(self):
-        self.assertEqual(proration_factor(date(2027, 1, 1), D.FIXED_30, self.book), 1)
+    def test_s1_one_joiner_four_methods(self):
+        """৳50,000, a 31-day month, 19 payable calendar days; 18 payable
+        working days of 27 (the spec's counts, from a calendar stub)."""
 
-    def test_a_part_month_costs_the_days_lost(self):
-        february = date(2027, 2, 1)
-        joined = date(2027, 2, 15)  # 14 days lost
-        self.assertEqual(proration_factor(february, D.FIXED_30, self.book, join_date=joined), 1 - Decimal(14) / 30)
-        self.assertEqual(proration_factor(february, D.CALENDAR_ACTUAL, self.book, join_date=joined), Decimal("0.5"))
-        # Two of the 14 lost days were weekly holidays: they were never working days.
-        self.assertEqual(
-            proration_factor(february, D.WORKING_26, self.book, join_date=joined, weekly_holidays_lost=2),
-            1 - Decimal(12) / 26,
-        )
-        self.assertEqual(proration_factor(february, D.FIXED_30, self.book, join_date=date(2027, 3, 1)), 0)
+        class Counts:
+            def working_days(self, first, last):
+                return 27 if first.day == 1 else 18
+
+        october, joined = date(2026, 10, 1), date(2026, 10, 13)
+        amount = {m: round_to_taka(Decimal(50000) * proration_factor(october, m, self.book, join_date=joined,
+                                                                     calendar=Counts())) for m in D.values}
+        self.assertEqual(amount, {D.CALENDAR_DAYS: 30645, D.FIXED_30: 31667, D.WORKING_DAYS_26: 34615,
+                                  D.ACTUAL_WORKING_DAYS: 33333})
+        self.assertEqual(max(amount.values()) - min(amount.values()), 3970)
+
+    def test_working_days_come_from_the_calendar(self):
+        cal = FakeCalendar(off=(5,))  # Fridays 2, 9, 16, 23, 30 October 2026
+        october = date(2026, 10, 1)
+        self.assertEqual(cal.working_days(date(2026, 10, 1), date(2026, 10, 31)), 26)
+        joined = date(2026, 10, 10)  # 22 calendar days, 19 working
+        self.assertEqual(proration_factor(october, D.ACTUAL_WORKING_DAYS, self.book, join_date=joined, calendar=cal),
+                         Decimal(19) / 26)
+        two_day = FakeCalendar(off=(5, 6))
+        self.assertEqual(proration_factor(october, D.ACTUAL_WORKING_DAYS, self.book, join_date=joined,
+                                          calendar=two_day), Decimal(15) / 21)
+
+    def test_s2_a_30_day_month_agrees_for_calendar_and_fixed_30(self):
+        november = date(2026, 11, 1)
+        joined = date(2026, 11, 12)
+        self.assertEqual(proration_factor(november, D.CALENDAR_DAYS, self.book, join_date=joined),
+                         proration_factor(november, D.FIXED_30, self.book, join_date=joined))
+
+    def test_a_part_month_never_exceeds_a_whole_one(self):
+        # FIXED_30 on a 31-day month: a joiner on the 1st is a whole month, 1.0, not 31/30.
+        self.assertEqual(proration_factor(date(2026, 10, 1), D.FIXED_30, self.book, join_date=date(2026, 10, 1)), 1)
+        self.assertEqual(proration_factor(date(2027, 2, 1), D.FIXED_30, self.book, join_date=date(2027, 3, 1)), 0)
+
+    def test_working_day_methods_need_the_calendar(self):
+        with self.assertRaises(ValueError):
+            proration_factor(date(2026, 10, 1), D.WORKING_DAYS_26, self.book, join_date=date(2026, 10, 13))
 
 
 class SeparationTests(StatutoryTestCase):
     def entitlement(self, kind, joined, basic=30000, until=AS_OF, eligible=True, **kwargs):
         employee = self.employee(f"EMP-{kind[:4]}{joined:%y%m%d}{'' if eligible else 'N'}", doj=joined)
-        employee.statutory.gratuity_eligible = eligible
-        employee.statutory.save()
+        if eligible:
+            join(employee, "GRATUITY")
         return separation_entitlement(employee, structure(employee, basic), kind, until, self.book, **kwargs)
 
     def test_termination_pays_the_higher_of_compensation_and_gratuity(self):

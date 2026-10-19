@@ -29,7 +29,6 @@ from employeeio.choices import (
     TrackedFieldChoices,
 )
 from employeeio.models import (
-    CompanyStatutoryProfile,
     Employee,
     EmployeeFieldHistory,
     EmployeeInvestment,
@@ -391,7 +390,26 @@ class EmployeeCreateSerializer(serializers.Serializer):
 
 
 class StatutorySerializer(CamelModelSerializer):
+    """The employee's statutory particulars. Membership of PF, gratuity and
+    group insurance is effective-dated participation (payroll settings §3.7):
+    switching one on enrols from a date, switching it off opts out with a
+    reason. The gratuity basis and accrual method are the company's -- shown
+    here, elected in Payroll settings."""
+
+    pf_member = serializers.BooleanField(required=False)
+    pf_enrolled = serializers.DateField(required=False, allow_null=True)
+    pf_employee = serializers.DecimalField(max_digits=8, decimal_places=4, required=False, allow_null=True)
+    pf_employer = serializers.DecimalField(max_digits=8, decimal_places=4, required=False, allow_null=True)
+    gratuity_eligible = serializers.BooleanField(required=False)
+    insurance_covered = serializers.BooleanField(required=False)
+    opt_out_reason = serializers.CharField(required=False, allow_blank=True, write_only=True)
     pf_constituted = serializers.SerializerMethodField()
+    gratuity_basis = serializers.SerializerMethodField()
+    gratuity_method = serializers.SerializerMethodField()
+    gratuity_fund = serializers.SerializerMethodField()
+    participation = serializers.SerializerMethodField()
+
+    MEMBERSHIP = {"pf_member": "PF", "gratuity_eligible": "GRATUITY", "insurance_covered": "GROUP_INSURANCE"}
 
     class Meta:
         model = EmployeeStatutory
@@ -399,12 +417,67 @@ class StatutorySerializer(CamelModelSerializer):
             "pf_member", "pf_constituted", "pf_number", "pf_enrolled", "pf_employee", "pf_employer",
             "gratuity_eligible", "gratuity_basis", "gratuity_method", "gratuity_fund",
             "insurance_covered", "insurance_policy", "insurance_sum", "insurer",
-            "festival_granted", "festival_reason",
+            "festival_granted", "festival_reason", "opt_out_reason", "participation",
         ]
 
     def get_pf_constituted(self, obj):
-        profile = CompanyStatutoryProfile.objects.filter(company_id=obj.employee.company_id).first()
-        return bool(profile and profile.pf_constituted)
+        from paysetio.services.ops import scheme_applies, scheme_config
+
+        company = obj.employee.company
+        return scheme_applies(company, "PF") and bool(scheme_config(company, "PF").get("constituted"))
+
+    def get_gratuity_basis(self, obj):
+        from employeeio.services.sites import site_of
+        from paysetio.services.resolve import election
+
+        return election(obj.employee.company, "gratuity_basis", clock.today(), site_of(obj.employee)).value
+
+    def get_gratuity_method(self, obj):
+        from paysetio.services.ops import scheme_config
+
+        return scheme_config(obj.employee.company, "GRATUITY").get("method")
+
+    def get_gratuity_fund(self, obj):
+        from paysetio.services.ops import scheme_config
+
+        return scheme_config(obj.employee.company, "GRATUITY").get("fundName") or ""
+
+    def get_participation(self, obj):
+        from paysetio.models import SchemeParticipation
+        from paysetio.services.ops import participation_out
+
+        return [participation_out(p) for p in SchemeParticipation.objects.filter(employee=obj.employee)
+                .order_by("scheme_code", "-enrolled_on")]
+
+    def update(self, instance, validated_data):
+        from paysetio.services import ops as settings_ops
+
+        employee = instance.employee
+        company = employee.company
+        reason = validated_data.pop("opt_out_reason", "")
+        enrolled_on = validated_data.pop("pf_enrolled", None)
+        rates = {k: validated_data.pop(k) for k in ("pf_employee", "pf_employer") if k in validated_data}
+        wanted = {k: validated_data.pop(k) for k in self.MEMBERSHIP if k in validated_data}
+        instance = super().update(instance, validated_data)
+        user = self.context.get("request").user if self.context.get("request") else None
+        try:
+            for field, code in self.MEMBERSHIP.items():
+                member = getattr(instance, field)
+                want = wanted.get(field, member)
+                if want and not member:
+                    settings_ops.enrol(company, employee, code,
+                                       on=(enrolled_on if code == "PF" else None) or clock.today(),
+                                       employee_rate=rates.get("pf_employee", ...) if code == "PF" else ...,
+                                       employer_rate=rates.get("pf_employer", ...) if code == "PF" else ...,
+                                       user=user)
+                elif member and not want:
+                    settings_ops.opt_out(company, employee, code, reason=reason, user=user)
+                elif member and code == "PF" and rates:
+                    settings_ops.enrol(company, employee, code, employee_rate=rates.get("pf_employee", ...),
+                                       employer_rate=rates.get("pf_employer", ...), user=user)
+        except settings_ops.SettingsRefused as exc:
+            raise serializers.ValidationError(exc.errors) from None
+        return instance
 
     def _percent(self, value):
         if value is None:
@@ -422,10 +495,16 @@ class StatutorySerializer(CamelModelSerializer):
 
     def validate(self, attrs):
         instance = self.instance
-        if attrs.get("pf_member") and not (instance and self.get_pf_constituted(instance)):
+        if attrs.get("pf_member") and not instance.pf_member and not self.get_pf_constituted(instance):
             raise serializers.ValidationError({
                 "pf_member": "No provident fund is constituted for this company, so membership cannot be switched on."
             })
+        for field, code in self.MEMBERSHIP.items():
+            if field in attrs and not attrs[field] and getattr(instance, field) and not (
+                    attrs.get("opt_out_reason") or "").strip():
+                raise serializers.ValidationError({
+                    "opt_out_reason": f"Give the reason for leaving the {code.replace('_', ' ').lower()} scheme: "
+                                      "an opt-out carries one."})
         granted = attrs.get("festival_granted", instance.festival_granted if instance else False)
         reason = attrs.get("festival_reason", instance.festival_reason if instance else "")
         if granted and self._before_eligibility(instance) and not (reason or "").strip():

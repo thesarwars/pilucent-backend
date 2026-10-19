@@ -100,6 +100,7 @@ PILUCENT_APPS = [
     "idcardio",
     "intakeio",
     "paylibio",
+    "paysetio",
     "stockio",
     "nexusio",
     "salesio",

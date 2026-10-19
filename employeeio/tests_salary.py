@@ -13,7 +13,6 @@ from decimal import Decimal
 from django.test import TestCase
 
 from employeeio.models import (
-    CompanyStatutoryProfile,
     EmployeeFieldHistory,
     EmployeeSalaryComponent,
     EmployeeSalaryStructure,
@@ -34,6 +33,7 @@ from employeeio.services.salary import (
     warnings_for,
 )
 from employeeio.services.salary_templates import ComponentsExceedGross, Split, build_split, pct, templates_on
+from paysetio.test_support import set_election
 from employeeio.test_support import (
     AS_OF,
     ApiMixin,
@@ -335,13 +335,25 @@ class RevisionTests(SalaryApiTestCase):
         self.assertEqual(response.status_code, 409, response.content)
         self.assertEqual(response.json()["errors"][0]["path"], "expectedStructure")
 
-    def test_working_26_arrears_prorate_by_calendar_without_a_holiday_calendar(self):
-        CompanyStatutoryProfile.objects.update_or_create(company=self.company,
-                                                         defaults={"proration_divisor": "WORKING_26"})
+    def test_arrears_prorate_by_the_proration_election(self):
         body = self.revise(effectiveFrom="2027-01-27", reason="Late-January increment", preview=True).json()
         january = body["consequence"]["periods"][0]
-        self.assertEqual((january["period"], january["factor"]), ("2027-01", "0.1613"))
-        self.assertEqual(body["consequence"]["prorationDivisor"], "CALENDAR_ACTUAL")
+        self.assertEqual((january["period"], january["factor"]), ("2027-01", "0.1613"))  # 5 of 31 days
+        self.assertEqual(body["consequence"]["prorationDivisor"], "CALENDAR_DAYS")
+
+    def test_working_day_arrears_need_a_published_calendar(self):
+        set_election(self.company, "proration_method", "WORKING_DAYS_26", on=date(2026, 12, 1))
+        response = self.revise(effectiveFrom="2027-01-27", reason="Late-January increment", preview=True)
+        self.assertEqual(response.status_code, 409, response.content)
+        self.assertIn("calendar", response.content.decode())
+
+    def test_unanswered_proration_refuses_arrears(self):
+        from paysetio.models import PayrollElection
+
+        PayrollElection.objects.filter(company=self.company, election_key="proration_method").update(status="REJECTED")
+        response = self.revise(effectiveFrom="2027-01-27", reason="Late-January increment", preview=True)
+        self.assertEqual(response.status_code, 409, response.content)
+        self.assertEqual(response.json()["unanswered"], "proration_method")
 
     def test_methods(self):
         self.assertEqual(self.revise(method="FIXED_INCREASE", value="1000", preview=True).json()["gross"], "23000.00")

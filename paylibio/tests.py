@@ -148,14 +148,14 @@ class GoldenTests(Base):
         salary.assign(e, template="officer", amount=Decimal("50000"), effective_from=date(2026, 1, 1))
         book = rule_book(AS_OF)
         old = salary.latest_structure(e)
-        self.assertEqual(overtime_hourly(old, book).value, Decimal("288.46"))  # basic 30,000 alone
+        self.assertEqual(overtime_hourly(e, old, book, AS_OF).value, Decimal("288.46"))  # basic 30,000 alone
         L.change_flags(self.company, self.comp("HRA"), {"in_ot_base_s108": True}, effective_from=date(2027, 1, 1),
                        reason="Board decision BR-2027-01")
-        self.assertEqual(overtime_hourly(old, book).value, Decimal("288.46"))  # its own version: unchanged
+        self.assertEqual(overtime_hourly(e, old, book, AS_OF).value, Decimal("288.46"))  # its own version: unchanged
         salary.revise(e, method="NEW_GROSS", value=Decimal("52000"), effective_from=date(2027, 4, 1))
         new = salary.latest_structure(e)
-        self.assertEqual(overtime_hourly(new, book).value, Decimal("450.00"))  # (31,200 + 15,600) ÷ 208 × 2
-        self.assertIn("House rent", overtime_hourly(new, book).basis)
+        self.assertEqual(overtime_hourly(e, new, book, AS_OF).value, Decimal("450.00"))  # (31,200 + 15,600) ÷ 208 × 2
+        self.assertIn("House rent", overtime_hourly(e, new, book, AS_OF).basis)
 
     def test_l12_bulk_apply_without_preview(self):
         b = L.create_bulk(self.company, {"method": "PCT_INCREASE", "value": "8", "effectiveFrom": "2027-04-01"})

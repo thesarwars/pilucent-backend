@@ -26,13 +26,10 @@ from .choices import (
     EstablishmentChoices,
     GenderChoices,
     GradeChoices,
-    GratuityBasisChoices,
-    GratuityMethodChoices,
     InstrumentChoices,
     MaritalChoices,
     MfsProviderChoices,
     PaymentMethodChoices,
-    ProrationDivisorChoices,
     RelationChoices,
     ReligionChoices,
     RevisionMethodChoices,
@@ -200,38 +197,6 @@ class Employee(BaseModelWithUID):
         return bool(self.separated_on) and not self.final_settlement_on
 
 
-class CompanyStatutoryProfile(BaseModelWithUID):
-    """Company-level statutory facts the employee profile is gated by (§2.4)."""
-
-    company = models.OneToOneField(
-        "companyio.Company", on_delete=models.CASCADE, related_name="bd_statutory_profile"
-    )
-    # When false, provident-fund membership cannot be switched on for anyone.
-    pf_constituted = models.BooleanField(default=False)
-    # How a part month is paid (and how backdated arrears prorate a part
-    # period). Calendar actual is the most defensible of the four.
-    proration_divisor = models.CharField(
-        max_length=20,
-        choices=ProrationDivisorChoices.choices,
-        default=ProrationDivisorChoices.CALENDAR_ACTUAL,
-    )
-    # Policy elections, not law (salary profile §6): the employer's provident
-    # fund rate for a member with no rate of their own, and the flat monthly
-    # group-insurance premium for a covered employee.
-    pf_employer_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("8.00"))
-    insurance_premium_monthly = models.DecimalField(**MONEY_FIELD, default=Decimal("148"))
-    # Attendance elections (attendance §6.2, §6.3). The overtime base changes
-    # the hourly rate by about 40%; the three days-worked booleans decide what
-    # counts toward earned-leave accrual, and are independent.
-    overtime_base = models.CharField(
-        max_length=20, choices=[("BASIC_PLUS_DA", "Basic + dearness allowance"), ("GROSS", "Gross")],
-        default="BASIC_PLUS_DA",
-    )
-    days_worked_paid_leave = models.BooleanField(default=False)
-    days_worked_festival = models.BooleanField(default=False)
-    days_worked_weekly = models.BooleanField(default=False)
-
-
 class ProcessedPayrollPeriod(BaseModelWithUID):
     """A payroll period the company has processed: the source of "periods a
     backdated change reopens" and of the next unprocessed period (§5.2).
@@ -282,22 +247,59 @@ class EmployeeNominee(BaseModelWithUID):
 
 
 class EmployeeStatutory(BaseModelWithUID):
+    """The employee's own statutory particulars. Scheme MEMBERSHIP is not
+    here: it is effective-dated per scheme in `paysetio.SchemeParticipation`
+    (payroll settings §3.7), and the flags below read it. The gratuity basis
+    and accrual method are the company's election and scheme, not a per-
+    employee field."""
+
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name="statutory")
-    pf_member = models.BooleanField(default=False)
     pf_number = _text(64)
-    pf_enrolled = models.DateField(null=True, blank=True)
-    pf_employee = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    pf_employer = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    gratuity_eligible = models.BooleanField(default=False)
-    gratuity_basis = _text(10, choices=GratuityBasisChoices.choices)
-    gratuity_method = _text(20, choices=GratuityMethodChoices.choices)
-    gratuity_fund = _text()
-    insurance_covered = models.BooleanField(default=False)
     insurance_policy = _text(64)
     insurance_sum = models.DecimalField(**MONEY_FIELD, null=True, blank=True)
     insurer = _text()
     festival_granted = models.BooleanField(default=False)
     festival_reason = models.TextField(blank=True, default="")
+
+    def _participation(self, code, on=None):
+        from paysetio.services.ops import participation_in_force
+
+        return participation_in_force(self.employee, code, on)
+
+    @property
+    def pf_member(self):
+        return self._participation("PF") is not None
+
+    @property
+    def pf_enrolled(self):
+        p = self._participation("PF")
+        return p.enrolled_on if p else None
+
+    @property
+    def pf_employee(self):
+        """The member's employee rate in percent: their own, else the fund's."""
+        return self._pf_rate("override_rate_pct", "employeeRatePct")
+
+    @property
+    def pf_employer(self):
+        return self._pf_rate("override_employer_rate_pct", "employerRatePct")
+
+    def _pf_rate(self, own, fund):
+        from paysetio.services.ops import scheme_config
+
+        p = self._participation("PF")
+        if p is None:
+            return None
+        rate = getattr(p, own)
+        return rate if rate is not None else Decimal(scheme_config(self.employee.company, "PF")[fund])
+
+    @property
+    def gratuity_eligible(self):
+        return self._participation("GRATUITY") is not None
+
+    @property
+    def insurance_covered(self):
+        return self._participation("GROUP_INSURANCE") is not None
 
 
 class EmployeeTaxProfile(BaseModelWithUID):

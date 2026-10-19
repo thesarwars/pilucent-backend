@@ -4,7 +4,7 @@ Components and templates are versioned. A flag change never rewrites a
 version: it makes version n+1 from a stated date, and every structure line
 keeps resolving the version it pinned. Statutory constants come from the
 rule book as at the date asked about; the provident-fund rates are the
-company's election, in its payroll policy.
+PF scheme in payroll settings (paysetio).
 """
 
 from collections import defaultdict
@@ -390,6 +390,14 @@ def _check_rows(company, mode, rows, balancing):
         raise LibraryRefused({"rows": errors}, status=400)
 
 
+def _elected_balancing(company):
+    """A new template's balancing line starts from the company's balancing
+    election (payroll settings §7.7); a template may still name its own."""
+    from paysetio.services.resolve import election
+
+    return election(company, "balancing_component").value or "BASIC"
+
+
 def save_template(company, data, *, template=None, user=None):
     """A draft is edited in place; a published version is never changed --
     the edit becomes the next draft (§1 rule 4)."""
@@ -404,7 +412,7 @@ def save_template(company, data, *, template=None, user=None):
         raise LibraryRefused({"mode": ["A template is gross-down or basic-up."]}, status=400)
     rows = data.get("rows", [{"code": r.component_code, "basis": r.basis, "value": r.value}
                              for r in template.rows.all()] if template else [])
-    balancing = data.get("balancingCode", template.balancing_code if template else "BASIC")
+    balancing = data.get("balancingCode", template.balancing_code if template else _elected_balancing(company))
     _check_rows(company, mode, rows, balancing)
     name = str(data.get("name", template.name if template else "") or "").strip()
     note = str(data.get("note", template.note if template else "") or "").strip()
@@ -520,7 +528,7 @@ def preview_template(company, t, amount, *, grade="", on=None):
 
 def constants(company, on):
     """§4.2: every statutory constant from the rule book as at `on`; the PF
-    rates from the company's policy."""
+    rates from the PF scheme, the overtime divisor from the overtime election."""
     from rulebookio.book import rule_book
 
     book = rule_book(on)
@@ -533,15 +541,23 @@ def constants(company, on):
         except Exception:  # noqa: BLE001 -- a missing rule falls back, and says so
             return Decimal(default), {"key": key, "citation": None, "confidence": "FALLBACK"}
 
-    p = ensure_policy(company)
+    from paysetio.services.ops import scheme_config
+    from paysetio.services.resolve import election
+
+    pf = scheme_config(company, "PF", on)
+    ot = election(company, "overtime_base", on)
     ot_div, ot_div_src = rule("standardMonthHours", 208)
+    if ot.answered and ot.hours:
+        ot_div, ot_div_src = Decimal(ot.hours), {"key": "overtime_base.standardMonthHours",
+                                                  "citation": ot.row.statutory_citation, "confidence": "POLICY"}
     ot_mult, ot_mult_src = rule("overtimeMultiplier", 2)
     fest, fest_src = rule("festivalBonusesPerYear", 2)
     grat, grat_src = rule("gratuityDaysStandard", 30)
     return {"otDivisor": ot_div, "otMultiplier": ot_mult, "festivalCount": fest, "gratuityDays": grat,
-            "pfRateEmployee": p.pf_rate_employee, "pfRateEmployer": p.pf_rate_employer,
+            "pfRateEmployee": to_decimal(pf["employeeRatePct"]) / HUNDRED,
+            "pfRateEmployer": to_decimal(pf["employerRatePct"]) / HUNDRED,
             "sources": {"otDivisor": ot_div_src, "otMultiplier": ot_mult_src, "festivalCount": fest_src,
-                        "gratuityDays": grat_src, "pfRate": {"key": "companyPolicy", "citation": "Company election",
+                        "gratuityDays": grat_src, "pfRate": {"key": "PF scheme", "citation": "Payroll settings — PF scheme",
                                                               "confidence": "POLICY"}}}
 
 
@@ -633,9 +649,16 @@ def floors(company, on=None):
     return {"grades": grades, "companyFloor": money_str(company_floor) if company_floor is not None else None,
             "citation": rule.citation, "confidence": rule.confidence, "effective": rule.effective_from.isoformat()
             if getattr(rule, "effective_from", None) else None, "breaches": breaches,
-            "pfRateEmployee": f"{policy.pf_rate_employee.normalize():f}",
-            "pfRateEmployer": f"{policy.pf_rate_employer.normalize():f}",
+            "pfRateEmployee": _pf_fraction(company, "employeeRatePct"),
+            "pfRateEmployer": _pf_fraction(company, "employerRatePct"),
             "basicShareWarnPct": f"{policy.basic_share_warn_pct.normalize():f}"}
+
+
+def _pf_fraction(company, key):
+    """The PF scheme's rate as a fraction, '0.08' -- the shape the floors tab reads."""
+    from paysetio.services.ops import scheme_config
+
+    return f"{(to_decimal(scheme_config(company, 'PF')[key]) / HUNDRED).normalize():f}"
 
 
 def set_policy(company, data, *, user=None):
@@ -646,8 +669,11 @@ def set_policy(company, data, *, user=None):
     from employeeio.services.salary import floor_book
 
     p = ensure_policy(company)
-    before = {"companyFloor": str(p.company_floor_basic) if p.company_floor_basic is not None else None,
-              "pfEmployee": str(p.pf_rate_employee), "pfEmployer": str(p.pf_rate_employer)}
+    if "pfRateEmployee" in data or "pfRateEmployer" in data:
+        raise LibraryRefused({"pfRateEmployee": [
+            "The provident-fund rates are set on the PF scheme in Payroll settings, where a change is "
+            "effective-dated and does not restate past contributions."]}, status=410)
+    before = {"companyFloor": str(p.company_floor_basic) if p.company_floor_basic is not None else None}
     if "companyFloor" in data:
         v = data["companyFloor"]
         if v in (None, ""):
@@ -662,18 +688,15 @@ def set_policy(company, data, *, user=None):
                     f"৳{v:,.0f} is below the gazette's lowest floor for a grade in use (৳{lowest:,.0f}). A company "
                     "floor may only add to the gazette."]})
             p.company_floor_basic = v
-    for attr, key in (("pf_rate_employee", "pfRateEmployee"), ("pf_rate_employer", "pfRateEmployer"),
-                      ("basic_share_warn_pct", "basicShareWarnPct")):
+    for attr, key in (("basic_share_warn_pct", "basicShareWarnPct"),):
         if key in data:
             setattr(p, attr, to_decimal(data[key]))
     try:
         p.save()
     except IntegrityError:
-        raise LibraryRefused({"pfRateEmployee": ["A provident fund rate is between 0 and 1 (0.08 is 8%)."]},
-                             status=400) from None
+        raise LibraryRefused({"basicShareWarnPct": ["Not a valid percentage."]}, status=400) from None
     audit(company, "POLICY_CHANGED", user, entity_type="policy", code="payroll", before=before,
-          after={"companyFloor": str(p.company_floor_basic) if p.company_floor_basic is not None else None,
-                 "pfEmployee": str(p.pf_rate_employee), "pfEmployer": str(p.pf_rate_employer)})
+          after={"companyFloor": str(p.company_floor_basic) if p.company_floor_basic is not None else None})
     return p
 
 

@@ -21,8 +21,16 @@ from rulebookio.test_support import seed_rules  # noqa: F401 -- re-exported for 
 AS_OF = date(2027, 3, 8)
 
 
-def make_company(name):
-    return Company.objects.create(name=name)
+def make_company(name, elections=True):
+    """A company. With `elections`, every payroll election is answered as the
+    system applied it before they existed (payroll settings), from 2000."""
+    company = Company.objects.create(name=name)
+    if elections:
+        from paysetio.test_support import _labour, answer_elections
+
+        if _labour() is not None:
+            answer_elections(company)
+    return company
 
 
 def make_user(company, email):
