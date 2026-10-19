@@ -7,6 +7,7 @@ urlpatterns = [
 
     path("/agencies", include("weapi.django_rest.urls.agencies")),
     path("/attendance", include("weapi.django_rest.urls.bd_attendance")),
+    path("/attendance-intake", include("weapi.django_rest.urls.bd_intake")),
     path("/attendances", include("weapi.django_rest.urls.attendances")),
     path("/attachments", include("weapi.django_rest.urls.attachments")),
     path("/audit-logs", include("weapi.django_rest.urls.audit_logs")),

@@ -214,7 +214,8 @@ class AttendanceReopen(AttendanceView):
     def post(self, request):
         self.refuse_unless(REOPEN)
         period = ops.reopen(self.company(), self.site(), self.month(), reason=request.data.get("reason"),
-                            user=request.user)
+                            user=request.user,
+                            confirmed_invalidates_payroll=bool(request.data.get("confirmedInvalidatesPayroll")))
         return Response({"period": ops.period_out(period)})
 
 

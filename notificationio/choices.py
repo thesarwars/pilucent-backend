@@ -19,6 +19,7 @@ class NotificationModelKindChoices(models.TextChoices):
     NEXUS = "NEXUS", "Economic Nexus"  # no per-object FK; message-only
     LEAVE = "LEAVE", "Leave"  # BD leave; message-only, the outbox carries the record
     ID_CARD = "ID_CARD", "ID card"  # BD ID cards; message-only, the outbox carries the record
+    ATTENDANCE_INTAKE = "ATTENDANCE_INTAKE", "Attendance intake"  # BD intake; message-only
 
 
 class NotificationKindChoices(models.TextChoices):
@@ -82,3 +83,8 @@ class NotificationKindChoices(models.TextChoices):
     CARD_PRINT_READY = "CARD_PRINT_READY", "Card Print Job Ready"
     CARD_PRINT_FAILED = "CARD_PRINT_FAILED", "Card Print Job Failed"
     CARD_TEMPLATE_PUBLISHED = "CARD_TEMPLATE_PUBLISHED", "Card Template Published"
+
+    # BD attendance intake (intakeio events, attendance-intake.md §10)
+    INTAKE_ORPHANS_DETECTED = "INTAKE_ORPHANS_DETECTED", "Unmapped Device IDs Held"
+    INTAKE_BATCH_REVERSED = "INTAKE_BATCH_REVERSED", "Attendance Import Reversed"
+    ATTENDANCE_PERIOD_UNLOCKED = "ATTENDANCE_PERIOD_UNLOCKED", "Attendance Period Unlocked"

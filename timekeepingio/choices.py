@@ -78,6 +78,14 @@ class CreditKindChoices(models.TextChoices):
     SUBSTITUTE = "SUBSTITUTE", "Substitute holiday"
 
 
+class PeriodStageChoices(models.TextChoices):
+    """Attendance intake §6: OPEN -> PROCESSING -> REVIEW, then the lock."""
+
+    OPEN = "OPEN", "Open"
+    PROCESSING = "PROCESSING", "Processing"
+    REVIEW = "REVIEW", "Review"
+
+
 class QuarantineReasonChoices(models.TextChoices):
     UNKNOWN_EMPLOYEE = "UNKNOWN_EMPLOYEE", "Unknown employee"
     PERIOD_LOCKED = "PERIOD_LOCKED", "Period locked"

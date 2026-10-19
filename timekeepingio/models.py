@@ -28,6 +28,7 @@ from .choices import (
     ExceptionStateChoices,
     PeriodStatusChoices,
     PunchDirectionChoices,
+    PeriodStageChoices,
     PunchSourceChoices,
     QuarantineReasonChoices,
 )
@@ -159,6 +160,19 @@ class Punch(AppendOnlyModel):
         ]
 
 
+class PunchVoid(AppendOnlyModel):
+    """A punch that no longer counts -- its import batch was reversed. The
+    punch itself is never touched: the void is a second, append-only fact,
+    and the register reads punches without one."""
+
+    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="+")
+    punch = models.OneToOneField(Punch, on_delete=models.PROTECT, related_name="void")
+    reason = models.TextField()
+    source_ref = models.CharField(max_length=40)  # IMP-0031
+    actor = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    actor_name = _text()
+
+
 class PunchQuarantine(BaseModelWithUID):
     """§8.3. A punch that cannot be placed is held, counted and surfaced --
     never dropped."""
@@ -235,6 +249,16 @@ class AttendancePeriod(BaseModelWithUID):
     reopened_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name="+")
     reopen_reason = models.TextField(blank=True, default="")
+    # Attendance intake §6: the working stage of an open month, before the lock.
+    stage = models.CharField(max_length=10, choices=PeriodStageChoices.choices, default=PeriodStageChoices.OPEN)
+    # Locked over unresolved exceptions: why, and how many.
+    acknowledge_reason = models.TextField(blank=True, default="")
+    exceptions_acknowledged = models.PositiveIntegerField(default=0)
+    # The payroll run that consumed the period, and -- after an unlock -- the
+    # run it invalidated, so the invalid run can be explained later.
+    payroll_run_ref = models.CharField(max_length=40, blank=True, default="")
+    payroll_processed_on = models.DateField(null=True, blank=True)
+    payroll_invalidated_ref = models.CharField(max_length=40, blank=True, default="")
 
     class Meta:
         ordering = ("site", "-period_month")
