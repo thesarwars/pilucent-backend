@@ -176,19 +176,12 @@ class StructureTemplateRow(BaseModelWithUID):
 
 
 class PayrollPolicy(BaseModelWithUID):
-    """Company elections, not statute (§4.2): the provident-fund rates and
-    the company's own basic floor, which may exceed the gazette."""
+    """The company's own basic floor, which may exceed the gazette. The
+    provident-fund rates moved to the PF scheme in payroll settings."""
 
     company = models.OneToOneField("companyio.Company", on_delete=models.CASCADE, related_name="payroll_policy")
     company_floor_basic = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
-    pf_rate_employee = models.DecimalField(max_digits=6, decimal_places=4, default=0.08)
-    pf_rate_employer = models.DecimalField(max_digits=6, decimal_places=4, default=0.08)
     basic_share_warn_pct = models.DecimalField(max_digits=6, decimal_places=2, default=50)
-
-    class Meta:
-        constraints = [models.CheckConstraint(condition=Q(pf_rate_employee__gte=0, pf_rate_employee__lte=1,
-                                                          pf_rate_employer__gte=0, pf_rate_employer__lte=1),
-                                              name="paylibio_policy_pf_rate_sane")]
 
 
 class BulkRevision(BaseModelWithUID):

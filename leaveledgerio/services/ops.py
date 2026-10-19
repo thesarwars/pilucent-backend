@@ -453,7 +453,12 @@ def days_worked_from_attendance(employee, start, end, book):
                today=clock.today())
     recs = w.records(employee)
     settled = sum(1 for r in recs if r.status and r.status != "EXCEPTION" and r.day.year not in w.kinds.missing)
-    worked = Decimal(str(days_worked_for_accrual(recs, elections_of(employee.company)["daysWorked"])))
+    flags = elections_of(employee.company, site_of(employee), last)["daysWorked"]
+    if flags is None:
+        from paysetio.services.resolve import ElectionUnanswered
+
+        raise ElectionUnanswered("days_worked_basis")
+    worked = Decimal(str(days_worked_for_accrual(recs, flags)))
     return worked, settled, len(recs)
 
 

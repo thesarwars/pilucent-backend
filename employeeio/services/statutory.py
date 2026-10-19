@@ -18,7 +18,7 @@ from common import clock
 from common.money import ZERO, round_to_paisa, round_to_taka, to_decimal
 from rulebookio.book import UnknownRule
 
-from ..choices import GratuityBasisChoices, ProrationDivisorChoices, SeparationTypeChoices
+from ..choices import ProrationDivisorChoices, SeparationTypeChoices
 from .periods import days_in_month, month_end, month_start
 from .profile import add_months, service_parts
 from .tax import Figure
@@ -113,13 +113,22 @@ def base_label(codes):
     return " + ".join(names.get(c, c) for c in codes) or "nothing"
 
 
-def wage_base(employee, structure):
-    """`gratuityBasis` = GROSS ? monthly gross : the gratuity base (§7.1) --
-    the lines whose component counts toward the gratuity wage."""
-    if employee.statutory.gratuity_basis == GratuityBasisChoices.GROSS:
-        return structure.gross, "monthly gross (gratuity basis GROSS)"
-    total, codes = line_base(structure, "in_gratuity_base")
-    return total, "basic" if codes == ["BASIC"] else f"gratuity base ({base_label(codes)})"
+def _election(employee, key, on):
+    from paysetio.services.resolve import election
+
+    from .sites import site_of
+
+    return election(employee.company, key, on or clock.today(), site_of(employee))
+
+
+def wage_base(employee, structure, on=None):
+    """The gratuity wage under the company's gratuity-basis election (payroll
+    settings §4.3): basic is the library's gratuity base, gross the monthly
+    gross. Unanswered refuses (`ElectionUnanswered`) -- never a default."""
+    from paysetio.services.resolve import gratuity_base
+
+    total, _, label = gratuity_base(structure, _election(employee, "gratuity_basis", on))
+    return total, label
 
 
 def gratuity(employee, structure, until, book):
@@ -128,7 +137,7 @@ def gratuity(employee, structure, until, book):
     years, rounded_up = gratuity_years(parts, book)
     days = gratuity_days(years, book)
     divisor = rules["divisor"].decimal
-    base_value, base_label = wage_base(employee, structure)
+    base_value, base_label = wage_base(employee, structure, until)
     base = Figure(base_value, f"Last drawn {base_label}")
     service = f"{parts.years}y {parts.residual_months}m {parts.residual_days}d"
     amount = Figure(
@@ -163,7 +172,7 @@ def gratuity_breakpoint(employee, structure, as_of, book):
     rises_on = add_months(employee.doj, breakpoint * MONTHS_PER_YEAR + int(rules["fraction"].value)) + timedelta(days=1)
     if rises_on <= as_of:
         return None
-    base_value, base_label = wage_base(employee, structure)
+    base_value, base_label = wage_base(employee, structure, as_of)
     after = int(rules["after"].value)
     return {
         "anniversary": add_months(employee.doj, breakpoint * MONTHS_PER_YEAR).isoformat(),
@@ -183,17 +192,23 @@ def gratuity_breakpoint(employee, structure, as_of, book):
 # ------------------------------------------------------------- overtime §7.2
 
 
-def overtime_hourly(structure, book):
-    """2 × the ordinary hourly rate on the overtime base (s.108) -- the lines
-    whose component counts toward it, the FULL monthly amount, not a
-    prorated one."""
+def overtime_hourly(employee, structure, book, on=None):
+    """The multiplier × the ordinary hourly rate on the elected overtime base
+    (s.108), the FULL monthly amount, not a prorated one. The election
+    chooses the base and the standard month hours; the rule book the
+    multiplier."""
+    from paysetio.services.resolve import month_hours, overtime_base
+
+    r = _election(employee, "overtime_base", on)
     multiplier = book.labour.get("overtimeMultiplier")
-    hours = book.labour.get("standardMonthHours")
-    base, codes = line_base(structure, "in_ot_base_s108")
+    base, codes, label = overtime_base(structure, r)
+    hours = month_hours(r, book)
+    # The elected hours are the company's; the rule book's 208 carries its own confidence.
+    rules = [multiplier] if r.hours else [multiplier, book.labour.get("standardMonthHours")]
     return Figure(
-        round_to_paisa(base * multiplier.decimal / hours.decimal),
-        f"({base_label(codes)}) {base} ÷ {hours.value} hours × {multiplier.value}; shown to the paisa",
-        [multiplier, hours],
+        round_to_paisa(base * multiplier.decimal / hours),
+        f"({label}) {base} ÷ {hours} hours × {multiplier.value}; shown to the paisa",
+        rules,
     )
 
 
@@ -212,9 +227,11 @@ def festival_bonus(employee, structure, as_of, book):
         taxable = book.tax.get("festivalBonusTaxable")
     except UnknownRule:
         taxable = None
+    eligible = bool(eligible_from and eligible_from <= as_of)
     return {
         "eligibleFrom": eligible_from.isoformat() if eligible_from else None,
-        "eligible": bool(eligible_from and eligible_from <= as_of),
+        "eligible": eligible,
+        "underAYear": None if eligible or not employee.doj else under_a_year(employee, per_bonus, as_of),
         "perBonus": Figure(per_bonus, f"{base_label(festival_codes)} × {cap.value}", [cap]).as_dict(),
         "annual": Figure(per_bonus * per_year.decimal, f"Per bonus × {per_year.value} festivals",
                          [cap, per_year]).as_dict(),
@@ -225,6 +242,22 @@ def festival_bonus(employee, structure, as_of, book):
         "taxable": Figure(taxable.value, "Fully taxable — no exemption; under-withheld most often in "
                           "March and September", [taxable]).as_dict(money=False) if taxable else None,
     }
+
+
+def under_a_year(employee, per_bonus, as_of):
+    """One festival bonus before twelve months' service, under the company's
+    election (payroll settings §7.5). NONE is the statutory position."""
+    from paysetio.services.resolve import ElectionUnanswered, festival_under_year
+
+    parts = service_parts(employee.doj, as_of)
+    months = parts.years * MONTHS_PER_YEAR + parts.residual_months
+    try:
+        r = _election(employee, "festival_bonus_policy", as_of)
+        amount, basis = festival_under_year(per_bonus, months, r)
+    except ElectionUnanswered as exc:
+        return {"answered": False, "message": exc.message, "completedMonths": months}
+    return {"answered": True, "policy": r.value, "completedMonths": months,
+            "perBonus": Figure(round_to_paisa(amount), basis).as_dict()}
 
 
 # ----------------------------------------------------------------- leave §7.4
@@ -274,42 +307,53 @@ def leave(employee, structure, book):
 # ------------------------------------------------------------ proration §11.13
 
 
-def proration_factor(period, divisor, book, join_date=None, leave_date=None, lwp_days=0,
-                     weekly_holidays_lost=0, payable_hours=None):
-    """The share of a month's pay earned in `period` (payroll-calc.js 05.3).
+def proration_factor(period, method, book, join_date=None, leave_date=None, lwp_days=0, calendar=None):
+    """The share of a month's pay earned in `period` under the proration
+    election (payroll settings §4.3, golden vector S1).
 
-    Driven by days LOST, not days present: a full unbroken period is 1.0
-    whatever the calendar says. Dividing days present by 30 was right for a
-    30-day month and silently underpaid every February by 6.7% (acceptance
-    test 13). CALENDAR_ACTUAL is the one convention that genuinely pays by
-    actual days, so it divides by the real month length.
+    A whole month in employment is 1.0 whatever the calendar says, less any
+    leave without pay: dividing days present by 30 would silently underpay
+    every February by 6.7% (salary profile acceptance test 13). A part month
+    -- a joiner or a leaver -- is the payable days over the method's divisor,
+    capped at the whole month:
 
-    `weekly_holidays_lost` (WORKING_26 only): weekly holidays inside the days
-    lost before joining or after leaving -- they were never working days, so
-    they cost nothing. (The front end added them to the days lost, which
-    docked a full month 4/26.)
+      CALENDAR_DAYS        payable calendar days ÷ days in the month
+      FIXED_30             payable calendar days ÷ 30
+      WORKING_DAYS_26      payable working days ÷ 26
+      ACTUAL_WORKING_DAYS  payable working days ÷ working days in the month
+
+    Working days come from the establishment's published calendar
+    (`calendar`, a `paysetio.services.calendar.Calendar`), never from a
+    hardcoded weekend. Leave without pay is in working days for the two
+    working-day methods, calendar days otherwise.
     """
+    D = ProrationDivisorChoices
     start, end = month_start(period), month_end(period)
     first = max(start, join_date) if join_date else start
     last = min(end, leave_date) if leave_date else end
     if last < first:
         return ZERO
-    lost = (first - start).days + (end - last).days + int(lwp_days)
-    D = ProrationDivisorChoices
-    if divisor == D.CALENDAR_ACTUAL:
-        present = (last - first).days + 1 - int(lwp_days)
-        return max(ZERO, Decimal(present) / Decimal(days_in_month(start)))
-    if divisor == D.FIXED_30:
-        return max(ZERO, 1 - Decimal(lost) / book.labour.decimal("dayWageDivisor"))
-    if divisor == D.WORKING_26:
-        lost_working = max(0, lost - int(weekly_holidays_lost))
-        return max(ZERO, 1 - Decimal(lost_working) / book.labour.decimal("standardDaysPerMonth"))
-    if divisor == D.HOURS_208:
-        if payable_hours is None:
-            raise ValueError("The HOURS_208 divisor needs the payable hours.")
-        # Hours past the divisor are overtime, not a bigger month.
-        return min(Decimal(1), max(ZERO, to_decimal(payable_hours) / book.labour.decimal("standardMonthHours")))
-    raise ValueError(f"Unknown proration divisor: {divisor}")
+    whole = first == start and last == end
+    lwp = Decimal(int(lwp_days))
+    working = method in (D.WORKING_DAYS_26, D.ACTUAL_WORKING_DAYS)
+    if working and calendar is None:
+        raise ValueError(f"The {method} method needs the establishment's calendar.")
+    if method == D.CALENDAR_DAYS:
+        divisor, payable = Decimal(days_in_month(start)), Decimal((last - first).days + 1)
+    elif method == D.FIXED_30:
+        divisor, payable = book.labour.decimal("dayWageDivisor"), Decimal((last - first).days + 1)
+    elif method == D.WORKING_DAYS_26:
+        divisor, payable = book.labour.decimal("standardDaysPerMonth"), Decimal(calendar.working_days(first, last))
+    elif method == D.ACTUAL_WORKING_DAYS:
+        divisor = Decimal(calendar.working_days(start, end))
+        payable = Decimal(calendar.working_days(first, last))
+    else:
+        raise ValueError(f"Unknown proration method: {method}")
+    if not divisor:
+        return ZERO
+    if whole:
+        return max(ZERO, 1 - lwp / divisor)
+    return max(ZERO, min(Decimal(1), (payable - lwp) / divisor))
 
 
 # ------------------------------------------------------------ separation §6.3
@@ -380,7 +424,7 @@ def separation_entitlement(employee, structure, separation_type, on, book, gross
         gratuity_figure = Figure(ZERO, "No gratuity entitlement on file (gratuityEligible is off): "
                                        "compared with nil — \"gratuity, if any\"")
     divisor = L.get("dayWageDivisor")
-    base_value, base_label = wage_base(employee, structure)
+    base_value, base_label = wage_base(employee, structure, on)
     compensation = Figure(
         round_to_taka(base_value * days * years / divisor.decimal),
         f"{base_label.capitalize()} ÷ {divisor.value} × {days} days × {years} years; rounded to the taka",
@@ -464,15 +508,25 @@ def provident_fund(employee, structure, book):
 def derived(employee, structure, as_of, book):
     """What the structure drives (the salary tab's derivation panel): every
     figure with its basis, citation and confidence (§9)."""
+    from paysetio.services.resolve import ElectionUnanswered
+
     out = {
-        "overtimeHourly": overtime_hourly(structure, book).as_dict(),
+        "overtimeHourly": None,
         "providentFund": provident_fund(employee, structure, book),
         "festivalBonus": festival_bonus(employee, structure, as_of, book),
         "leave": leave(employee, structure, book),
         "gratuity": None,
         "gratuityBreakpoint": None,
+        "unanswered": [],
     }
+    try:
+        out["overtimeHourly"] = overtime_hourly(employee, structure, book, as_of).as_dict()
+    except ElectionUnanswered as exc:
+        out["unanswered"].append({"key": exc.key, "message": exc.message})
     if employee.doj:
-        out["gratuity"] = gratuity(employee, structure, as_of, book).as_dict()
-        out["gratuityBreakpoint"] = gratuity_breakpoint(employee, structure, as_of, book)
+        try:
+            out["gratuity"] = gratuity(employee, structure, as_of, book).as_dict()
+            out["gratuityBreakpoint"] = gratuity_breakpoint(employee, structure, as_of, book)
+        except ElectionUnanswered as exc:
+            out["unanswered"].append({"key": exc.key, "message": exc.message})
     return out

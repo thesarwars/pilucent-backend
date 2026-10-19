@@ -16,7 +16,6 @@ from django.utils import timezone
 
 from common import clock
 from common.money import money_str, round_to_paisa
-from employeeio.models import CompanyStatutoryProfile
 from employeeio.services.salary_access import actor_role
 from employeeio.services.sites import site_of
 from employeeio.services.validation import validate_reason
@@ -72,15 +71,20 @@ def rules_of(period):
     return Rules.from_rule_set(period.rule_set)
 
 
-def elections_of(company):
-    p = CompanyStatutoryProfile.objects.filter(company=company).first()
+def elections_of(company, site=None, on=None):
+    """The payroll elections attendance reads (payroll settings §4.1), as
+    resolved for the site on `on`. Elected in Payroll settings, not here."""
+    from paysetio.services.resolve import elections_for
+
+    r = elections_for(company, site, on or clock.today())
+    ot, worked = r["overtime_base"], r["days_worked_basis"]
     return {
-        "overtimeBase": p.overtime_base if p else "BASIC_PLUS_DA",
-        "daysWorked": {
-            "paidLeave": bool(p and p.days_worked_paid_leave),
-            "festival": bool(p and p.days_worked_festival),
-            "weekly": bool(p and p.days_worked_weekly),
-        },
+        "overtimeBase": ot.value,
+        "overtimeComponents": (ot.data or {}).get("components") if ot.value == "CUSTOM" else None,
+        "standardMonthHours": ot.hours,
+        "daysWorked": {k: bool(v) for k, v in (worked.data or {}).items()} if worked.answered else None,
+        "answered": {"overtimeBase": ot.answered, "daysWorked": worked.answered},
+        "citations": {"overtimeBase": ot.as_dict()["citation"], "daysWorked": worked.as_dict()["citation"]},
     }
 
 
@@ -181,22 +185,27 @@ def grid(company, site, month, *, dept=None, q="", exceptions_only=False, page=1
 # ======================================================================== day
 
 
-def hourly_ot_rate(employee, d, rules, elections):
-    """§6.2: monthly base ÷ standard month hours × the multiplier. The base is
-    the ACTUAL basic (+ dearness allowance) from the structure in force, or
-    gross under that election -- never an approximation from gross."""
+def hourly_ot_rate(employee, d, rules):
+    """§6.2: the elected overtime base ÷ the standard month hours × the
+    multiplier, on the ACTUAL structure in force -- never an approximation
+    from gross. None with no structure; {"unanswered": ...} when the
+    overtime base has not been elected."""
     from employeeio.services.salary import structure_in_force
+    from paysetio.services.resolve import ElectionUnanswered, election, overtime_base
 
     structure = structure_in_force(employee, d)
     if structure is None:
         return None
-    gross_base = elections["overtimeBase"] == "GROSS"
-    base = structure.gross if gross_base else structure.basic + structure.component_amount("DA")
-    rate = round_to_paisa(base / Decimal(rules.standard_month_hours) * rules.overtime_multiplier)
+    r = election(employee.company, "overtime_base", d, site_of(employee))
+    try:
+        base, _, label = overtime_base(structure, r)
+    except ElectionUnanswered as exc:
+        return {"unanswered": True, "message": exc.message}
+    hours = r.hours or rules.standard_month_hours
+    rate = round_to_paisa(base / Decimal(hours) * rules.overtime_multiplier)
     return {
         "base": money_str(base),
-        "basis": f"{'Gross' if gross_base else 'Basic + dearness allowance'} ÷ {rules.standard_month_hours} "
-                 f"× {rules.overtime_multiplier}",
+        "basis": f"{label} ÷ {hours} × {rules.overtime_multiplier}",
         "rate": money_str(rate),
         "rateValue": rate,
     }
@@ -243,8 +252,10 @@ def day_detail(company, employee, d, *, figures):
         "settable": list(SETTABLE_STATUSES),
     }
     if figures:
-        rate = hourly_ot_rate(employee, d, rules, elections_of(company))
-        if rate is not None:
+        rate = hourly_ot_rate(employee, d, rules)
+        if rate is not None and rate.get("unanswered"):
+            out["otRate"] = rate
+        elif rate is not None:
             out["otCost"] = money_str(round_to_paisa(rate.pop("rateValue") * r.overtime / 60))
             out["otRate"] = rate
     return out
@@ -299,7 +310,7 @@ def close_summary(company, site, month):
     period = ensure_period(company, site, month)
     rules = rules_of(period)
     today = clock.today()
-    elections = elections_of(company)
+    elections = elections_of(company, site, month_end(month))
     out = {"period": period_out(period, today), "elections": elections, "rules": {"version": rules.version,
                                                                                     "confidence": rules.confidence}}
     employees = list(site_employees(company, site))
@@ -334,13 +345,13 @@ def close_summary(company, site, month):
                     high.append(row)
                 else:
                     medium.append(row)
-        worked_days = days_worked_for_accrual(recs, elections["daysWorked"])
+        worked_days = days_worked_for_accrual(recs, elections["daysWorked"]) if elections["daysWorked"] else None
         ot = sum(r.overtime for r in recs)
         late = sum(r.late for r in recs)
         worked = sum(r.worked for r in recs)
         for k, v in mine.items():
             totals[k] += v
-        totals["daysWorked"] += worked_days
+        totals["daysWorked"] += worked_days or 0
         totals["overtimeMinutes"] += ot
         totals["lateMinutes"] += late
         totals["workedMinutes"] += worked
@@ -1017,26 +1028,9 @@ def publish_calendar(company, site, year, *, user=None):
     return cal
 
 
-# ================================================================== elections
-
-
-def save_elections(company, *, overtime_base=None, paid_leave=None, festival=None, weekly=None):
-    profile, _ = CompanyStatutoryProfile.objects.get_or_create(company=company)
-    if overtime_base is not None:
-        if overtime_base not in ("BASIC_PLUS_DA", "GROSS"):
-            raise AttendanceRefused({"overtimeBase": ["BASIC_PLUS_DA or GROSS."]})
-        profile.overtime_base = overtime_base
-    for field, value in (("days_worked_paid_leave", paid_leave), ("days_worked_festival", festival),
-                         ("days_worked_weekly", weekly)):
-        if value is not None:
-            setattr(profile, field, bool(value))
-    profile.save()
-    return elections_of(company)
-
-
 __all__ = [
     "AttendanceRefused", "acknowledge", "adjust", "assign_shift", "calendar_out", "close_summary", "compliance",
     "confirm_holiday_work", "create_shift", "day_detail", "elections_of", "exceptions_list", "grid",
     "import_punches", "lock", "publish_calendar", "recompute", "remove_adjustment", "reopen", "resolve",
-    "save_calendar", "save_elections", "set_profile_shift", "shift_out",
+    "save_calendar", "set_profile_shift", "shift_out",
 ]

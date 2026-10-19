@@ -20,6 +20,7 @@ class NotificationModelKindChoices(models.TextChoices):
     LEAVE = "LEAVE", "Leave"  # BD leave; message-only, the outbox carries the record
     ID_CARD = "ID_CARD", "ID card"  # BD ID cards; message-only, the outbox carries the record
     ATTENDANCE_INTAKE = "ATTENDANCE_INTAKE", "Attendance intake"  # BD intake; message-only
+    PAYROLL_SETTINGS = "PAYROLL_SETTINGS", "Payroll settings"  # BD payroll settings; message-only
 
 
 class NotificationKindChoices(models.TextChoices):
@@ -88,3 +89,8 @@ class NotificationKindChoices(models.TextChoices):
     INTAKE_ORPHANS_DETECTED = "INTAKE_ORPHANS_DETECTED", "Unmapped Device IDs Held"
     INTAKE_BATCH_REVERSED = "INTAKE_BATCH_REVERSED", "Attendance Import Reversed"
     ATTENDANCE_PERIOD_UNLOCKED = "ATTENDANCE_PERIOD_UNLOCKED", "Attendance Period Unlocked"
+
+    # BD payroll settings (paysetio events, payroll-settings.md §8)
+    PAYROLL_ELECTION_PROPOSED = "PAYROLL_ELECTION_PROPOSED", "Payroll Election Awaiting Approval"
+    PAYROLL_ELECTION_BACKDATED = "PAYROLL_ELECTION_BACKDATED", "Payroll Election Backdated"
+    PAYROLL_SETTINGS_BLOCKED = "PAYROLL_SETTINGS_BLOCKED", "Payroll Blocked By Settings"

@@ -296,13 +296,13 @@ class AttendanceCalendarPublish(AttendanceView):
 
 
 class AttendanceElections(AttendanceView):
+    """Read-only: the overtime base and the days-worked flags are elected,
+    with history and a second approver, in Payroll settings."""
+
     def get(self, request):
-        return Response(ops.elections_of(self.company()))
+        return Response(ops.elections_of(self.company(), self.site() if request.query_params.get("site") else None))
 
     def patch(self, request):
-        self.refuse_unless(WRITE)
-        d = request.data
-        worked = d.get("daysWorked") or {}
-        return Response(ops.save_elections(self.company(), overtime_base=d.get("overtimeBase"),
-                                           paid_leave=worked.get("paidLeave"), festival=worked.get("festival"),
-                                           weekly=worked.get("weekly")))
+        return Response({"message": "The payroll elections moved to Payroll settings, where each change is "
+                                    "effective-dated, cited and approved by a second person."},
+                        status=status.HTTP_410_GONE)

@@ -111,6 +111,14 @@ class BDEmployeeView(APIView):
         # say which one, so it can be seeded or published.
         if isinstance(exc, RuleBookError):
             return Response({"error": True, "message": str(exc)}, status=status.HTTP_409_CONFLICT)
+        # An unanswered payroll election refuses what it governs (payroll
+        # settings §1.2): say which, and where to elect it.
+        from paysetio.services.resolve import ElectionUnanswered
+
+        if isinstance(exc, ElectionUnanswered):
+            return Response({"error": True, "message": exc.message, "unanswered": exc.key,
+                             "errors": [{"field": "settings", "path": "settings", "message": exc.message}]},
+                            status=status.HTTP_409_CONFLICT)
         return super().handle_exception(exc)
 
 

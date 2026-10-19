@@ -100,8 +100,13 @@ def separation_preview(employee, separation_type, on, gross_misconduct=False):
         return {"available": False, "warnings": protection, "message": (
             "No salary structure in force on the separation date." if structure is None
             else "No date of joining on file: length of service cannot be computed.")}
+    from paysetio.services.resolve import ElectionUnanswered
+
     book = rule_book(on)
-    out = separation_entitlement(employee, structure, separation_type, on, book, gross_misconduct)
+    try:
+        out = separation_entitlement(employee, structure, separation_type, on, book, gross_misconduct)
+    except ElectionUnanswered as exc:
+        return {"available": False, "warnings": protection, "message": exc.message, "unanswered": exc.key}
     warnings = list(protection)
     if separation_type == SeparationTypeChoices.RETIREMENT:
         warning = retirement_age_warning(employee, on, book)

@@ -136,16 +136,6 @@ class SeparationTypeChoices(models.TextChoices):
 # ----------------------------------------------------------- statutory (§2.4)
 
 
-class GratuityBasisChoices(models.TextChoices):
-    BASIC = "BASIC", "Basic"
-    GROSS = "GROSS", "Gross"
-
-
-class GratuityMethodChoices(models.TextChoices):
-    MONTHLY_PROVISION = "MONTHLY_PROVISION", "Monthly provision"
-    FUNDED = "FUNDED", "Funded"
-
-
 # --------------------------------------------------------- tax profile (§2.5)
 
 
@@ -277,13 +267,14 @@ class ArrearsRunChoices(models.TextChoices):
 
 
 class ProrationDivisorChoices(models.TextChoices):
-    """A policy election (payroll-calc.js 05.3). All four are lawful; they pay
-    differently, and the difference is largest in February."""
+    """The proration election (payroll settings §2): all four are lawful and
+    pay differently; the difference is largest in a 31-day month and in
+    February. Elected in `paysetio`, never defaulted."""
 
-    CALENDAR_ACTUAL = "CALENDAR_ACTUAL", "Calendar actual"
+    CALENDAR_DAYS = "CALENDAR_DAYS", "Calendar days"
     FIXED_30 = "FIXED_30", "Fixed 30"
-    WORKING_26 = "WORKING_26", "Working 26"
-    HOURS_208 = "HOURS_208", "Hours 208"
+    WORKING_DAYS_26 = "WORKING_DAYS_26", "Working days (26)"
+    ACTUAL_WORKING_DAYS = "ACTUAL_WORKING_DAYS", "Actual working days"
 
 
 # ----------------------------------------------------------- documents (§9)

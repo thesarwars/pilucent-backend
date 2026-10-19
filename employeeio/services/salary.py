@@ -33,7 +33,6 @@ from ..choices import (
     ArrearsRunChoices,
     GradeChoices,
     OverrideBasisChoices,
-    ProrationDivisorChoices,
     RevisionMethodChoices,
     RevisionTypeChoices,
     SalaryAuditActionChoices,
@@ -50,7 +49,7 @@ from ..models import (
     SalaryAudit,
     SalaryOverride,
 )
-from .periods import next_unprocessed_period, period_label, reopened_periods
+from .periods import month_end, next_unprocessed_period, period_label, reopened_periods
 from .salary_access import actor_role
 from .salary_templates import (
     OVERRIDE_TOLERANCE,
@@ -614,19 +613,30 @@ def warnings_for(built, current_gross=None):
 def arrears_for(employee, effective_from, new_gross, old_gross, book):
     """Each processed period the change reaches back into, and what it owes:
     (new − paid) × the share of the period the new rate covers, rounded to the
-    paisa per period. A part period prorates by the company's divisor --
-    calendar actual where the election needs what is not on file: hours
-    (HOURS_208) or the weekly holidays in the part period (WORKING_26)."""
+    paisa per period. A part period prorates by the proration election in
+    force in that period (payroll settings §4.3); with no period reopened,
+    nothing needs it. Unanswered refuses rather than default."""
+    from paysetio.services.calendar import Calendar
+    from paysetio.services.resolve import election
+    from timekeepingio.services.base import CalendarMissing
+
+    from .sites import site_of
     from .statutory import proration_factor
 
-    profile = getattr(employee.company, "bd_statutory_profile", None)
-    divisor = profile.proration_divisor if profile else ProrationDivisorChoices.CALENDAR_ACTUAL
-    if divisor in (ProrationDivisorChoices.HOURS_208, ProrationDivisorChoices.WORKING_26):
-        divisor = ProrationDivisorChoices.CALENDAR_ACTUAL
+    site = site_of(employee)
+    cal = Calendar(site)
+    divisor = None
     rows, total = [], ZERO
     for period in reopened_periods(employee, effective_from):
         starts = max(d for d in (effective_from, employee.doj, period) if d)
-        factor = proration_factor(period, divisor, book, join_date=starts, leave_date=employee.separated_on)
+        divisor = election(employee.company, "proration_method", month_end(period), site).require().value
+        try:
+            factor = proration_factor(period, divisor, book, join_date=starts, leave_date=employee.separated_on,
+                                      calendar=cal)
+        except CalendarMissing as exc:
+            raise SalaryRefused({"effectiveFrom": [
+                f"Arrears for {period_label(period)} prorate by working days (the proration election), and "
+                f"{exc.errors['calendar'][0]}"]}, status=409) from None
         due = round_to_paisa((new_gross - old_gross) * factor)
         total += due
         rows.append({
@@ -668,22 +678,28 @@ def employer_cost(employee, structure, as_of, book):
     the festival count are law, from the rule book."""
     from .statutory import gratuity
 
+    from paysetio.services.ops import scheme_config
+    from paysetio.services.resolve import ElectionUnanswered
+
     gross, basic = structure.gross, structure.basic
-    profile = getattr(employee.company, "bd_statutory_profile", None)
     statutory = _statutory(employee)
     rows = [("gross", "Gross", gross, "Structure total")]
 
     if statutory is not None and statutory.pf_member:
-        rate = statutory.pf_employer if statutory.pf_employer is not None else (
-            profile.pf_employer_rate if profile else Decimal("8"))
+        rate = statutory.pf_employer
         rows.append(("providentFund", "Provident fund — employer", round_to_taka(basic * rate / HUNDRED),
                      f"{pct_text(rate)}% of basic"))
     else:
         rows.append(("providentFund", "Provident fund — employer", ZERO, "Not a provident-fund member"))
 
     tenure = None
-    if employee.doj and statutory is not None:
-        g = gratuity(employee, structure, as_of, book)
+    try:
+        g = gratuity(employee, structure, as_of, book) if employee.doj and statutory is not None else None
+    except ElectionUnanswered as exc:
+        g, unanswered = None, exc
+    else:
+        unanswered = None
+    if g is not None:
         parts = g.service
         served = f"{parts.years}y {parts.residual_months}m"
         basis = f"{served} · {g.days} days ÷ {MONTHS}"
@@ -694,7 +710,8 @@ def employer_cost(employee, structure, as_of, book):
         tenure = {"service": parts.as_dict(), "years": g.years, "roundedUp": g.rounded_up, "daysPerYear": g.days,
                   "label": served}
     else:
-        rows.append(("gratuity", "Gratuity provision", ZERO, "No date of joining on file"))
+        rows.append(("gratuity", "Gratuity provision", ZERO,
+                     unanswered.message if unanswered else "No date of joining on file"))
 
     per_year = book.labour.get("festivalBonusesPerYear")
     cap = book.labour.get("festivalBonusCapMultiple")
@@ -702,7 +719,7 @@ def employer_cost(employee, structure, as_of, book):
     times = f"Basic × {per_year.value}" if cap.decimal == 1 else f"Basic × {cap.value} × {per_year.value}"
     rows.append(("festivalBonus", "Festival bonus provision", bonus, f"{times} ÷ {MONTHS}"))
 
-    premium = profile.insurance_premium_monthly if profile else Decimal("148")
+    premium = to_decimal(scheme_config(employee.company, "GROUP_INSURANCE", as_of).get("premiumMonthly") or "0")
     covered = statutory is not None and statutory.insurance_covered
     rows.append(("insurance", "Group insurance", premium if covered else ZERO,
                  "Flat premium (company policy)" if covered else "Not covered"))
@@ -726,10 +743,15 @@ def gratuity_consequence(employee, current, built, as_of, book):
     liability for every completed year, not only future ones (§11.3)."""
     from .statutory import gratuity
 
+    from paysetio.services.resolve import ElectionUnanswered
+
     if current is None or not employee.doj or _statutory(employee) is None:
         return None
-    before = gratuity(employee, current, as_of, book)
-    after = gratuity(employee, built, as_of, book)
+    try:
+        before = gratuity(employee, current, as_of, book)
+        after = gratuity(employee, built, as_of, book)
+    except ElectionUnanswered:
+        return None
     delta = after.amount.value - before.amount.value
     if not delta:
         return None
