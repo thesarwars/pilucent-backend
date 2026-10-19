@@ -26,7 +26,8 @@ class SalaryStructureWriteSerializer(StrictSerializer):
 
     decimal_keys = ("gross", "value")
 
-    templateCode = serializers.ChoiceField(CURRENT_TEMPLATES, required=False, allow_null=True)
+    # Any template in the company's pay library; the service refuses an unknown or retired one.
+    templateCode = serializers.CharField(max_length=40, required=False, allow_null=True)
     # Gross on a gross-down template; basic on RMG (optional there: the
     # grade's gazetted basic).
     gross = MoneyField(required=False, allow_null=True)

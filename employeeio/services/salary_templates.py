@@ -1,27 +1,24 @@
-"""Salary templates (salary profile §7; backend §3.1, §4.1, §4.2).
+"""Salary templates (salary profile §7; components & structures §3.4-§4.3).
 
-A template is a split of gross: basic as a percentage of gross, house rent as
-a percentage of BASIC, medical and conveyance of gross. Whatever the four
-leave of gross goes to the template's balancing component -- the rounding
-residue on a split that allocates all of gross (officer, balanced on basic),
-or the unallocated share on one that does not (worker 95.5%, staff 99%, which
-balance on Other allowance so basic stays at its percentage).
+A template is now a row-based structure template in the pay library
+(`paylibio.StructureTemplate`): each row a component with a basis -- % of
+gross, % of basic, or a fixed amount. A gross-down template splits a gross;
+whatever its rows leave goes to the balancing component (the rounding residue
+on a split that allocates all of gross, or the unallocated share on one that
+does not). A basic-up template stacks its rows on a basic, so gross is the
+output. The RMG template is the gazette's, built from the rule book.
 
-Templates are rows per company, versioned by `effective_from`, seeded on
-first use. Management (65/50/5/3) allocates 105.5% of gross and is left out
-of the seed until its split is settled.
+`Split` is a template's rows as the engine reads them; `build_split` the
+gross-down computation. The officer, worker and staff splits behave exactly as
+they did as four fixed columns.
 """
 
 from dataclasses import dataclass
-from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
-
-from django.db import transaction
 
 from common.money import ZERO, round_to_taka, to_decimal
 
 from ..choices import OverrideBasisChoices, SalaryComponentChoices
-from ..models import SalaryTemplate
 
 C = SalaryComponentChoices
 B = OverrideBasisChoices
@@ -30,60 +27,43 @@ _ONE_DP = Decimal("0.1")
 # Overridden when the effective percentage is this far from the template's:
 # wide enough to absorb rounding, narrow enough to catch a real deviation.
 OVERRIDE_TOLERANCE = Decimal("0.5")
-
-# Before any structure: a template has to be in force on the oldest joining date.
-SEED_FROM = date(2000, 1, 1)
-SEED = (
-    {"code": "officer", "label": "Officer grade template", "basic": "60", "hr": "50", "med": "6", "conv": "4",
-     "balancing": C.BASIC, "order": 1,
-     "note": "Officers and above. The default for anyone outside a gazetted worker grade. Allocates all of gross; "
-             "basic absorbs the rounding."},
-    {"code": "worker", "label": "Worker grade template", "basic": "55", "hr": "50", "med": "8", "conv": "5",
-     "balancing": C.OTHER, "order": 2,
-     "note": "Gazetted worker grades. Basic is held at 55%, which needs a higher gross to clear the same grade "
-             "floor; the 4.5% of gross the split leaves is paid as Other allowance."},
-    {"code": "staff", "label": "Staff grade template", "basic": "58", "hr": "50", "med": "7", "conv": "5",
-     "balancing": C.OTHER, "order": 3,
-     "note": "Supervisory and administrative staff. The 1% of gross the split leaves is paid as Other allowance."},
-)
+# Library row basis -> the salary module's override basis.
+ROW_BASIS = {"PCT_OF_GROSS": B.PCT_GROSS, "PCT_OF_BASIC": B.PCT_BASIC, "FIXED": B.FIXED}
 
 
 def ensure_templates(company):
-    """Seed the company's templates the first time they are needed. A code
-    that already has any version is left alone -- a company that revised its
-    officer split keeps its own."""
-    have = set(SalaryTemplate.objects.filter(company=company).values_list("code", flat=True))
-    missing = [s for s in SEED if s["code"] not in have]
-    if not missing:
-        return
-    with transaction.atomic():
-        for s in missing:
-            SalaryTemplate.objects.get_or_create(
-                company=company, code=s["code"], effective_from=SEED_FROM,
-                defaults={
-                    "label": s["label"], "note": s["note"], "basic_pct": Decimal(s["basic"]),
-                    "hr_pct_of_basic": Decimal(s["hr"]), "med_pct": Decimal(s["med"]),
-                    "conv_pct": Decimal(s["conv"]), "balancing_component": s["balancing"],
-                    "display_order": s["order"],
-                },
-            )
+    from paylibio.services.seed import ensure_library
+
+    ensure_library(company)
+
+
+def _current(company, on, code=None):
+    """The published version of each template in force on `on`."""
+    from paylibio.models import StructureTemplate
+
+    ensure_templates(company)
+    qs = (StructureTemplate.objects.filter(company=company, status__in=("PUBLISHED", "ARCHIVED"),
+                                           effective_from__lte=on).prefetch_related("rows")
+          .order_by("code", "-effective_from", "-version"))
+    if code is not None:
+        qs = qs.filter(code=code)
+    current = {}
+    for row in qs:
+        current.setdefault(row.code, row)
+    return current
 
 
 def templates_on(company, on):
-    """The version of each active template in force on `on`, in display order."""
-    ensure_templates(company)
-    rows = SalaryTemplate.objects.filter(company=company, is_active=True, effective_from__lte=on).order_by(
-        "code", "-effective_from")
-    current = {}
-    for row in rows:
-        current.setdefault(row.code, row)
-    return sorted(current.values(), key=lambda r: (r.display_order, r.code))
+    """The company (non-gazette) templates a structure can be built on, in
+    display order. An archived template still resolves a structure built on
+    it, but is not offered."""
+    rows = [t for t in _current(company, on).values() if not t.gazette and t.status == "PUBLISHED"]
+    return sorted(rows, key=lambda r: (r.display_order, r.code))
 
 
 def template_on(company, code, on):
-    ensure_templates(company)
-    return (SalaryTemplate.objects.filter(company=company, code=code, is_active=True, effective_from__lte=on)
-            .order_by("-effective_from").first())
+    """The version of `code` in force on `on` (company or gazette), or None."""
+    return _current(company, on, code).get(code)
 
 
 # ------------------------------------------------------------------- splits
@@ -104,39 +84,79 @@ def pct_text(value):
 
 @dataclass(frozen=True)
 class Split:
-    basic: Decimal  # % of gross
-    hr: Decimal  # % of BASIC
-    med: Decimal  # % of gross
-    conv: Decimal  # % of gross
+    """A template's rows: ((code, basis, value), ...) in order, with BASIC first."""
+
+    rows: tuple
     balancing: str
+    mode: str = "GROSS_DOWN"
 
     @classmethod
-    def of(cls, row):
-        return cls(row.basic_pct, row.hr_pct_of_basic, row.med_pct, row.conv_pct, row.balancing_component)
+    def of(cls, template):
+        rows = sorted(template.rows.all(), key=lambda r: (r.component_code != C.BASIC, r.display_order, r.id or 0))
+        return cls(tuple((r.component_code, ROW_BASIS[r.basis], to_decimal(r.value)) for r in rows),
+                   template.balancing_code, template.mode)
+
+    def row(self, code):
+        return next(((b, v) for c, b, v in self.rows if c == code), None)
+
+    def _pct(self, code, basis):
+        r = self.row(code)
+        return r[1] if r and r[0] == basis else ZERO
+
+    @property
+    def basic(self):  # % of gross
+        return self._pct(C.BASIC, B.PCT_GROSS)
+
+    @property
+    def hr(self):  # % of BASIC
+        return self._pct(C.HRA, B.PCT_BASIC)
+
+    @property
+    def med(self):
+        return self._pct(C.MED, B.PCT_GROSS)
+
+    @property
+    def conv(self):
+        return self._pct(C.CONV, B.PCT_GROSS)
+
+    @property
+    def has_fixed(self):
+        return any(b == B.FIXED for _, b, _ in self.rows)
 
     @property
     def remainder(self):
-        """The share of gross the four leave, in % of gross."""
-        return HUNDRED - (self.basic + self.med + self.conv + self.basic * self.hr / HUNDRED)
+        """The share of gross the rows leave, in % of gross. None when a fixed
+        row makes it depend on the gross."""
+        if self.has_fixed:
+            return None
+        of_gross = sum((v for c, b, v in self.rows if b == B.PCT_GROSS), ZERO)
+        of_basic = sum((v for c, b, v in self.rows if b == B.PCT_BASIC), ZERO)
+        return HUNDRED - (of_gross + self.basic * of_basic / HUNDRED)
 
     @property
     def notation(self):
-        return " / ".join(pct_text(x) for x in (self.basic, self.hr, self.med, self.conv))
+        """'60 / 50 / 6 / 4' -- each row's figure, in order."""
+        return " / ".join(pct_text(v) if b != B.FIXED else f"৳{v:,.0f}" for _, b, v in self.rows)
 
     def template_pct(self, code):
-        """The template's percentage for a line, on the line's own base."""
-        return {
-            C.BASIC: self.basic, C.HRA: self.hr, C.MED: self.med, C.CONV: self.conv,
-            C.OTHER: self.remainder if self.balancing == C.OTHER else ZERO,
-        }.get(code)
+        """The template's percentage for a line, on the line's own base; the
+        balance for the balancing Other line; None where it has none."""
+        if code == C.OTHER and C.OTHER not in self.codes:
+            rem = self.remainder
+            return (rem if rem is not None else None) if self.balancing == C.OTHER else ZERO
+        r = self.row(code)
+        if r is None or r[0] == B.FIXED:
+            return None
+        return r[1]
+
+    @property
+    def codes(self):
+        return [c for c, _, _ in self.rows]
 
     def default_basis(self, code):
         """How the template expresses a line (the override grid's baseline)."""
-        if code == C.HRA:
-            return B.PCT_BASIC, self.hr
-        if code == C.OTHER:
-            return B.FIXED, ZERO
-        return B.PCT_GROSS, self.template_pct(code)
+        r = self.row(code)
+        return r if r is not None else (B.FIXED, ZERO)
 
 
 class ComponentsExceedGross(ValueError):
@@ -155,27 +175,29 @@ def line_amount(code, basis, value, gross, basic):
 
 
 def build_split(split, gross, overrides=None, keep_gross=True):
-    """The components of `gross` under `split` (§4.1), with `overrides`
-    ({code: (basis, value)}) set line by line.
+    """The components of `gross` under `split` (§4.3 GROSS_DOWN), with
+    `overrides` ({code: (basis, value)}) set line by line.
 
-    Each line is rounded to the taka; the balancing line absorbs what is left
-    so the parts sum to gross exactly. With overrides the balancing line is
-    Other allowance, as on the override grid. `keep_gross=False` lets gross
-    become the sum of the lines instead (the grid's "let gross change").
-    Raises ComponentsExceedGross when the lines leave the balancing line
-    below zero.
+    Basic first; each other row on its basis; each line rounded to the taka;
+    the balancing line absorbs what is left so the parts sum to gross
+    exactly. With overrides the balancing line is Other allowance, as on the
+    override grid. `keep_gross=False` lets gross become the sum of the lines
+    instead (the grid's "let gross change"). Raises ComponentsExceedGross
+    when the lines leave the balancing line below zero.
     """
     overrides = overrides or {}
     gross = round_to_taka(gross)
-    basis, value = overrides.get(C.BASIC, (B.PCT_GROSS, split.basic))
+    basis, value = overrides.get(C.BASIC, split.default_basis(C.BASIC))
     basic = line_amount(C.BASIC, basis, value, gross, ZERO)
     lines = {C.BASIC: basic}
-    for code in (C.HRA, C.MED, C.CONV):
+    for code in split.codes:
+        if code == C.BASIC:
+            continue
         basis, value = overrides.get(code, split.default_basis(code))
         lines[code] = line_amount(code, basis, value, gross, basic)
-    if C.OTHER in overrides:
-        basis, value = overrides[C.OTHER]
-        lines[C.OTHER] = line_amount(C.OTHER, basis, value, gross, basic)
+    for code, (basis, value) in overrides.items():
+        if code not in lines:
+            lines[code] = line_amount(code, basis, value, gross, basic)
     if not keep_gross:
         return [(code, amount) for code, amount in lines.items() if amount or code != C.OTHER]
     balancing = C.OTHER if overrides else split.balancing
@@ -183,7 +205,19 @@ def build_split(split, gross, overrides=None, keep_gross=True):
         lines[C.BASIC] = basic + gross - sum(lines.values())
     else:
         # The balancing line is the output here, whatever was typed into it.
-        lines[C.OTHER] = gross - sum(a for c, a in lines.items() if c != C.OTHER)
+        lines[balancing] = gross - sum(a for c, a in lines.items() if c != balancing)
     if any(a < 0 for a in lines.values()):
         raise ComponentsExceedGross(-min(a for a in lines.values()))
     return [(code, amount) for code, amount in lines.items() if amount or code == balancing]
+
+
+def build_basic_up(split, basic):
+    """§4.3 BASIC_UP: the rows stack on `basic`; gross is their sum -- an
+    output, with no residue and no balancing line."""
+    basic = round_to_taka(basic)
+    lines = [(C.BASIC, basic)]
+    for code, basis, value in split.rows:
+        if code == C.BASIC:
+            continue
+        lines.append((code, line_amount(code, basis, value, ZERO, basic)))
+    return [(c, a) for c, a in lines if a or c == C.BASIC]

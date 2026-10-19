@@ -400,62 +400,6 @@ class EmployeeFieldHistory(BaseModelWithUID):
         raise ValidationError("Change history is append-only. Record a correction as a new entry.")
 
 
-class SalaryTemplate(BaseModelWithUID):
-    """A named split of gross (salary profile §7, backend §3.1). Per company
-    and versioned: a change is a new row from a later date, so a structure
-    built on the old split still says what it was built on.
-
-    `hr_pct_of_basic` is a percentage of BASIC; every other one is of gross.
-    Whatever the four leave of gross goes to `balancing_component`.
-    """
-
-    company = models.ForeignKey("companyio.Company", on_delete=models.CASCADE, related_name="salary_templates")
-    code = models.CharField(max_length=20)
-    label = models.CharField(max_length=120)
-    label_bn = _text(120)
-    # States the CONSEQUENCE of choosing it, not its audience.
-    note = models.TextField()
-    note_bn = models.TextField(blank=True, default="")
-    basic_pct = models.DecimalField(max_digits=6, decimal_places=3)
-    hr_pct_of_basic = models.DecimalField(max_digits=6, decimal_places=3)
-    med_pct = models.DecimalField(max_digits=6, decimal_places=3)
-    conv_pct = models.DecimalField(max_digits=6, decimal_places=3)
-    balancing_component = models.CharField(
-        max_length=10, choices=SalaryComponentChoices.choices, default=SalaryComponentChoices.BASIC
-    )
-    display_order = models.PositiveSmallIntegerField(default=0)
-    is_active = models.BooleanField(default=True)
-    effective_from = models.DateField()
-    superseded_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
-    # Null for the seeded rows.
-    created_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True)
-
-    class Meta:
-        ordering = ("display_order", "code", "-effective_from")
-        constraints = [
-            models.UniqueConstraint(
-                fields=["company", "code", "effective_from"], name="employeeio_salarytemplate_code_per_company"
-            ),
-            models.CheckConstraint(
-                condition=Q(basic_pct__gt=0, basic_pct__lte=100, hr_pct_of_basic__gte=0, hr_pct_of_basic__lte=100,
-                            med_pct__gte=0, med_pct__lte=100, conv_pct__gte=0, conv_pct__lte=100),
-                name="employeeio_salarytemplate_pct_in_range",
-            ),
-            # 100.001, not 100: the four are decimals, and an exact-100 split
-            # must not fail on a representation boundary.
-            models.CheckConstraint(
-                condition=LessThanOrEqual(
-                    F("basic_pct") + F("med_pct") + F("conv_pct") + F("basic_pct") * F("hr_pct_of_basic") / 100,
-                    Decimal("100.001"),
-                ),
-                name="employeeio_salarytemplate_pct_sum_under_100",
-            ),
-        ]
-
-    def __str__(self):
-        return f"{self.code} from {self.effective_from}"
-
-
 class SalaryStructureQuerySet(models.QuerySet):
     def live(self):
         """Everything but cancelled structures: a cancelled scheduled change
@@ -498,11 +442,11 @@ class EmployeeSalaryStructure(BaseModelWithUID):
     reopened_periods = models.JSONField(default=list, blank=True)
     arrears = models.DecimalField(**MONEY_FIELD, default=ZERO)
     arrears_run = _text(20, choices=ArrearsRunChoices.choices)
-    # The template row it was built on (null for RMG, which the gazette builds,
-    # and for structures from before templates were rows). PROTECT: a template
-    # that has been used is never deleted.
+    # The pay-library template version it was built on (null for structures
+    # from before templates were rows, and the retired std/classic). PROTECT:
+    # a template that has been used is never deleted.
     template_version = models.ForeignKey(
-        SalaryTemplate, on_delete=models.PROTECT, null=True, blank=True, related_name="structures"
+        "paylibio.StructureTemplate", on_delete=models.PROTECT, null=True, blank=True, related_name="structures"
     )
     # The labour rule set its floor and figures were checked against, so a
     # 2025 structure still reproduces after the 2026 rules change (§5.5).
@@ -582,13 +526,10 @@ class EmployeeSalaryComponent(BaseModelWithUID):
     # MEASURED on write: |effective - template| >= 0.5pp. Never a flag someone sets.
     is_overridden = models.BooleanField(default=False)
     is_balancing = models.BooleanField(default=False)
-    # Five independent bases (payroll engine §4.2). House rent is in the wages
-    # base and the perquisite ceiling, not the provident-fund base.
-    in_ot_base = models.BooleanField(default=False)
-    in_pf_base = models.BooleanField(default=False)
-    in_gratuity_base = models.BooleanField(default=False)
-    in_wages_base = models.BooleanField(default=True)
-    in_perquisite_ceiling = models.BooleanField(default=False)
+    # The pay-library component version this line was built on (components &
+    # structures §9). Its bases are read from that version -- never from the
+    # current one -- so a later flag change does not restate this line.
+    component_version = models.PositiveIntegerField(default=1)
 
     class Meta:
         ordering = ("position", "id")

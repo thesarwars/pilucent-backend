@@ -56,6 +56,7 @@ from .salary_templates import (
     OVERRIDE_TOLERANCE,
     ComponentsExceedGross,
     Split,
+    build_basic_up,
     build_split,
     pct,
     pct_text,
@@ -87,7 +88,8 @@ R = RevisionTypeChoices
 B = OverrideBasisChoices
 A = SalaryAuditActionChoices
 
-TABLE_TEMPLATES = (T.OFFICER, T.WORKER, T.STAFF)
+# Retired before the pay library: structures on them still read, and their
+# next revision moves them to a current template.
 RETIRED_TEMPLATES = (T.STD, T.CLASSIC)
 GROSS_DOWN, BASIC_UP = "GROSS_DOWN", "BASIC_UP"
 OVERRIDABLE = (C.BASIC, C.HRA, C.MED, C.CONV, C.OTHER)
@@ -96,7 +98,31 @@ OVERRIDABLE = (C.BASIC, C.HRA, C.MED, C.CONV, C.OTHER)
 UNCHECKED = object()
 
 
-def template_label(code):
+def library_template(company, code, on=None):
+    """The pay library's template `code` in force on `on`, or None."""
+    if company is None or not code:
+        return None
+    return template_on(company, code, on or clock.today())
+
+
+def is_table(company, code, on=None):
+    """A company template (gross-down or basic-up), not the gazette's."""
+    t = library_template(company, code, on)
+    return t is not None and not t.gazette
+
+
+def is_basic_up(company, code, on=None):
+    """Built up from basic, so the amount means basic and gross is the output."""
+    if code == T.RMG:
+        return True
+    t = library_template(company, code, on)
+    return t is not None and t.mode == BASIC_UP
+
+
+def template_label(code, company=None):
+    t = library_template(company, code) if company is not None else None
+    if t is not None:
+        return t.name
     return T(code).label if code in T.values else code
 
 
@@ -137,14 +163,19 @@ def templates_out(company, on=None):
     out = []
     for row in templates_on(company, on):
         split = Split.of(row)
+        basic_up = row.mode == BASIC_UP
+        rows = [{"code": c, "name": C(c).label if c in C.values else c, "basis": b, "value": pct_text(v)
+                 if b != B.FIXED else money_str(v)} for c, b, v in split.rows]
+        rule = " · ".join(f"{r['name']} {r['value']}{'% of basic' if r['basis'] == B.PCT_BASIC else '% of gross' if r['basis'] == B.PCT_GROSS else ' fixed'}"
+                          for r in rows)
         out.append({
-            "id": row.code, "name": row.label, "nameBn": row.label_bn or None, "note": row.note,
+            "id": row.code, "name": row.name, "nameBn": row.name_bn or None, "note": row.note,
             "split": split.notation, "basicPct": pct_text(split.basic), "hrPctOfBasic": pct_text(split.hr),
             "medPct": pct_text(split.med), "convPct": pct_text(split.conv),
-            "remainderPct": pct_text(split.remainder), "balancing": row.balancing_component,
-            "mode": GROSS_DOWN, "amountMeans": "gross", "version": row.effective_from.isoformat(),
-            "rule": f"Basic {pct_text(split.basic)}% of gross · House rent {pct_text(split.hr)}% of basic · "
-                    f"Medical {pct_text(split.med)}% · Conveyance {pct_text(split.conv)}%",
+            "remainderPct": pct_text(split.remainder) if split.remainder is not None else None,
+            "balancing": None if basic_up else row.balancing_code,
+            "mode": row.mode, "amountMeans": "basic" if basic_up else "gross", "version": row.effective_from.isoformat(),
+            "versionNumber": row.version, "rows": rows, "rule": rule,
         })
     out.append({
         "id": T.RMG.value, "name": T.RMG.label, "nameBn": None,
@@ -175,6 +206,8 @@ class Built:
     split: object = None  # its Split, the baseline overrides are measured against
     overrides: dict = field(default_factory=dict)  # {code: Intent}
     balancing: str = None
+    company: object = None  # whose library resolves each line's component version
+    on: object = None
 
     @property
     def gross(self):
@@ -245,27 +278,38 @@ def build(template, amount, book, grade="", company=None, on=None, overrides=Non
             basic = max(floor, round_to_taka((total - fixed) / (1 + rate)))
             while sum(x for _, x in parts(basic)) < total:
                 basic += 1
-            return Built(template, parts(basic), [allowances, floor_rule, total_rule], balancing=C.BASIC)
-        return Built(template, parts(round_to_taka(amount)), [allowances], balancing=C.BASIC)
-    if template not in TABLE_TEMPLATES or company is None:
-        raise _refused_template(template)
-    row = template_on(company, template, on or clock.today())
-    if row is None:
-        raise SalaryRefused({"template": [f"No {template_label(template)} is in force on {on}."]})
+            return Built(template, parts(basic), [allowances, floor_rule, total_rule], balancing=C.BASIC,
+                         company=company, on=on, row=library_template(company, T.RMG, on))
+        return Built(template, parts(round_to_taka(amount)), [allowances], balancing=C.BASIC, company=company, on=on,
+                     row=library_template(company, T.RMG, on))
+    row = library_template(company, template, on or clock.today())
+    if row is None or row.gazette:
+        if template in RETIRED_TEMPLATES or company is None or row is None:
+            raise _refused_template(template)
     split = Split.of(row)
     overrides = overrides or {}
+    if split.mode == BASIC_UP:
+        if overrides:
+            raise SalaryRefused({"rows": [f"{row.name} builds up from basic: revise it instead of overriding."]})
+        if amount is None:
+            fixed = split.row(C.BASIC)
+            (floor, floor_rule), _, _ = grade_floor_rules(grade, book)
+            amount = max(fixed[1] if fixed and fixed[0] == B.FIXED else ZERO, floor)
+        return Built(template, build_basic_up(split, amount), [], row, split, {}, None, company, on)
     try:
         components = build_split(split, amount, {c: (i.basis, i.value) for c, i in overrides.items()}, keep_gross)
     except ComponentsExceedGross as exc:
         raise SalaryRefused({"rows": [
             f"Components exceed gross by {format_money(exc.excess)}. The balancing line cannot go below zero: "
             "reduce a component, or let gross change."]}) from None
-    return Built(template, components, [], row, split, overrides, C.OTHER if overrides else split.balancing)
+    return Built(template, components, [], row, split, overrides, C.OTHER if overrides else split.balancing,
+                 company, on)
 
 
 def template_input(structure):
-    """What a template was given to build `structure`: gross, or basic for RMG."""
-    if structure.template == T.RMG:
+    """What a template was given to build `structure`: gross, or basic for a
+    basic-up template (RMG and the like)."""
+    if is_basic_up(structure.employee.company, structure.template, structure.effective_from):
         return structure.basic
     return structure.gross
 
@@ -281,16 +325,20 @@ def percent_of(amount, whole):
     return None if value is None else pct_text(value)
 
 
-_BASE_FLAGS = {"in_ot_base": False, "in_pf_base": False, "in_gratuity_base": False, "in_wages_base": True,
-               "in_perquisite_ceiling": True}
-# Basic is the only line in the overtime, provident-fund and gratuity bases,
-# and is outside the s.55 perquisite ceiling.
-BASIC_FLAGS = {"in_ot_base": True, "in_pf_base": True, "in_gratuity_base": True, "in_wages_base": True,
-               "in_perquisite_ceiling": False}
+def component_version(company, code, on):
+    """The library version of `code` a line built on `on` pins (§9): a later
+    flag change makes a new version and never rewrites this line's bases."""
+    from paylibio.services.library import version_on
+
+    c = version_on(company, code, on) if company is not None else None
+    return c.version if c is not None else 1
 
 
-def base_flags(code):
-    return dict(BASIC_FLAGS if code == C.BASIC else _BASE_FLAGS)
+def base_flags(company, code, version):
+    """The line's bases, read from the component version it pins."""
+    from paylibio.services.library import flags_of
+
+    return flags_of(company, code, version)
 
 
 def describe(built):
@@ -317,7 +365,8 @@ def describe(built):
                       and abs(effective - template_pct) >= OVERRIDE_TOLERANCE)
         rows.append({
             "code": code, "amount": amount, "basis_text": basis, "template_pct": template_pct,
-            "effective_pct": effective, "is_overridden": overridden, "is_balancing": balancing, **base_flags(code),
+            "effective_pct": effective, "is_overridden": overridden, "is_balancing": balancing,
+            "component_version": component_version(built.company, code, built.on or clock.today()),
         })
     return rows
 
@@ -342,9 +391,11 @@ def _line_out(code, amount, gross, *, basis, template_pct, effective_pct, overri
         "templateBasis": _template_basis(code, template_pct) if overridden else None,
         "isOverridden": overridden,
         "isBalancing": balancing,
-        "bases": {"overtime": flags["in_ot_base"], "providentFund": flags["in_pf_base"],
+        "bases": {"overtime": flags["in_ot_base_s108"], "providentFund": flags["in_pf_base"],
                   "gratuity": flags["in_gratuity_base"], "wages": flags["in_wages_base"],
-                  "perquisiteCeiling": flags["in_perquisite_ceiling"]},
+                  "perquisiteCeiling": flags["in_perquisite_ceiling"], "taxable": flags["in_taxable_income"],
+                  "festival": flags["in_festival_base"], "prorate": flags["prorate_part_month"]},
+        "componentVersion": flags.get("version"),
     }
 
 
@@ -352,7 +403,8 @@ def described_out(built):
     gross = built.gross
     return [_line_out(r["code"], r["amount"], gross, basis=r["basis_text"], template_pct=r["template_pct"],
                       effective_pct=r["effective_pct"], overridden=r["is_overridden"], balancing=r["is_balancing"],
-                      flags=r) for r in describe(built)]
+                      flags=base_flags(built.company, r["code"], r["component_version"]))
+            for r in describe(built)]
 
 
 def components_out(components, gross):
@@ -368,8 +420,9 @@ def components_out(components, gross):
 
 def _stored_lines(structure, gross):
     out = []
+    company = structure.employee.company
     for c in structure.components.all():
-        flags = {k: getattr(c, k) for k in BASIC_FLAGS}
+        flags = base_flags(company, c.code, c.component_version)
         effective = c.effective_pct
         if effective is None:  # from before the metadata was recorded
             effective = pct(c.amount, gross)
@@ -409,7 +462,7 @@ def structure_out(structure, today=None):
         "effectiveFrom": structure.effective_from.isoformat(),
         "effectiveTo": structure.effective_to.isoformat() if structure.effective_to else None,
         "template": structure.template,
-        "templateName": template_label(structure.template),
+        "templateName": template_label(structure.template, structure.employee.company),
         "templateRetired": structure.template in RETIRED_TEMPLATES,
         "templateVersion": (structure.template_version.effective_from.isoformat()
                             if structure.template_version_id else None),
@@ -454,7 +507,7 @@ def masked_structure_out(structure, today=None):
         "effectiveFrom": structure.effective_from.isoformat(),
         "effectiveTo": structure.effective_to.isoformat() if structure.effective_to else None,
         "template": structure.template,
-        "templateName": template_label(structure.template),
+        "templateName": template_label(structure.template, structure.employee.company),
         "revisionType": rtype,
         "revisionTypeLabel": R(rtype).label if rtype in R.values else None,
         "clearsFloor": structure.clears_floor,
@@ -522,13 +575,13 @@ def required_gross(template, book, grade, company, on):
     """The lowest gross whose structure clears both floors on `template` --
     the wizard's "Raise to the minimum". None for RMG, which builds up from
     the floor by itself."""
-    if template not in TABLE_TEMPLATES:
+    row = library_template(company, template, on)
+    if row is None or row.gazette or row.mode == BASIC_UP:
         return None
     (floor, _), (total, _), _ = grade_floor_rules(grade, book)
-    row = template_on(company, template, on)
-    if row is None:
-        return None
     split = Split.of(row)
+    if not split.basic:
+        return None
     gross = max((floor * HUNDRED / split.basic).quantize(Decimal(1), rounding=ROUND_CEILING), total)
     while True:
         lines = dict(build_split(split, gross))
@@ -804,7 +857,7 @@ def _outcome(employee, built, effective_from, checks, warnings, consequence, *, 
         "status": (SalaryStatusChoices.SCHEDULED if effective_from > today else SalaryStatusChoices.ACTIVE),
         "backdated": backdated,
         "template": built.template,
-        "templateName": template_label(built.template),
+        "templateName": template_label(built.template, built.company),
         "gross": money_str(built.gross),
         "grossInWords": both_words(built.gross),
         "basic": money_str(built.basic),
@@ -968,7 +1021,7 @@ def assign(employee, *, template, amount=None, effective_from=None, arrears_run=
             f"A structure cannot take effect before the date of joining ({employee.doj.isoformat()})."]})
     if employee.separated_on and effective_from > employee.separated_on:
         raise SalaryRefused({"effective_from": [f"The employee separated on {employee.separated_on.isoformat()}."]})
-    if amount is None and template != T.RMG:
+    if amount is None and not is_basic_up(employee.company, template, effective_from):
         raise SalaryRefused({"amount": ["A gross amount is required for this template."]})
     if amount is not None and checked_amount(amount, "amount") <= 0:
         raise SalaryRefused({"amount": ["The amount must be above zero."]})
@@ -978,7 +1031,8 @@ def assign(employee, *, template, amount=None, effective_from=None, arrears_run=
     built = build(template, amount, book, employee.grade, employee.company, effective_from)
     return _commit(employee, built, effective_from, current=None, book=book, reason="", user=user, preview=preview,
                    arrears_run=arrears_run, revision_type=revision_type or R.FIRST_ASSIGNMENT, method="",
-                   history_label=f"Assigned on the {template_label(template)}", idempotency_key=idempotency_key)
+                   history_label=f"Assigned on the {template_label(template, employee.company)}",
+                   idempotency_key=idempotency_key)
 
 
 # ------------------------------------------------------------------ revision
@@ -994,9 +1048,9 @@ def revision_default(employee, current, today=None):
     return default
 
 
-def _revised_amount(method, value, current, template):
-    """The new template input (gross, or basic for RMG)."""
-    means = "basic" if template == T.RMG else "gross"
+def _revised_amount(method, value, current, template, company=None, on=None):
+    """The new template input (gross, or basic for a basic-up template)."""
+    means = "basic" if is_basic_up(company, template, on) else "gross"
     if method == M.CHANGE_TEMPLATE:
         if value is not None:
             return checked_amount(value)
@@ -1012,11 +1066,11 @@ def _revised_amount(method, value, current, template):
         return base + v
     if method == M.NEW_GROSS:
         if means == "basic":
-            raise SalaryRefused({"method": ["The RMG template is built up from basic: revise it with NEW_BASIC."]})
+            raise SalaryRefused({"method": ["This template is built up from basic: revise it with NEW_BASIC."]})
         return v
     if method == M.NEW_BASIC:
         if means != "basic":
-            raise SalaryRefused({"method": ["NEW_BASIC applies to a basic-up (RMG) structure; use NEW_GROSS."]})
+            raise SalaryRefused({"method": ["NEW_BASIC applies to a basic-up structure; use NEW_GROSS."]})
         return v
     raise SalaryRefused({"method": [f"Unknown revision method {method!r}."]})
 
@@ -1065,22 +1119,26 @@ def revise(employee, *, method, value=None, effective_from=None, reason="", temp
         raise SalaryRefused({"revisionType": [f"{R(revision_type).label} applies only to a first structure."]})
 
     warnings = []
+    company = employee.company
+
+    def known(code):
+        return code == T.RMG or is_table(company, code, effective_from)
+
     if method == M.CHANGE_TEMPLATE:
-        known = TABLE_TEMPLATES + (T.RMG,)
-        template = template or (str(value) if value in known else None)
+        template = template or (str(value) if known(str(value)) else None)
         if template is None:
             raise SalaryRefused({"template": ["Name the template to change to."]})
         if template == current.template:
             raise SalaryRefused({"template": ["The structure is already on this template."]})
-        value = None if value in known else value
+        value = None if known(str(value)) else value
     elif current.template in RETIRED_TEMPLATES and (template is None or template == current.template):
         raise SalaryRefused({"template": [
-            f"This structure is on the {template_label(current.template)}. Choose a current template: revise it "
+            f"This structure is on the {template_label(current.template, employee.company)}. Choose a current template: revise it "
             "with CHANGE_TEMPLATE."]})
     template = template or current.template
-    if template not in TABLE_TEMPLATES + (T.RMG,):
+    if not known(template):
         raise _refused_template(template)
-    amount = _revised_amount(method, value, current, template)
+    amount = _revised_amount(method, value, current, template, company, effective_from)
     if rounding:
         amount = (amount / rounding).quantize(Decimal(1), rounding=ROUND_HALF_UP) * rounding
     if amount <= 0:
@@ -1088,7 +1146,8 @@ def revise(employee, *, method, value=None, effective_from=None, reason="", temp
     checked_amount(amount)
 
     overrides = {}
-    if template == current.template and template in TABLE_TEMPLATES:
+    if template == current.template and is_table(company, template, effective_from) \
+            and not is_basic_up(company, template, effective_from):
         overrides = carried_overrides(current)
     elif current.overrides.exists():
         warnings.append({"key": "salary.overridesDropped", "message": (
@@ -1116,7 +1175,7 @@ def reassign(employee, *, template, amount=None, effective_from=None, reason="",
     if template != current.template:
         method = M.CHANGE_TEMPLATE
     else:
-        method = M.NEW_BASIC if template == T.RMG else M.NEW_GROSS
+        method = M.NEW_BASIC if is_basic_up(employee.company, template, effective_from) else M.NEW_GROSS
         if amount is None:
             raise SalaryRefused({"amount": ["A gross amount is required to reassign on the same template."]})
     return revise(employee, method=method, value=amount, effective_from=effective_from, reason=reason,
@@ -1166,10 +1225,10 @@ def override(employee, base, *, rows, mode="REBALANCE", reason="", effective_fro
     if base.pk != current.pk:
         raise SalaryRefused({"structure": [
             "This is no longer the latest structure. Reload the overrides from the one now in force."]}, status=409)
-    if current.template not in TABLE_TEMPLATES:
+    if not is_table(employee.company, current.template) or is_basic_up(employee.company, current.template):
         raise SalaryRefused({"structure": [
-            f"Overrides apply to a template structure; this one is on the {template_label(current.template)}. "
-            "Revise it instead."]})
+            f"Overrides apply to a gross-down template structure; this one is on the "
+            f"{template_label(current.template, employee.company)}. Revise it instead."]})
     if mode not in OVERRIDE_MODES:
         raise SalaryRefused({"mode": [f"Mode must be one of {', '.join(OVERRIDE_MODES)}."]})
     if not preview:
