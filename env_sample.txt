@@ -52,6 +52,10 @@ EMAIL_PORT=587
 EMAIL_HOST_USER=
 EMAIL_HOST_PASSWORD=
 EMAIL_USE_TLS=True
+# Resend (used instead of SMTP when RESEND_API_KEY is set; sender must be on a verified Resend domain)
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
+EMAIL_FROM_NAME=Pilucent
 
 # Moov (origin registered with Moov; defaults to APP_URL)
 # MOOV_ORIGIN=

@@ -392,11 +392,23 @@ GOOGLE_OAUTH2_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH2_CLIENT_SECRET")
 GOOGLE_OAUTH2_PROJECT_ID = os.environ.get("GOOGLE_OAUTH2_PROJECT_ID")
 
 # Sending email settings
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# With RESEND_API_KEY set, all mail goes through Resend's HTTP API
+# (common/mail.py) from RESEND_FROM_EMAIL, an address on a domain verified in
+# Resend. Without it, the SMTP settings below are used as before.
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL")
+EMAIL_BACKEND = (
+    "common.mail.ResendEmailBackend" if RESEND_API_KEY else "django.core.mail.backends.smtp.EmailBackend"
+)
 EMAIL_HOST = os.environ.get("EMAIL_HOST")
 EMAIL_PORT = os.environ.get("EMAIL_PORT")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-DEFAULT_HOST_USER = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@pilucent.com")
+DEFAULT_HOST_USER = (RESEND_API_KEY and RESEND_FROM_EMAIL) or os.environ.get(
+    "DEFAULT_FROM_EMAIL", "no-reply@pilucent.com"
+)
+if "<" not in DEFAULT_HOST_USER:
+    DEFAULT_HOST_USER = f"{os.environ.get('EMAIL_FROM_NAME', 'Pilucent')} <{DEFAULT_HOST_USER}>"
+DEFAULT_FROM_EMAIL = DEFAULT_HOST_USER
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS")
 
