@@ -1,6 +1,7 @@
 from django.urls import path
 
 from ..views import bd_payrun as v
+from ..views import bd_payslip as slips
 
 # Run payroll (docs/backend/run-payroll-done.md §6).
 urlpatterns = [
@@ -11,6 +12,8 @@ urlpatterns = [
     path(r"/<uuid:uid>/lines/<uuid:line>", v.PrLine.as_view(), name="weapi.bd-payrun-line"),
     path(r"/<uuid:uid>/lines/<uuid:line>/mark-failed", v.PrMarkFailed.as_view(), name="weapi.bd-payrun-mark-failed"),
     path(r"/<uuid:uid>/include-all", v.PrIncludeAll.as_view(), name="weapi.bd-payrun-include-all"),
+    path(r"/<uuid:uid>/payslips/generate", slips.PsGenerate.as_view(), name="weapi.bd-payslips-generate"),
+    path(r"/<uuid:uid>/payslips/release", slips.PsRelease.as_view(), name="weapi.bd-payslips-release"),
     path(r"/<uuid:uid>/compute", v.PrCompute.as_view(), name="weapi.bd-payrun-compute"),
     path(r"/<uuid:uid>/exceptions/<uuid:exc>/resolve", v.PrException.as_view(), name="weapi.bd-payrun-resolve"),
     path(r"/<uuid:uid>/approve", v.PrApprove.as_view(), name="weapi.bd-payrun-approve"),

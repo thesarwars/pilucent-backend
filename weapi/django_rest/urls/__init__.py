@@ -1,5 +1,7 @@
 from django.urls import path, include
 
+from weapi.django_rest.views.bd_payslip import WrRegister
+
 urlpatterns = [
     path("", include("weapi.django_rest.urls.we")),
 
@@ -38,6 +40,8 @@ urlpatterns = [
     path("/pay-library", include("weapi.django_rest.urls.bd_paylib")),
     path("/payroll-settings", include("weapi.django_rest.urls.bd_paysettings")),
     path("/payroll-runs", include("weapi.django_rest.urls.bd_payrun")),
+    path("/payslips", include("weapi.django_rest.urls.bd_payslip")),
+    path("/wages-registers/<uuid:uid>", WrRegister.as_view(), name="weapi.bd-wages-register"),
     path("/payment-methods", include("weapi.django_rest.urls.payment_methods")),
     path("/products", include("weapi.django_rest.urls.products")),
     path("/purchases", include("weapi.django_rest.urls.purchases")),

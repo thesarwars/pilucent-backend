@@ -102,6 +102,7 @@ PILUCENT_APPS = [
     "paylibio",
     "paysetio",
     "payrunio",
+    "payslipio",
     "stockio",
     "nexusio",
     "salesio",
