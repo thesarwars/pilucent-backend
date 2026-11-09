@@ -95,7 +95,7 @@ services:
       <<: *django-env
       DB_USER: pilucent
       DB_PASSWORD: ${PILUCENT_DB_PASSWORD:-pilucent_dev}
-    command: python manage.py migrate --noinput
+    command: sh -c "python manage.py migrate --noinput && python manage.py seed_install_defaults"
     depends_on:
       db:
         condition: service_healthy

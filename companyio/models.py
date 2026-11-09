@@ -464,7 +464,7 @@ class CompanySetting(BaseModelWithUID):
 
     # Currency
     home_currency = models.CharField(
-        max_length=50, choices=CurrencyChoices, default=CurrencyChoices.USD
+        max_length=50, choices=CurrencyChoices, default=CurrencyChoices.BDT
     )
     multi_currency = models.CharField(
         max_length=50, choices=CurrencyChoices, default=CurrencyChoices.USD
