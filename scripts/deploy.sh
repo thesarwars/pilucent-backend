@@ -33,6 +33,13 @@ $COMPOSE exec -T \
     -e DB_PASSWORD="$DB_MIGRATION_PASSWORD" \
     app python3 manage.py migrate --noinput
 
+# 2b. Seed what migrate leaves out (account categories, the full admin role).
+#     Idempotent: a curated admin role is left alone.
+$COMPOSE exec -T \
+    -e DB_USER="$DB_MIGRATION_USER" \
+    -e DB_PASSWORD="$DB_MIGRATION_PASSWORD" \
+    app python3 manage.py seed_install_defaults
+
 # 3. Collect Static files
 $COMPOSE exec -T app python3 manage.py collectstatic --noinput
 
