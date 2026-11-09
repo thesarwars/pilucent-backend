@@ -180,6 +180,9 @@ class TaxProjection:
     figures: dict = field(default_factory=dict)
     slab_walk: list = field(default_factory=list)
     trace: list = field(default_factory=list)
+    # Read and compared against, though it moved no figure (the minimum tax
+    # when it did not apply).
+    consulted: list = field(default_factory=list)
 
     @property
     def liability(self):
@@ -208,6 +211,9 @@ class TaxProjection:
             **{key: fig.as_dict(money=key not in counts) for key, fig in self.figures.items()},
             "slabWalk": self.slab_walk,
             "trace": self.trace,
+            # Every rule this computation read: the payslip's confidence gate
+            # is driven by this list, so a new dependency cannot escape it.
+            "rulesRead": sorted({rv.rule for rv in self.rules + self.consulted}),
         }
 
 
@@ -241,7 +247,7 @@ def project(employee, as_of=None, book=None, ytd_deducted=ZERO):
     book = book or rule_book(as_of)
     tax_profile = employee.tax_profile
     flags = flags_for_category(tax_profile.category)
-    figures, trace = {}, []
+    figures, trace, consulted = {}, [], []
 
     def step(key, label, figure):
         figures[key] = figure
@@ -331,6 +337,7 @@ def project(employee, as_of=None, book=None, ytd_deducted=ZERO):
             inputs=[figures["slabTax"], figures["rebate"]]))
 
         minimum = book.tax.get("minimumTax")
+        consulted.append(minimum)
         min_applies = taxable > threshold and after_rebate < minimum.decimal
         liability = step("liability", "Annual liability", Figure(
             minimum.decimal if min_applies else after_rebate,
@@ -360,4 +367,5 @@ def project(employee, as_of=None, book=None, ytd_deducted=ZERO):
         figures=figures,
         slab_walk=walked if not flags.non_resident else [],
         trace=trace,
+        consulted=consulted,
     )

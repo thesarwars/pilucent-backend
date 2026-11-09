@@ -29,6 +29,7 @@ from paysetio.models import PaySchedule
 from paysetio.services.ops import create_scheme_accounts
 from paysetio.test_support import constitute_pf, join, set_election
 from rulebookio.models import RuleSet
+from rulebookio.test_support import verify_every_rule
 from timekeepingio.models import AttendancePeriod, DaySnapshot, HolidayCalendar, HolidayCalendarDay
 
 from .models import PaymentInstruction, PayrollException, PayrollRun, PayrollRunLine, PayrollRunTransition, RunEvent
@@ -546,6 +547,7 @@ class Api(ApiMixin, RunCase):
 
         r = self.b.post(f"{BASE}/{uid}/mark-paid", {"lines": "all"}, format="json")
         self.assertEqual(r.json()["state"], "PAID")
+        verify_every_rule()  # the close issues the payslips, and they gate on it
         r = self.b.post(f"{BASE}/{uid}/release")
         self.assertEqual(r.json()["state"], "CLOSED")
         reg = self.b.get(f"{BASE}/{uid}/register").json()

@@ -26,6 +26,7 @@ from payrunio.services import bankfiles
 from payrunio.services import ops as R
 from payrunio.services.ops import RunRefused
 from payrunio.services.present import overview, register, run_head, run_out
+from payslipio.services.ops import release as release_payslips
 
 from ..serializers.bd_employees import ui_errors
 from .bd_employees import BDEmployeeView
@@ -240,7 +241,8 @@ class PrRelease(RunView):
 
     def post(self, request, uid):
         self.refuse_unless(RELEASE)
-        return self.out(R.release(self.run(uid), user=request.user))
+        # One close: the run ends only by issuing its documents.
+        return self.out(release_payslips(self.run(uid), user=request.user))
 
 
 class PrRegister(RunView):
